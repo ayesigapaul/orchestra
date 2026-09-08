@@ -7,7 +7,7 @@ per surface; do not build dashboards from scratch and do not import across copie
 
 | Item | Version |
 | --- | --- |
-| Next.js | 16.2.6 (App Router) |
+| Next.js | 16.2.12 (App Router) |
 | React | 19.2.4 |
 | Tailwind CSS | 4 |
 | TypeScript | 5 |
@@ -15,6 +15,14 @@ per surface; do not build dashboards from scratch and do not import across copie
 | Package manager | pnpm |
 
 Also included: Prettier, ESLint, a `Dockerfile`, and Kubernetes manifests under `k8s/`.
+
+### Dependency overrides
+
+`package.json` carries a `pnpm.overrides` block. Next.js pins `postcss` to an exact patch version
+and ships `sharp` as an optional dependency, so neither moves when Next.js is upgraded; `fast-uri`
+and `qs` arrive several levels below `shadcn`. Each is pinned forward to the release that carries
+its security fix. Re-check with `pnpm audit` after any upgrade, and drop an override once the
+dependency that pulled it in has caught up.
 
 ## What it already provides
 
