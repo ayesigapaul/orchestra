@@ -15,8 +15,11 @@
     "MD033": { "allowed_elements": [] },
     // Bare URLs are disallowed — use link syntax.
     "MD034": true,
-    // Tables pad their pipes; separator rows must match the header and body rows.
-    "MD060": { "style": "leading_and_trailing" }
+    // Tables pad their pipes: leading and trailing pipes on header, separator and body.
+    // This is MD055 (table-pipe-style). MD060 is table-column-style and accepts only
+    // aligned | any | compact | tight, so pinning it to a MD055 value silently matched
+    // nothing and the convention went unenforced.
+    "MD055": { "style": "leading_and_trailing" }
   },
   "globs": ["docs/**/*.md", "*.md", ".github/**/*.md"],
   // CODE_OF_CONDUCT.md is the verbatim Contributor Covenant; archived docs are immutable.
