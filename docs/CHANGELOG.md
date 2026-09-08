@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.3.0
+version: 0.4.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -26,6 +26,24 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
 - `80-reference/` — AG-UI, A2UI, MCP and LangGraph evaluations
+
+---
+
+## [0.4.0] — 2026-09-09
+
+### Added
+
+- [ADR-0011](adr/adr-0011-tenant-isolation-shared-schema-rls.md) — tenant isolation by shared
+  schema with row-level security, closing the question ADR-0001 deferred. Isolation is enforced by
+  the datastore rather than by application code, a missing policy fails CI rather than relying on
+  review, and the schema is designed so a single Tenant can later be promoted to a dedicated
+  database without a schema change or a change to any public contract.
+
+### Changed
+
+- `00-overview/vision.md`, `roadmap.md` and `scope-and-non-goals.md` — tenant isolation moves out
+  of the open questions. The datastore engine takes its place there: ADR-0011 constrains it to one
+  that enforces row-level security, but does not choose it.
 
 ---
 

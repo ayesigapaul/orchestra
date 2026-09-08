@@ -206,7 +206,7 @@ build toward it or promise it.
 
 | Question | What would decide it |
 | --- | --- |
-| Tenant isolation strategy: row-level security, schema-per-tenant, or database-per-tenant | The multi-tenancy architecture document, per [ADR-0001](../adr/adr-0001-product-shape-multi-tenant-saas.md) |
+| Which datastore engine backs the platform | An architecture decision, constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security |
 | Whether BYOK means spend control or data non-egress | Design-partner validation, named in [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) and [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) |
 | Compensation semantics beyond the requirement to declare them | The workflow execution-semantics specification, per [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md) |
 | Price points, tier boundaries and what a seat costs | Observed usage, once customers exist — [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) |
