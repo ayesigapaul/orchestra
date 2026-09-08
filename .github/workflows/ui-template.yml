@@ -1,0 +1,47 @@
+name: UI template
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-template-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: UI template
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui-template/control-plane
+    steps:
+      - uses: actions/checkout@v7
+      # No path filter on this workflow. A required check that is skipped by a path
+      # filter never reports, and the pull request then waits on it forever.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: ui-template/control-plane/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Build
+        run: pnpm build
+      # A pull request must not introduce a vulnerable dependency, so this fails there.
+      # On main it only reports: an advisory can be published against code nobody has
+      # touched, and that must not turn the branch red. Dependabot alerts and automated
+      # security fixes are enabled for exactly that case.
+      - name: Audit
+        continue-on-error: ${{ github.event_name != 'pull_request' }}
+        run: pnpm audit

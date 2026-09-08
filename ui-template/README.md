@@ -7,7 +7,7 @@ per surface; do not build dashboards from scratch and do not import across copie
 
 | Item | Version |
 | --- | --- |
-| Next.js | 16.2.12 (App Router) |
+| Next.js | 16.3.4 (App Router) |
 | React | 19.2.4 |
 | Tailwind CSS | 4 |
 | TypeScript | 5 |
@@ -15,6 +15,9 @@ per surface; do not build dashboards from scratch and do not import across copie
 | Package manager | pnpm |
 
 Also included: Prettier, ESLint, a `Dockerfile`, and Kubernetes manifests under `k8s/`.
+
+CI runs `pnpm lint`, `pnpm typecheck`, `pnpm build` and `pnpm audit` against this template on every
+pull request — see [`.github/workflows/ui-template.yml`](../.github/workflows/ui-template.yml).
 
 ### Dependency overrides
 
