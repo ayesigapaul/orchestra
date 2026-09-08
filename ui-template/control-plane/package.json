@@ -48,6 +48,7 @@
   "pnpm": {
     "overrides": {
       "fast-uri": "^3.1.6",
+      "js-yaml": "^4.3.2",
       "postcss": "^8.5.28",
       "qs": "^6.16.0",
       "sharp": "^0.35.4"
