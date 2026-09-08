@@ -1,0 +1,12 @@
+# Every change requires review from the platform architecture owner.
+*                       @ayesigapaul
+
+# Contracts and decisions carry the highest review bar.
+/docs/adr/              @ayesigapaul
+/docs/30-protocol/      @ayesigapaul
+/docs/40-governance/    @ayesigapaul
+/docs/VERSIONING.md     @ayesigapaul
+
+# Repository and CI configuration.
+/.github/               @ayesigapaul
+/scripts/               @ayesigapaul

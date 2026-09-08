@@ -1,0 +1,20 @@
+# Link checker configuration — https://lychee.cli.rs
+max_redirects = 5
+max_retries = 2
+timeout = 20
+accept = ["200", "203", "206", "429"]
+no_progress = true
+cache = true
+max_cache_age = "2d"
+
+exclude = [
+  # Provisional domains not yet registered
+  "^https://schemas\\.orchestra\\.dev",
+  "^https://orchestra\\.dev",
+  # Rate-limited or bot-hostile hosts
+  "^https://www\\.linkedin\\.com",
+  "^https://x\\.com",
+  "^https://twitter\\.com",
+]
+
+exclude_path = ["docs/archive", "node_modules"]

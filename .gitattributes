@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+*.md       text diff=markdown
+*.json     text
+*.yml      text
+*.yaml     text
+*.sh       text eol=lf
+*.png      binary
+*.jpg      binary
+*.svg      text
+
+# Keep generated/vendored files out of language stats and diffs
+docs/archive/**  linguist-documentation
+*.lock           -diff linguist-generated

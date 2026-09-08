@@ -1,0 +1,75 @@
+name: Repository hygiene
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    name: Conventional commits
+    # A push event lints github.event.before..after. That range does not resolve on a
+    # branch's first push, where before is the null SHA, nor after any force-push, where
+    # before names a commit that no longer exists — the job then fails for a reason that
+    # has nothing to do with the commits. Merges are squash-only, so the subject that
+    # actually lands on main is the pull request title, checked by pr-title below.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: .commitlintrc.json
+          failOnWarnings: true
+
+  pr-title:
+    name: Pull request title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: The PR title becomes the squash-merge subject, so it must be conventional
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          npm install --no-audit --no-fund --silent @commitlint/cli@19.6.0 @commitlint/config-conventional@19.6.0
+          echo "$PR_TITLE" | npx commitlint -g .commitlintrc.json
+
+  actionlint:
+    name: Workflow syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: raven-actions/actionlint@v2
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: "8.24.3"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # The pinned binary rather than the action wrapper, for the reason recorded in
+      # CLAUDE.md. gitleaks-action derives a commit range from the event payload, and on a
+      # branch's first push that range reaches for the root commit's parent and aborts,
+      # reporting a failure while scanning nothing. `gitleaks git` walks the whole history
+      # and has no such edge case.
+      - name: Scan the full history for secrets
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          curl -sSL --retry 3 \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP/gitleaks" gitleaks
+          "$RUNNER_TEMP/gitleaks/gitleaks" git --redact --verbose .

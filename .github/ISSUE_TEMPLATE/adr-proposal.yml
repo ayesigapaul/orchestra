@@ -1,0 +1,44 @@
+name: ADR proposal
+description: Propose an architecturally significant decision.
+title: "ADR: "
+labels: ["adr", "decision", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write an ADR when a decision is **costly to reverse** and **affects more than one component
+        or team**. Reversible implementation choices do not need one.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What is true today that forces this decision now? Facts and constraints, not preferences. Mark unverified claims as assumptions.
+    validations: { required: true }
+  - type: textarea
+    id: options
+    attributes:
+      label: Options considered
+      description: At least two, each with a one-line characterisation.
+    validations: { required: true }
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation and rationale
+    validations: { required: true }
+  - type: textarea
+    id: consequences
+    attributes:
+      label: Consequences accepted
+      description: Including the negative ones. An ADR with no negative consequences has not been thought through.
+    validations: { required: true }
+  - type: input
+    id: affected
+    attributes:
+      label: Supersedes or affects
+      placeholder: ADR-0006, docs/30-protocol/event-protocol.md
+  - type: textarea
+    id: revisit
+    attributes:
+      label: Revisit criteria
+      description: Under what conditions should this be reopened? A decision with no revisit criteria is dogma.
+    validations: { required: true }

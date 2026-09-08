@@ -1,0 +1,63 @@
+---
+title: Architecture Decision Records
+doc_id: DOC-004
+version: 0.2.0
+status: Draft
+last_updated: 2026-09-08
+owners: [platform-architecture]
+---
+
+# Architecture Decision Records
+
+An ADR records one architecturally significant decision, the context that forced it, the options
+weighed, and the consequences accepted. Format: [MADR](https://adr.github.io/madr/).
+
+**ADRs are immutable once Accepted.** A decision is changed by writing a new ADR that supersedes the
+old one, never by editing it. The value of the practice is the reasoning trail, and editing destroys
+it.
+
+Write an ADR when a decision is **costly to reverse** and **affects more than one team or component**.
+Do not write one for reversible implementation choices.
+
+Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`](../VERSIONING.md) §3
+
+---
+
+## Index
+
+| ADR | Title | Status | Date |
+| --- | --- | --- | --- |
+| [0001](adr-0001-product-shape-multi-tenant-saas.md) | Product shape: multi-tenant SaaS | Accepted | 2026-09-08 |
+| [0002](adr-0002-enterprise-segment-and-byok.md) | Enterprise segment with BYOK model credentials | Accepted | 2026-09-08 |
+| [0003](adr-0003-governance-layer-positioning.md) | Position Orchestra as a governance layer, not an agent framework | Accepted | 2026-09-08 |
+| [0004](adr-0004-adopt-ag-ui-event-protocol.md) | Adopt AG-UI as the client-facing event protocol | Proposed | 2026-09-08 |
+| [0005](adr-0005-langgraph-as-compilation-target.md) | LangGraph as a compilation target, not a public boundary | Accepted | 2026-09-08 |
+| [0006](adr-0006-model-layer-as-credential-broker.md) | Model layer is a credential and endpoint broker | Accepted | 2026-09-08 |
+| [0007](adr-0007-outbound-connector-for-enterprise-reachability.md) | Outbound connector for enterprise tool reachability | Proposed | 2026-09-08 |
+| [0008](adr-0008-declarative-workflow-definitions.md) | Customer-defined workflows as declarative definitions | Accepted | 2026-09-08 |
+| [0009](adr-0009-meter-first-defer-tiering.md) | Meter from day one, defer tiering | Accepted | 2026-09-08 |
+| [0010](adr-0010-a2ui-genui-interchange.md) | A2UI as the GenUI interchange format | Proposed | 2026-09-08 |
+
+## Decision dependency graph
+
+```mermaid
+flowchart TD
+  A1["ADR-0001<br/>Multi-tenant SaaS"] --> A2["ADR-0002<br/>Enterprise + BYOK"]
+  A2 --> A3["ADR-0003<br/>Governance layer"]
+  A2 --> A6["ADR-0006<br/>Credential broker"]
+  A2 --> A7["ADR-0007<br/>Outbound connector"]
+  A3 --> A4["ADR-0004<br/>Adopt AG-UI"]
+  A3 --> A8["ADR-0008<br/>Declarative workflows"]
+  A3 --> A9["ADR-0009<br/>Meter first"]
+  A5["ADR-0005<br/>LangGraph as target"] --> A8
+  A4 --> A10["ADR-0010<br/>A2UI interchange"]
+
+  classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
+  classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
+  class A1,A2,A3,A5,A6,A8,A9 accepted;
+  class A4,A7,A10 proposed;
+```
+
+**Accepted** decisions are binding on implementation. **Proposed** decisions require a named
+validation step — a spike, a benchmark, or a design-partner conversation — before they bind. Each
+proposed ADR states that step explicitly.

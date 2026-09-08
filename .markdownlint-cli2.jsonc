@@ -1,0 +1,24 @@
+{
+  "config": {
+    "default": true,
+    // Line length: prose wraps at 100, but tables, code and links are exempt.
+    "MD013": { "line_length": 100, "tables": false, "code_blocks": false, "headings": false },
+    // Duplicate headings are legitimate across ADR sections (Positive / Negative / etc).
+    "MD024": { "siblings_only": true },
+    // Documents legitimately begin with YAML front matter rather than an H1.
+    "MD041": false,
+    // Front matter carries `title:`; the document H1 is not a duplicate of it.
+    "MD025": { "front_matter_title": "" },
+    // We use both ordered styles deliberately.
+    "MD029": { "style": "ordered" },
+    // Inline HTML is not used; keep it that way so output renders identically everywhere.
+    "MD033": { "allowed_elements": [] },
+    // Bare URLs are disallowed — use link syntax.
+    "MD034": true,
+    // Tables pad their pipes; separator rows must match the header and body rows.
+    "MD060": { "style": "leading_and_trailing" }
+  },
+  "globs": ["docs/**/*.md", "*.md", ".github/**/*.md"],
+  // CODE_OF_CONDUCT.md is the verbatim Contributor Covenant; archived docs are immutable.
+  "ignores": ["node_modules/**", "docs/archive/**", "CODE_OF_CONDUCT.md"]
+}

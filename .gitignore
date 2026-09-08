@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+
+# Build output
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# JVM / Gradle
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Environment & secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials.json
+
+# Tooling caches
+.turbo/
+.cache/
+coverage/
+.lycheecache
+
+# Editors & OS
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.example.json
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local scratch
+tmp/
+scratch/
+
+# Claude Code — shared skills and CLAUDE.md are committed; per-machine settings are not
+.claude/settings.local.json
+.claude/*.local.json

@@ -1,0 +1,31 @@
+name: RFC proposal
+description: Open a design proposal for discussion before it becomes a decision.
+title: "RFC: "
+labels: ["rfc", "triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is not working, or not possible, today?
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations: { required: true }
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations: { required: true }
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact on published contracts
+      description: Does this touch the event protocol, gateway API, workflow DSL or any schema? Is it additive?
+    validations: { required: true }
+  - type: textarea
+    id: open
+    attributes:
+      label: Open questions

@@ -1,0 +1,27 @@
+name: Documentation issue
+description: Something in the specification set is wrong, unclear, contradictory or missing.
+labels: ["documentation", "triage"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Document
+      description: Path, and section if known.
+      placeholder: docs/40-governance/policy-model.md §4
+    validations: { required: true }
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options: [Incorrect, Unclear, Contradicts another document, Missing, Out of date]
+    validations: { required: true }
+  - type: textarea
+    id: detail
+    attributes:
+      label: What is wrong
+      description: If this contradicts another document, name both.
+    validations: { required: true }
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested correction

@@ -1,0 +1,80 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # External links rot without anyone touching the repository.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Markdown style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      # Pinned to the exact tool version rather than an action wrapper, so that
+      # `npx markdownlint-cli2@0.23.2` locally runs precisely what CI runs.
+      # Globs and ignores come from .markdownlint-cli2.jsonc — the single source of truth.
+      - name: Lint markdown
+        run: npx --yes markdownlint-cli2@0.23.2
+
+  validate:
+    name: Structure and conventions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Validate front matter, ADR index, doc ids and internal links
+        run: node scripts/validate-docs.mjs
+
+  mermaid:
+    name: Mermaid diagrams render
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Extract and parse every mermaid block
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund --silent mermaid@11.4.1 jsdom@25.0.1
+          node scripts/check-mermaid.mjs
+
+  links:
+    name: External links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore link-check cache
+        uses: actions/cache@v6
+        with:
+          path: .lycheecache
+          key: lychee-${{ github.sha }}
+          restore-keys: lychee-
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: --config lychee.toml --no-progress './**/*.md'
+          # A pull request must not introduce a dead link, so it fails there. The weekly
+          # run finds rot on third-party sites that no commit caused; failing it would
+          # put a red mark on main with nobody having touched the repository, so it
+          # reports through the job summary instead.
+          fail: ${{ github.event_name != 'schedule' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
