@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: web
+  namespace: web
+  labels:
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: kub-home-lab
+spec:
+  ingressClassName: traefik
+  rules:
+    # sslip.io resolves <anything>.<ip>.sslip.io -> <ip>, so no DNS setup is
+    # needed. Node is on UTM NAT, so this is reachable from the Mac only.
+    - host: web.192.168.64.7.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http
+    # Second host for LAN devices (phone). Traffic arrives at the Mac's LAN IP,
+    # UTM port-forwards it into the VM, and Traefik routes on this Host header.
+    # Traefik strips the :port before matching, so :8080 still hits this rule.
+    - host: web.192.168.100.237.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: web
+                port:
+                  name: http

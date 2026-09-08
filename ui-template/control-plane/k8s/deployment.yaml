@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: web
+  labels: &labels
+    app.kubernetes.io/name: web
+    app.kubernetes.io/instance: web
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: kub-home-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: web
+      app.kubernetes.io/instance: web
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: docker.io/kub-home-lab/web:0.1.0
+          # The image is side-loaded into containerd, not pulled from a registry
+          # (§6.1 undecided). Always must be IfNotPresent or the kubelet will
+          # try to pull a tag that exists nowhere and fail.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi   # equal to request: cannot exceed, so never the
+                              # first evicted among Burstable pods
+              # No CPU limit on purpose (avoids CFS throttling). That makes this
+              # pod Burstable, not Guaranteed -- Guaranteed needs a CPU limit
+              # equal to its request too. Deliberate trade, see CLAUDE.md §4.
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            # standalone server.js writes ISR/image-optimization output here,
+            # so these two must stay writable under readOnlyRootFilesystem.
+            - { name: next-cache, mountPath: /app/.next/cache }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: next-cache, emptyDir: {} }
+        - { name: tmp, emptyDir: {} }
