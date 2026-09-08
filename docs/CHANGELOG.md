@@ -1,9 +1,9 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.2.0
+version: 0.3.0
 status: Draft
-last_updated: 2026-09-08
+last_updated: 2026-09-09
 owners: [platform-architecture]
 ---
 
@@ -17,7 +17,6 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 ### Planned
 
-- `00-overview/` — vision, product thesis, personas, scope & non-goals, roadmap
 - `10-architecture/` — C4 context and container views, control plane, data plane, connector,
   multi-tenancy, identity & access, deployment topologies
 - `20-domain/` — domain model with ERD, entity lifecycle state machines
@@ -27,6 +26,32 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
 - `80-reference/` — AG-UI, A2UI, MCP and LangGraph evaluations
+
+---
+
+## [0.3.0] — 2026-09-09
+
+Writes the overview section against the decisions recorded in 0.2.0. No decision changes.
+
+### Added
+
+- `00-overview/vision.md` — the problem, the thesis, what Orchestra is and is not, who it is for
+- `00-overview/product-thesis.md` — the governance-layer argument, the defensibility sort, and
+  prompt injection as a policy problem rather than a prompt problem
+- `00-overview/personas.md` — the five personas, their mapping onto Principal types, and the
+  distinction between Platform User and End User that ADR-0009 settled
+- `00-overview/scope-and-non-goals.md` — in scope, refused, and deferred, kept as three separate
+  classes with the reopening condition named for each
+- `00-overview/roadmap.md` — phases with entry and exit criteria rather than dates, and the
+  dependencies that gate each
+
+### Changed
+
+- `00-overview/README.md` — now an index of written documents rather than a scaffold notice
+- `.markdownlint-cli2.jsonc` — the table pipe convention was pinned to `MD060`, which is
+  `table-column-style` and accepts only `aligned | any | compact | tight`. A `MD055` value placed
+  there matched nothing, so the rule never ran. Corrected to `MD055`; the whole set still passes
+  with it enforcing.
 
 ---
 
