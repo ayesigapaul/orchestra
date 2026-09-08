@@ -37,6 +37,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0008](adr-0008-declarative-workflow-definitions.md) | Customer-defined workflows as declarative definitions | Accepted | 2026-09-08 |
 | [0009](adr-0009-meter-first-defer-tiering.md) | Meter from day one, defer tiering | Accepted | 2026-09-08 |
 | [0010](adr-0010-a2ui-genui-interchange.md) | A2UI as the GenUI interchange format | Proposed | 2026-09-08 |
+| [0011](adr-0011-tenant-isolation-shared-schema-rls.md) | Tenant isolation by shared schema with row-level security | Accepted | 2026-09-09 |
 
 ## Decision dependency graph
 
@@ -51,10 +52,11 @@ flowchart TD
   A3 --> A9["ADR-0009<br/>Meter first"]
   A5["ADR-0005<br/>LangGraph as target"] --> A8
   A4 --> A10["ADR-0010<br/>A2UI interchange"]
+  A1 --> A11["ADR-0011<br/>Tenant isolation by RLS"]
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
-  class A1,A2,A3,A5,A6,A8,A9 accepted;
+  class A1,A2,A3,A5,A6,A8,A9,A11 accepted;
   class A4,A7,A10 proposed;
 ```
 

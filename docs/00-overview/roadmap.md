@@ -69,9 +69,11 @@ definition language, and the metering dimensions.
 - Every planned document in [`20-domain/`](../20-domain/README.md),
   [`40-governance/`](../40-governance/README.md), [`50-workflows/`](../50-workflows/README.md) and
   [`60-operations/`](../60-operations/README.md) resting only on Accepted ADRs is written.
-- The tenant isolation strategy — row-level security, schema-per-tenant, database-per-tenant — has
-  its own ADR. [ADR-0001](../adr/adr-0001-product-shape-multi-tenant-saas.md) names it as a separate
-  decision, and it is still unmade.
+- The tenant isolation strategy has its own ADR and is settled: shared schema with row-level
+  security, and a promotion path that lets a single Tenant move to a dedicated database later
+  without a schema change
+  ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)). The datastore itself is
+  still unchosen, constrained only to an engine that enforces row-level security.
 - The transport seam is specified: a Tool connection is either a direct HTTPS session or a tunnelled
   one, indistinguishable to everything above it. ADR-0007 argues this is cheap now and expensive to
   retrofit, and separates it deliberately from building the Connector.

@@ -235,9 +235,6 @@ Three decisions are **Proposed**, not Accepted. They MUST NOT be built on as tho
 
 Other questions are simply unmade, and this document does not pretend otherwise:
 
-- **Tenant isolation strategy** — row-level security, schema-per-tenant or database-per-tenant.
-  ADR-0001 records it as a separate decision, to be taken in
-  [`10-architecture/`](../10-architecture/README.md).
 - **What BYOK means to a given customer** — control of spend and provider relationship, or a
   requirement that data never transit Orchestra infrastructure. Only the second implies a hybrid
   topology with a customer-deployed data plane. ADR-0002 requires this be tested with design
