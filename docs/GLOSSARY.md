@@ -144,8 +144,12 @@ exceptional failure mode.
 
 ## Interface
 
-**Agent Event** — a normalised, ordered, replayable message on the Run event stream. AG-UI event, or
-an `orchestra.*`-namespaced governance extension. Provider-native streaming formats are never exposed.
+**Agent Event** — a normalised, ordered, replayable message on the Run event stream, admitted by the
+Orchestra Agent Event Profile ([`30-protocol/event-protocol.md`](30-protocol/event-protocol.md)).
+The profile is Orchestra's artefact and its own versioned contract; it pins an upstream draft event
+format by commit and re-exports none of it as a promise. Provider-native and upstream-native
+streaming formats are never exposed. See [ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md),
+which is **Proposed**.
 
 **UI Surface** — a declarative, agent-produced interface region rendered natively by an allow-listed
 client renderer. Never executable code.

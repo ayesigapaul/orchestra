@@ -134,24 +134,30 @@ successor. A major path version is supported for **36 months** after its success
 
 ## 5. Agent event protocol
 
-Orchestra adopts **AG-UI** as its client-facing event protocol (see
-[ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md)). Two version numbers therefore apply:
+The client-facing event contract is the **Orchestra Agent Event Profile**, specified in
+[`30-protocol/event-protocol.md`](30-protocol/event-protocol.md). It is Orchestra's artefact,
+carrying Orchestra's version and Orchestra's compatibility promise, and it pins an upstream draft
+event format by commit rather than adopting it as the contract. See
+[ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md), which is **Proposed** and therefore not yet
+binding. Two version numbers apply:
 
-- **Upstream AG-UI version** — tracked, not controlled by us. Recorded in
-  [`30-protocol/`](30-protocol/).
-- **Orchestra profile version** — our conformance profile: which upstream events we emit, plus our
-  governance extensions carried in AG-UI's `CUSTOM` envelope (approval lifecycle, policy decisions,
-  workflow step transitions, quota signals).
+- **Pinned upstream commit** — tracked, not controlled by us, and not a promise Orchestra re-exports.
+  No upstream version has ever been frozen, which is why the profile exists.
+- **Profile version** — Orchestra's own semantic version: which upstream events the profile admits,
+  plus the governance extensions it defines (approval lifecycle, policy decisions, workflow step
+  transitions, quota signals).
 
 Extension namespacing is mandatory: `orchestra.approval.required`, `orchestra.policy.denied`,
 `orchestra.workflow.step.started`. Unprefixed custom event names are reserved for upstream.
 
 **Every event MUST carry** a monotonically increasing per-run `seq`, the `run_id`, the `tenant_id`,
-and a server-assigned `event_id`. Ordering and replay are protocol guarantees, not client
-conveniences — this is what makes reconnection and audit possible, and it is the gap that made the
-v0.1 event model unimplementable.
+and a server-assigned `event_id`, in the profile's vendor-prefixed metadata rather than as top-level
+fields — `30-protocol/event-protocol.md` states why. Ordering and replay are guarantees the profile
+makes and Orchestra implements; the upstream format supplies neither, so they are built rather than
+inherited. This is the gap that made the v0.1 event model unimplementable.
 
-Stream resumption uses SSE `Last-Event-ID`. The server MUST replay from the requested `seq` within
+Stream resumption uses SSE `Last-Event-ID`, which names the last event the client received. The
+server MUST replay from the event *after* that `seq`, within
 the run's event-retention window, and MUST fail explicitly rather than silently skipping a gap.
 
 ---
