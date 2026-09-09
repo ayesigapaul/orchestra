@@ -42,6 +42,10 @@ jobs:
           node-version: "22"
       - name: Validate front matter, ADR index, doc ids and internal links
         run: node scripts/validate-docs.mjs
+      # A register row naming a decider nobody will write is a question filed rather than answered.
+      # Five such rows existed before this check did.
+      - name: Check every open question defers to a document that exists or is planned
+        run: node scripts/open-questions.mjs --check
 
   mermaid:
     name: Mermaid diagrams render

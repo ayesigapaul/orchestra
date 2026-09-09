@@ -1,7 +1,7 @@
 ---
 title: Entity Lifecycle State Machines
 doc_id: DOC-032
-version: 0.6.0
+version: 0.7.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -173,8 +173,8 @@ resolves to exactly one Principal. [`domain-model.md`](domain-model.md) records 
 platform-operator action and marks it unmade. Expiry is a second instance of it, not a separate
 problem, and `40-governance/audit-model.md` decides both together.
 
-**Proposed, owned by `40-governance/approval-workflows.md`: the Evidence Set is captured at raise
-time and is immutable thereafter.** The point of attaching
+**The Evidence Set is captured at raise time and is immutable thereafter**, settled by
+`40-governance/approval-workflows.md` rule E4. The point of attaching
 it is that the human approves on the same information the model had; evidence that could change
 afterwards attests to nothing.
 
@@ -349,7 +349,6 @@ billing-adjacent surface.
 | What audit-retention period ends `Archived`? | Workflow version | `40-governance/audit-model.md` |
 | May a `Draft` version be deleted, given audit-retention obligations? | Workflow version | `40-governance/audit-model.md`, ADR-0011 follow-on |
 | How is an action with no acting Principal attributed — expiry, platform-operator work? | Approval Request, Audit Record | `40-governance/audit-model.md` |
-| Is the Evidence Set immutable from raise time? | Approval Request | `40-governance/approval-workflows.md` |
 | What separates `Degraded` from `Healthy`, and on what interval? | Connector | `10-architecture/connector.md`, `60-operations/reliability.md` |
 | What does a Run do when its Connector is not `Healthy`? | Run, Connector | `60-operations/reliability.md` |
 | Are Connector health transitions audited or telemetry? | Connector | `40-governance/audit-model.md` |
