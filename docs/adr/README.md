@@ -38,6 +38,8 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0009](adr-0009-meter-first-defer-tiering.md) | Meter from day one, defer tiering | Accepted | 2026-09-08 |
 | [0010](adr-0010-a2ui-genui-interchange.md) | A2UI as the GenUI interchange format | Proposed | 2026-09-09 |
 | [0011](adr-0011-tenant-isolation-shared-schema-rls.md) | Tenant isolation by shared schema with row-level security | Accepted | 2026-09-09 |
+| [0012](adr-0012-policy-decisions-are-audit-records.md) | Policy Decisions are a class of Audit Record over versioned Policies | Accepted | 2026-09-09 |
+| [0013](adr-0013-fail-closed-policy-decision-writes.md) | Policy Decision writes are fail-closed; other audit writes may degrade | Accepted | 2026-09-09 |
 
 ## Decision dependency graph
 
@@ -53,10 +55,12 @@ flowchart TD
   A5["ADR-0005<br/>LangGraph as target"] --> A8
   A4 --> A10["ADR-0010<br/>A2UI interchange"]
   A1 --> A11["ADR-0011<br/>Tenant isolation by RLS"]
+  A3 --> A12["ADR-0012<br/>Policy Decisions are Audit Records"]
+  A12 --> A13["ADR-0013<br/>Fail-closed decision writes"]
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
-  class A1,A2,A3,A5,A6,A8,A9,A11 accepted;
+  class A1,A2,A3,A5,A6,A8,A9,A11,A12,A13 accepted;
   class A4,A7,A10 proposed;
 ```
 
