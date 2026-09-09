@@ -1,9 +1,9 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.2.0
+version: 0.7.0
 status: Draft
-last_updated: 2026-09-08
+last_updated: 2026-09-09
 owners: [platform-architecture]
 ---
 
@@ -103,8 +103,9 @@ a Connector.
 enforced. Minimally: before any Tool invocation, at every Workflow Step boundary, and at Run
 admission.
 
-**Policy Decision** — the recorded outcome of a PEP evaluation: the rule that matched, the inputs,
-the verdict, the timestamp. Always audited, including allows.
+**Policy Decision** — a class of Audit Record: the recorded outcome of a PEP evaluation, holding a
+reference to the Policy version that matched, the inputs, the verdict and the timestamp. Always
+audited, including allows. See [ADR-0012](adr/adr-0012-policy-decisions-are-audit-records.md).
 
 **Approval Request** — a human decision gate raised by a `require_approval` verdict. Carries the
 proposed action, the evidence the agent relied on, the routing chain, and its resolution.
@@ -113,8 +114,8 @@ proposed action, the evidence the agent relied on, the routing chain, and its re
 requires, derived from policy.
 
 **Audit Record** — an append-only, immutable fact about something that happened, sufficient to
-reconstruct who did what, when, on what basis, and under which policy. Audit is a product surface,
-not a log level.
+reconstruct who did what, when, on what basis, and under which Policy version. Audit is a product
+surface, not a log level.
 
 **Evidence Set** — the exact inputs an Agent relied upon when proposing an action: tool results,
 retrieved context, prior messages. Attached to Approval Requests so a human approves on the same

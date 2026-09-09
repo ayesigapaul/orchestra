@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.6.0
+version: 0.7.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -22,10 +22,53 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 - `10-architecture/` — C4 context and container views, control plane, data plane, connector,
   multi-tenancy, identity & access, deployment topologies
 - `30-protocol/` — event protocol, gateway API, UI protocol, JSON Schemas
-- `40-governance/` — policy model, approval workflows, tool authorization, audit model, threat model
 - `50-workflows/` — workflow DSL, step types, execution semantics, worked examples
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.7.0] — 2026-09-09
+
+Writes the governance section, and settles three questions it could not have been written honestly
+without.
+
+### Added
+
+- [ADR-0012](adr/adr-0012-policy-decisions-are-audit-records.md) — a Policy Decision is a class of
+  Audit Record, not a separate entity, and Policies are immutably versioned so a decision record
+  references a Policy version rather than embedding the rule text. A Run pins the Policy versions
+  in force at admission, so editing a Policy cannot change a verdict a Run in flight already
+  received — without which ADR-0008's in-flight pinning guarantee is hollow.
+- [ADR-0013](adr/adr-0013-fail-closed-policy-decision-writes.md) — a Policy Decision MUST be durable
+  before the gated action is attempted; other Audit Records MAY degrade, provided a degraded period
+  is recoverable from the trail rather than silent. Durable means surviving a crash, not reaching
+  the audit store: a local append replicated afterwards satisfies the rule and keeps the network
+  round-trip off the enforcement path. What is forbidden is proceeding first and writing later,
+  where a crash loses the record and nothing shows it is missing. Replication lag becomes a
+  governed property, since it bounds how current an audit query can be.
+- `scripts/open-questions.mjs` — reads every open-questions register and reports them in one view,
+  ADR-required first. The registers stay the single source; nothing is copied. `--check` fails when
+  a register defers to a document that neither exists nor appears in a section README's planned
+  list, and runs in CI: five questions were once deferred into documents that never received them.
+- `40-governance/policy-model.md`, `approval-workflows.md`, `tool-authorization.md`,
+  `audit-model.md` and `threat-model.md` — the normative governance specification. Every Step is
+  evaluated at a Policy Enforcement Point whatever its Side-Effect Class; the class is an input to
+  the Policy, not a precondition for evaluation. Tool Catalog registration and the capability grant
+  are inputs to the enforcement point rather than gates in front of it, and a failed precondition
+  yields a recorded `deny` that names no Policy.
+
+### Changed
+
+- `GLOSSARY.md` — the Policy Decision entry described the record model ADR-0012 rejected, and the
+  Audit Record entry now reads "under which Policy version". The glossary is the set's tie-breaker,
+  so leaving it stale would have made every document that followed ADR-0012 the defect.
+- `20-domain/domain-model.md` — `POLICY_DECISION` is drawn as a subtype of `AUDIT_RECORD` rather
+  than as an unconnected entity.
+- `20-domain/lifecycle-state-machines.md` — Evidence Set immutability is settled by
+  `approval-workflows.md` and leaves the register.
+- `CLAUDE.md` — the decision table carried only ADR-0001 to ADR-0010; ADR-0011, ADR-0012 and
+  ADR-0013 are Accepted and now appear in the file loaded into every session.
 
 ---
 
