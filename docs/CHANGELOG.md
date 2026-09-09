@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.7.0
+version: 0.8.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -19,12 +19,39 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 - `80-reference/` — MCP and LangGraph evaluations, prior-art survey
 
-- `10-architecture/` — C4 context and container views, control plane, data plane, connector,
-  multi-tenancy, identity & access, deployment topologies
+- `10-architecture/` — connector and deployment topologies, once ADR-0007 and the BYOK question
+  are settled
 - `30-protocol/` — event protocol, gateway API, UI protocol, JSON Schemas
 - `50-workflows/` — workflow DSL, step types, execution semantics, worked examples
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.8.0] — 2026-09-09
+
+### Added
+
+- `10-architecture/system-context.md`, `containers.md`, `control-plane.md`, `data-plane.md`,
+  `multi-tenancy.md` and `identity-and-access.md` — the six unblocked architecture views. The
+  Control Plane gets its own document for the first time; v0.1 omitted it entirely, and ADR-0003
+  calls it a first-class product surface. `multi-tenancy.md` turns ADR-0011 into an implementable
+  design: forced row-level security, tenant context safe under connection pooling, a CI control on
+  the tenant-scoped table set, and the promotion path that lets one Tenant move to a dedicated
+  database without a schema change.
+
+### Changed
+
+- `40-governance/threat-model.md` — the egress default-deny posture was stated as a normative MUST
+  and then, fourteen lines later, registered as undecided. Three architecture documents took the
+  second reading. The posture is derived here from the threat analysis and binds; only the shape of
+  the allow-list is open, and the register now says so rather than reopening the rule.
+- `40-governance/threat-model.md`, `policy-model.md` and `audit-model.md` — whether
+  platform-operator work crosses a Policy Enforcement Point was claimed settled in one document,
+  unmade in another, and routed in a circle between them. It is unmade, it is the same decision as
+  attribution rather than a second one, and `audit-model.md` owns both halves.
+- `20-domain/`, `40-governance/` — cross-references corrected where a document described a
+  sibling's state as it was during drafting rather than as it is.
 
 ---
 

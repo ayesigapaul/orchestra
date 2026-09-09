@@ -316,6 +316,13 @@ Invariant I2 admits no unattributed action, and
 [`../20-domain/domain-model.md`](../20-domain/domain-model.md) calls this the largest hole in its
 identity section. **This document owns it and does not close it.**
 
+It owns both halves, which were briefly separated and are not separable. Whether platform-operator
+work crosses a Policy Enforcement Point at all, or reaches only the datastore under ADR-0011, is the
+same decision as how it is attributed: attribution is exactly what an enforcement point would
+require, so an answer to either determines the other. [`policy-model.md`](policy-model.md) N2 blocks
+such a path meanwhile, and [`threat-model.md`](threat-model.md) B6 records the boundary as unmade in
+both respects.
+
 The class is larger than the two cases usually named. It covers approval expiry, if a deadline
 mechanism is adopted; platform-operator work — scheduled maintenance, support access, migration
 tooling; and every transition caused by elapsed time or an observed condition rather than by an act,
@@ -439,7 +446,7 @@ unreachable audit store does to a governed action.
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
 | The audit-retention period, and whether the rule is platform-wide, per Tenant or per record class | A customer contract forcing a regulatory floor; storage cost modelling once volume is observable. Policy Decision retention is not separate from it (section 11), and it now also fixes how long a Policy version lives, since ADR-0012 bounds that below by the records naming it | **Yes** — spans storage, erasure, the definition and Policy version lifecycles, metering and the contract |
-| How an action with no acting Principal is attributed — expiry, operator work, time-caused transitions | Section 9 lays out three options; the choice changes the identity model and the audit contract | **Yes** |
+| How an action with no acting Principal is attributed, and whether platform-operator work crosses a Policy Enforcement Point at all — one decision, not two | Section 9 lays out three options; the choice changes the identity model and the audit contract | **Yes** |
 | How erasure requests are satisfied against immutable Audit Records | ADR-0011's per-tenant erasure follow-on, with legal input | **Yes** |
 | Whether immutability is additionally cryptographic — hash chain, write-once storage, notarisation | A security review, and the datastore selection ADR-0011 constrains but does not make | **Yes** — it narrows the datastore choice |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand | A design-partner conversation; forwarding attaches an availability obligation to Orchestra | **Yes** |

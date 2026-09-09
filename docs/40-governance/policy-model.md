@@ -217,10 +217,11 @@ is adopted. Both are registered unmade in
 [`../20-domain/domain-model.md`](../20-domain/domain-model.md) and
 [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md), and are
 decided by [`audit-model.md`](audit-model.md). Until they are, no such path may be permitted through
-a PEP, because there is nothing to attribute the permission to. How much this blocks depends on a
-second unmade question: whether platform-operator work reaches a PEP at all, or reaches only the
-datastore under [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md). Section 9 carries
-that question too; neither is answered here.
+a PEP, because there is nothing to attribute the permission to. How much this blocks depends on whether
+platform-operator work reaches a PEP at all, or reaches only the datastore under
+[ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md). That is the same decision as
+attribution rather than a second one — attribution is precisely what an enforcement point would
+need — so [`audit-model.md`](audit-model.md) owns both, and neither is answered here.
 
 **N3 — Any input outside the table MUST be captured in the Policy Decision.** Wall-clock time,
 aggregate state such as a running total within a Run or a period, and any value fetched during
@@ -419,7 +420,6 @@ normative document suffices.
 | What a Policy Decision references for a Tool call inside an Agent Run | Document | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), or an ADR |
 | Whether a retried Step Execution is re-evaluated, and whether retry creates a new one | Document | The same document; blocked on domain model I4 |
 | What an evaluation failure records — a `deny`, or a Step Execution error | Document | Reliability model in [`../60-operations/`](../60-operations/). ADR-0013 already settles that the action MUST NOT proceed; only the record and the Run outcome are open |
-| Whether any platform-operator path crosses a PEP, or reaches only the datastore | Document | [`audit-model.md`](audit-model.md) and [`threat-model.md`](threat-model.md); it fixes how much N2 blocks |
 | Where evaluation executes — in-process at each PEP, or a separate component | Document | [`../10-architecture/`](../10-architecture/); an ADR if it constrains the datastore |
 | What satisfies an Approval Chain, and how it escalates and delegates | Document | [`approval-workflows.md`](approval-workflows.md) |
 | How a Policy Decision reaches a client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed** |
