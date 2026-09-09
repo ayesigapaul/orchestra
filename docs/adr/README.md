@@ -30,13 +30,13 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0001](adr-0001-product-shape-multi-tenant-saas.md) | Product shape: multi-tenant SaaS | Accepted | 2026-09-08 |
 | [0002](adr-0002-enterprise-segment-and-byok.md) | Enterprise segment with BYOK model credentials | Accepted | 2026-09-08 |
 | [0003](adr-0003-governance-layer-positioning.md) | Position Orchestra as a governance layer, not an agent framework | Accepted | 2026-09-08 |
-| [0004](adr-0004-adopt-ag-ui-event-protocol.md) | Adopt AG-UI as the client-facing event protocol | Proposed | 2026-09-08 |
+| [0004](adr-0004-adopt-ag-ui-event-protocol.md) | Adopt AG-UI as the internal event format behind an Orchestra profile | Proposed | 2026-09-09 |
 | [0005](adr-0005-langgraph-as-compilation-target.md) | LangGraph as a compilation target, not a public boundary | Accepted | 2026-09-08 |
 | [0006](adr-0006-model-layer-as-credential-broker.md) | Model layer is a credential and endpoint broker | Accepted | 2026-09-08 |
 | [0007](adr-0007-outbound-connector-for-enterprise-reachability.md) | Outbound connector for enterprise tool reachability | Proposed | 2026-09-08 |
 | [0008](adr-0008-declarative-workflow-definitions.md) | Customer-defined workflows as declarative definitions | Accepted | 2026-09-08 |
 | [0009](adr-0009-meter-first-defer-tiering.md) | Meter from day one, defer tiering | Accepted | 2026-09-08 |
-| [0010](adr-0010-a2ui-genui-interchange.md) | A2UI as the GenUI interchange format | Proposed | 2026-09-08 |
+| [0010](adr-0010-a2ui-genui-interchange.md) | A2UI as the GenUI interchange format | Proposed | 2026-09-09 |
 | [0011](adr-0011-tenant-isolation-shared-schema-rls.md) | Tenant isolation by shared schema with row-level security | Accepted | 2026-09-09 |
 
 ## Decision dependency graph
@@ -47,7 +47,7 @@ flowchart TD
   A2 --> A3["ADR-0003<br/>Governance layer"]
   A2 --> A6["ADR-0006<br/>Credential broker"]
   A2 --> A7["ADR-0007<br/>Outbound connector"]
-  A3 --> A4["ADR-0004<br/>Adopt AG-UI"]
+  A3 --> A4["ADR-0004<br/>AG-UI behind a profile"]
   A3 --> A8["ADR-0008<br/>Declarative workflows"]
   A3 --> A9["ADR-0009<br/>Meter first"]
   A5["ADR-0005<br/>LangGraph as target"] --> A8
