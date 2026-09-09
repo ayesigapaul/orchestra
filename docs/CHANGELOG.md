@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.4.0
+version: 0.5.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -26,6 +26,38 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
 - `80-reference/` — AG-UI, A2UI, MCP and LangGraph evaluations
+
+---
+
+## [0.5.0] — 2026-09-09
+
+Carries out the desk-checkable validation steps on the two protocol ADRs. Both remain Proposed;
+one changes its decision as a result.
+
+### Changed
+
+- [ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md) — the decision moves from adopting AG-UI
+  as the public client-facing contract to adopting it as the internal wire format behind an
+  Orchestra-versioned profile. Investigation established that no version of the specification has
+  ever been frozen, that the only published artefact disclaims compatibility and asks not to be
+  cited as a stable reference, and that governance is a single vendor with no foundation and no
+  proposal process. The ADR's own mitigation was to pin a version, and there is none to pin.
+  Three factual claims are corrected: the event count, the citation of a blog post as the event
+  reference, and — the material one — the claim that ordering and reconnection arrive with the
+  protocol. They do not; only state synchronisation does. Replay and resumption are Orchestra's to
+  build. The CopilotKit React bindings are no longer adopted: their public API exports a
+  LangGraph-specific hook and requires the tool-protocol SDK as a peer dependency, which is the
+  rail leak CLAUDE.md rule 2 and ADR-0005 exist to prevent, and they carry no accessibility
+  position. Orchestra consumes the AG-UI client library behind its own adapter instead.
+- [ADR-0010](adr/adr-0010-a2ui-genui-interchange.md) — validation steps 1 and 3 are answered and
+  the ADR's judgement is confirmed rather than assumed. A2UI is pre-1.0 with stability guarantees
+  scheduled into an unshipped 1.0 milestone. A first-party React renderer exists; there is no
+  React Native renderer and none planned. The allow-listed component registry the decision depends
+  on is genuinely supported, but is enforced in renderer code rather than by the specification, so
+  server-side catalog validation is now required. The risk table gains a single-vendor governance
+  row, and the revisit criterion is sharpened to the published stability guarantee rather than the
+  1.0 tag.
+- `README.md` and `CLAUDE.md` — the one-line summary of ADR-0004 follows the changed decision.
 
 ---
 

@@ -1,7 +1,7 @@
 ---
 title: Orchestra Documentation
 doc_id: DOC-000
-version: 0.4.0
+version: 0.5.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -112,7 +112,7 @@ implying consensus.
 
 ## 4. Status of this documentation set
 
-This set is at **v0.4.0** and is **pre-implementation**. It supersedes the single-file v0.1 vision
+This set is at **v0.5.0** and is **pre-implementation**. It supersedes the single-file v0.1 vision
 brief, retained at [`archive/vision-v0.1-2026-09-08.md`](archive/vision-v0.1-2026-09-08.md).
 
 Substantive changes from v0.1, each recorded as an ADR:
@@ -122,7 +122,7 @@ Substantive changes from v0.1, each recorded as an ADR:
 | Product shape fixed as multi-tenant SaaS | [ADR-0001](adr/adr-0001-product-shape-multi-tenant-saas.md) |
 | Target segment: enterprise, BYOK model credentials | [ADR-0002](adr/adr-0002-enterprise-segment-and-byok.md) |
 | Repositioned as governance layer, not agent framework | [ADR-0003](adr/adr-0003-governance-layer-positioning.md) |
-| Client event protocol: adopt AG-UI rather than author one | [ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md) |
+| Client event protocol: AG-UI internally, behind an Orchestra-versioned profile | [ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md) |
 | LangGraph confined behind a compilation boundary | [ADR-0005](adr/adr-0005-langgraph-as-compilation-target.md) |
 | Model layer reduced to a credential/endpoint broker | [ADR-0006](adr/adr-0006-model-layer-as-credential-broker.md) |
 | Enterprise reachability via outbound connector | [ADR-0007](adr/adr-0007-outbound-connector-for-enterprise-reachability.md) |

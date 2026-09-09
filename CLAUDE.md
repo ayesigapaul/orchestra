@@ -25,7 +25,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0001 | Multi-tenant SaaS; multi-tenancy is MVP, not Phase 3 | Accepted |
 | 0002 | Enterprise segment, BYOK model credentials | Accepted |
 | 0003 | Governance layer, not an agent framework | Accepted |
-| 0004 | Adopt AG-UI; do not author an event protocol | Proposed |
+| 0004 | AG-UI internally; the public contract is an Orchestra-versioned profile | Proposed |
 | 0005 | LangGraph is a compilation target, never a public boundary | Accepted |
 | 0006 | Model layer is a credential and endpoint broker, not a router | Accepted |
 | 0007 | Outbound connector for enterprise tool reachability | Proposed |
