@@ -64,7 +64,7 @@ flowchart LR
 | B3 | An outbound request to an endpoint a Platform User configured, carrying a BYOK credential | The destination is tenant-supplied input (ADR-0006) |
 | B4 | A Tool invocation and its arguments, composed by a model | Arguments are model-authored; the callee is outside Orchestra |
 | B5 | Tool results and retrieved content entering the model's context | **Unauthenticated by construction.** Nothing decides what an attacker may write here |
-| B6 | Operator access for support, migration and cross-tenant aggregation | Legitimate and cross-tenant by design. Scoping is settled: this is datastore access, not a governed execution path, because an operator path crossing a Policy Enforcement Point has no resolvable Principal and fails closed ([`policy-model.md`](policy-model.md) N2). How the access is *attributed* remains unmade and needs an ADR — [`audit-model.md`](audit-model.md) owns it |
+| B6 | Operator access for support, migration and cross-tenant aggregation | Legitimate and cross-tenant by design, and **unmade in both respects**. Whether operator work reaches a Policy Enforcement Point at all or only the datastore is undecided, and so is how it is attributed. The two are one decision: attribution is what an enforcement point would need, so answering either answers the other. [`audit-model.md`](audit-model.md) owns it and needs an ADR. Meanwhile [`policy-model.md`](policy-model.md) N2 blocks any such path through a PEP, because an unattributable permission has nothing to attribute to |
 
 B5 is the boundary the rest of this document turns on: every other one has a credential, a policy or
 an engine behind it, and B5 has bytes.
@@ -279,10 +279,11 @@ a redirect from an allowed host to a private one; and the same against a Tool or
 
 **Controls.**
 
-- Egress MUST default to deny: the reachable set is an allow-list, not a block-list. This is the
-  posture the analysis above forces, not one an ADR has taken — ADR-0001's deny-by-default governs
-  authorization rather than network reachability, and the only egress allow-list written down
-  anywhere is the Connector's, under **Proposed** ADR-0007.
+- Egress MUST default to deny: the reachable set is an allow-list, not a block-list. This section
+  is normative and this requirement is derived here, from the analysis above, rather than inherited:
+  ADR-0001's deny-by-default governs authorization rather than network reachability. A
+  customer-configurable endpoint is an SSRF primitive by construction, and a block-list cannot
+  enumerate what it has not seen. The posture binds; its shape does not yet exist.
 - Every outbound request made on tenant-supplied input MUST have its destination resolved and
   validated **at connection time**, not only at configuration time, and MUST be re-validated on
   every redirect. Cloud instance metadata endpoints MUST be unreachable from any component making
@@ -293,9 +294,9 @@ a redirect from an allowed host to a private one; and the same against a Tool or
   back silently to a default endpoint. A response from a tenant-configured endpoint is untrusted
   content and is subject to T1.
 - The **shape** of the allow-list is **not decided** — per tenant or platform-wide, hostnames or
-  address ranges, in the application or by an egress proxy identity — and neither is the posture
-  itself. Both span the model broker, Tool invocation and the connector, so they need one ADR
-  between them, taken together.
+  address ranges, in the application or by an egress proxy identity. The posture above is settled;
+  only its shape is open. It spans the model broker, Tool invocation and the connector, so it needs
+  one ADR covering all three rather than three local answers.
 
 **Residual risk.** A customer's internal gateway is, by intent, an internal address, and Orchestra
 cannot distinguish "the tenant's own gateway" from "an internal address this configurer should not
@@ -421,7 +422,7 @@ classification is the one repeated here.
 | What happens when registered Tool metadata diverges from what the origin now serves — a precedence rule between registered and served metadata | [`tool-authorization.md`](tool-authorization.md), with the Tool registration specification in [`../10-architecture/`](../10-architecture/) | Later document |
 | Whether a Tool is invoked with the Agent's authority or with a delegated End User identity | [`tool-authorization.md`](tool-authorization.md) | **ADR required** — spans identity, connector and the origin contract |
 | Whether an immediately effective revocation path exists for a capability grant, and whether it overrides a Run's pinned version | [`tool-authorization.md`](tool-authorization.md), with the incident-response requirements this document does not carry | **ADR required** — that document's classification; it is what an incident response asks first |
-| Whether egress is default-deny, and the shape and scope of the allow-list | Connector and model-broker designs in [`../10-architecture/`](../10-architecture/) | **ADR required** — spans model broker, Tool invocation and connector |
+| The shape and scope of the egress allow-list; the default-deny posture is settled normatively in section 10 and is not reopened here | Connector and model-broker designs in [`../10-architecture/`](../10-architecture/) | **ADR required** for the shape — it spans model broker, Tool invocation and connector |
 | Which stores exist outside the row-level-secured datastore, and how each is tenant-scoped and CI-checked | `multi-tenancy.md` in [`../10-architecture/`](../10-architecture/) | Later document |
 | How platform-operator action is attributed under invariant I2, and how operator cross-tenant access is authorised and audited | [`audit-model.md`](audit-model.md), with this document | **ADR required** — [`audit-model.md`](audit-model.md) section 13's classification; it changes the identity model and the audit contract |
 | Whether per-tenant keys extend beyond credentials to data at rest | Left open by ADR-0011 | **ADR required** — key hierarchy and data model, expensive to reverse |
