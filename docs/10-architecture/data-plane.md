@@ -44,7 +44,7 @@ open.
 
 | Component | Responsibility | Grounding |
 | --- | --- | --- |
-| **Gateway** | The plane's only ingress. Resolves a Session Token to a Principal and a Tenant, admits Runs, terminates the Run event stream. | `gateway-api.md` and `event-protocol.md` in [`../30-protocol/`](../30-protocol/) |
+| **Gateway** | The plane's only ingress. Authenticates the calling Principal by any credential the Gateway contract accepts, resolving it to exactly one Principal and one Tenant; admits Runs; terminates the Run event stream. | `gateway-api.md` and `event-protocol.md` in [`../30-protocol/`](../30-protocol/) |
 | **Runtime** | Executes the compiled artifact. Supplies durability, checkpointing, interrupts and resumption. | [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md), [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md) |
 | **Policy Enforcement Points** | Not a component — places in the path where policy is evaluated and enforced. Whether the evaluator is a component of its own is open; section 5. | [`policy-model.md`](../40-governance/policy-model.md) E1 |
 | **Durable decision write** | Whatever carries a Policy Decision across a crash ahead of the gated action. [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) fixes the requirement and leaves the mechanism open — a shared transaction with the datastore, a durable outbox, or a node-local append all satisfy it. It is drawn below as a participant because the write is on the path, not because its shape is decided. | [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) |

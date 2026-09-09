@@ -1,9 +1,9 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.8.0
+version: 0.9.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-10
 owners: [platform-architecture]
 ---
 
@@ -21,10 +21,41 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 - `10-architecture/` — connector and deployment topologies, once ADR-0007 and the BYOK question
   are settled
-- `30-protocol/` — event protocol, gateway API, UI protocol, JSON Schemas
+- `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
 - `50-workflows/` — workflow DSL, step types, execution semantics, worked examples
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.9.0] — 2026-09-10
+
+### Added
+
+- `30-protocol/event-protocol.md`, `gateway-api.md` and `ui-protocol.md` — the normative wire
+  contracts. The event document is written as the Orchestra Agent Event Profile: Orchestra's
+  artefact, Orchestra's version, Orchestra's compatibility promise, pinning an upstream commit and
+  re-exporting none of it. Ordering and replay are specified as built rather than inherited, because
+  the upstream format supplies neither.
+
+### Changed
+
+- `GLOSSARY.md` and `VERSIONING.md` — both still said Orchestra adopts the upstream format as its
+  client-facing protocol, stating a **Proposed** decision as settled and making an upstream artefact
+  the definition of Orchestra's own wire term. ADR-0004's revision had reached the ADR set and the
+  overview but not these two, which everything else cites. The Agent Event is now defined by the
+  profile.
+- `VERSIONING.md` section 5 — stream resumption was inclusive of the `seq` a client names, which
+  redelivers one event on every resumption. `Last-Event-ID` names what the client already has, so
+  replay begins after it. Three documents had stated this two different ways and a conformance suite
+  can only test one.
+- `40-governance/audit-model.md` — the audit ordering key is independent of the event stream's
+  sequence, which `event-protocol.md` settles: Audit Records exist for actions belonging to no Run,
+  and a decision record precedes the action while its event follows. A7 also sourced a normative
+  requirement to a Proposed ADR, which cannot carry one.
+- `10-architecture/data-plane.md` — the Gateway authenticates any credential its contract accepts,
+  not only a Session Token. A Platform User holds none, and the approval surface is shown to a
+  Platform User, so the Session-Token-only reading left the first slice's surface undeliverable.
 
 ---
 

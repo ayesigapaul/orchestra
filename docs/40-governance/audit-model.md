@@ -117,9 +117,14 @@ availability bounds the availability of every governed action.
 
 **A7 — Deterministic order.** Reconstruction requires order, and wall-clock timestamps MUST NOT be
 the sole basis for it: clocks skew across the components that write records. Records within a Run
-MUST carry a deterministic ordering key. ADR-0004 — **Proposed** — already requires a per-run
-monotonic sequence and a server-assigned event identifier on the event stream; whether audit reuses
-that key or carries its own is not decided.
+MUST carry a deterministic ordering key, and it is **independent of the event stream's `seq`**.
+[`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md) section 10 settles this, and
+the reason is structural rather than stylistic: Audit Records exist for actions that belong to no
+Run and therefore have no `seq`, and A6 puts the record ahead of the gated action while the
+corresponding event is emitted after it. An Audit Record MAY carry the event's identifier as a
+correlation value; it MUST NOT use it as the ordering key. The per-run sequence itself is required
+by [`../VERSIONING.md`](../VERSIONING.md) section 5 and the Agent Event Profile, not by ADR-0004,
+which is Proposed and cannot carry a normative requirement.
 
 **A8 — No rail in the audit contract.** Per CLAUDE.md working rule 2 and
 [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md), the orchestration runtime's, a model
@@ -456,6 +461,5 @@ unreachable audit store does to a governed action.
 | Export format, schema, transport and completeness proof | A later governance or protocol document, once the forwarding question above is settled | No |
 | Whether a discarded `Draft` definition version's content is retained | The retention decision above. The discard is audited under A2 regardless, and no Run ever pinned a Draft, so no reconstruction depends on its content; only whether rejected content is itself evidence is in question | No — a later document, once retention exists |
 | Whether Connector health transitions are Audit Records or telemetry | The section 10 tension between the actor test and ADR-0009's reconciliation requirement; `connector.md` in [`../10-architecture/`](../10-architecture/) with `observability.md` in [`../60-operations/`](../60-operations/) | No — but it MUST be settled before the metered dimension ships |
-| Whether the audit ordering key is the event protocol's sequence number or an independent one | `event-protocol.md` in [`../30-protocol/`](../30-protocol/), and ADR-0004 is still **Proposed** | No |
 | Who within a Tenant may read audit, and who may read an Evidence Set | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | No |
 | The audit grain of a Tool call inside an Agent Run | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) — the gap `domain-model.md` section 4 registers | No — but neither audit nor metering can be applied retroactively |
