@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.5.0
+version: 0.6.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -17,15 +17,38 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 ### Planned
 
+- `80-reference/` — MCP and LangGraph evaluations, prior-art survey
+
 - `10-architecture/` — C4 context and container views, control plane, data plane, connector,
   multi-tenancy, identity & access, deployment topologies
-- `20-domain/` — domain model with ERD, entity lifecycle state machines
 - `30-protocol/` — event protocol, gateway API, UI protocol, JSON Schemas
 - `40-governance/` — policy model, approval workflows, tool authorization, audit model, threat model
 - `50-workflows/` — workflow DSL, step types, execution semantics, worked examples
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
-- `80-reference/` — AG-UI, A2UI, MCP and LangGraph evaluations
+
+---
+
+## [0.6.0] — 2026-09-09
+
+### Added
+
+- `20-domain/domain-model.md` — the entities, their relationships and cardinality, stated as
+  numbered invariants. Records the Tenant, Workspace, Principal, Platform User, End User and
+  Service Account entities that ADR-0009 said the domain model must gain and that no document had
+  yet received. Fixes the two points easiest to invert: Step Execution rather than the Run is the
+  unit of idempotency, retry and compensation, and a Run pins its definition version for life.
+- `20-domain/lifecycle-state-machines.md` — states and transitions for Run, Approval Request,
+  Workflow version and Connector, with an open-questions register naming what decides each
+  undecided transition rather than inventing one.
+- `80-reference/ag-ui-evaluation.md` and `80-reference/a2ui-evaluation.md` — the evidence behind
+  ADR-0004 and ADR-0010, with a source for every claim and an explicit record of the claims an
+  adversarial verification pass overturned. Written so the reasoning survives independently of the
+  decision records, and so a revisit can tell what has changed since.
+
+### Changed
+
+- `20-domain/README.md` and `80-reference/README.md` — indexes rather than scaffold notices.
 
 ---
 
