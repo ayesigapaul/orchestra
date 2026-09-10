@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-10
 owners: [platform-architecture]
@@ -19,12 +19,47 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 - `80-reference/` — MCP and LangGraph evaluations, prior-art survey
 
-- `10-architecture/` — connector and deployment topologies, once ADR-0007 and the BYOK question
-  are settled
 - `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.12.0] — 2026-09-10
+
+Completes the architecture section at eight documents. The last two were held back while everything
+else was written, because both depend on design-partner conversations that have not happened. They
+are written against an assumed partner profile, at the repository owner's direction, for
+demonstration purposes — which unblocks the writing and validates nothing. ADR-0007 remains
+**Proposed**.
+
+### Added
+
+- `10-architecture/connector.md` — the transport seam, the connector as a product rather than a
+  library, and permanent version skew. From section 3 onward the document is conditional on ADR-0007
+  binding, and if that ADR is rejected those sections leave the specification.
+- `10-architecture/deployment-topologies.md` — hosted, which ADR-0001 decides and which is not in
+  question, and the hybrid variant, which exists only if BYOK turns out to mean data non-egress.
+
+### Changed
+
+- `40-governance/tool-authorization.md` — `threat-model.md` T7 is normative and requires the
+  Connector to enforce a local Tool allow-list, while this document still said ADR-0007 "does not
+  decide that such a list exists" and hedged the double-enforcement argument. Two normative
+  documents said both MUST and undecided about the customer's last control against a compromised
+  Control Plane. Existence is settled while ADR-0007 stands; only divergence and read access remain
+  open.
+- Both new documents originally disagreed about what a data-non-egress reading implies. Proxying
+  model traffic through the Connector addresses *credential* egress, which is the benefit ADR-0007
+  names; the prompt, tool arguments and results still transit Orchestra infrastructure. So
+  non-egress does not promote that proxy to a requirement — the hybrid topology makes it redundant.
+- `10-architecture/deployment-topologies.md` had recorded an unreachable policy evaluator as a
+  refusal. `reliability.md` F10 decides otherwise: it is a contained fault, never a recorded `deny`,
+  because counting outages as governance refusals inflates a figure ADR-0009 meters.
+- The claim that hybrid keeps model traffic inside the customer's estate was false. ADR-0002 names
+  Azure OpenAI, AWS Bedrock and the Anthropic API as MVP deployment surfaces, all public endpoints
+  whichever plane invokes them. Hybrid means the traffic never transits *Orchestra's* infrastructure.
 
 ---
 

@@ -253,8 +253,12 @@ audit, and is expensive to reverse once tokens are minted one way. It needs an A
 > keeping reachability on an axis of its own.
 
 ADR-0007 lists tool allow-listing at the connector among the controls its own threat model must
-carry. It does not decide that such a list exists. If the connector carries one, authorization is
-enforced twice on this path: at Orchestra's enforcement point, and at the customer's connector.
+carry, and [`threat-model.md`](threat-model.md) T7 makes it normative: the Connector MUST enforce a
+local Tool allow-list. That requirement is conditional on ADR-0007 binding and void with it, like
+the rest of this section — but its existence is not in question while the ADR stands. Authorization
+is therefore enforced twice on this path: at Orchestra's enforcement point, and at the customer's
+connector. The duplication is deliberate rather than redundant, because the second enforcement is
+the customer's own control and survives a compromise of the first.
 
 **That would be deliberate, and it would not be redundancy.** The two lists sit in different trust
 domains, are authored by different parties, and change under different control. The connector's
@@ -362,6 +366,6 @@ ADR, because it is costly to reverse or spans components, or whether a later doc
 | What a Run does after a mid-Run `deny` at a Tool enforcement point, which the Run state machine has no transition for | [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2 with `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), aligned with [`policy-model.md`](policy-model.md) rule V1, which owns it | **ADR** |
 | Whether a registered Tool's Side-Effect Class may be changed once grants exist | The Control Plane specification, with [`audit-model.md`](audit-model.md) | Later document |
 | What happens to grants and to Runs in flight when a Tool is de-registered | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) | Later document |
-| Whether a Connector carries a tool allow-list at all, and divergence from Orchestra's grants: detection, reporting, precedence | `connector.md` in [`../10-architecture/`](../10-architecture/), after ADR-0007 binds | Later document |
+| Divergence between the Connector's local allow-list and Orchestra's grants: detection, reporting, and whether Orchestra may read the list at all. Existence is settled by [`threat-model.md`](threat-model.md) T7 and precedence by TA17 | `connector.md` in [`../10-architecture/`](../10-architecture/), after ADR-0007 binds | Later document |
 | Whether a refused invocation is metered as a Tool invocation | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/) | Later document |
 | How platform-operator invocation of a Tool is attributed under invariant I2, given that [`policy-model.md`](policy-model.md) rule N2 blocks such a path until it is | [`audit-model.md`](audit-model.md), which already owns the general case | **ADR** |
