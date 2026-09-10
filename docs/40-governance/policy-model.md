@@ -116,6 +116,19 @@ acting Principals. An implementation MUST NOT rewrite the Policy Decision to `al
 request is approved. Audit must distinguish an action permitted by rule from one permitted by a
 human, and collapsing the two destroys the fact a reviewer came for.
 
+**V4 — At the boundary of an `approval` Step the verdict set narrows to `require_approval` and
+`deny`.** An implementation MUST NOT return `allow` there. The Step type declares that a gate belongs
+at this point in the process; Policy decides the Approval Chain, the routing and the approvers, and
+whether the action is refused outright — it does not decide whether the gate exists. A step type
+whose gate a non-matching Policy silently removes is not a type, it is a comment, and an author who
+placed it there would have no way to tell the difference until an audit.
+
+This is the only place the verdict set is narrowed, and it is narrowed in the conservative
+direction: more gates, never fewer. The argument is set out in
+[`../50-workflows/step-types.md`](../50-workflows/step-types.md) section 7, which cites this rule
+rather than asserting it — a constraint on verdicts belongs to this document, and a rule stated only
+in a non-normative section binds nothing.
+
 ## 3. Where Policy Enforcement Points sit
 
 A **Policy Enforcement Point** is a place in the execution path, not a record
@@ -418,7 +431,6 @@ normative document suffices.
 | How a rule discriminating on a model-authored argument selects the restrictive branch on an unverifiable value | Document | Inseparable from the language decision; assigned here by [`threat-model.md`](threat-model.md) section 14. See S2 |
 | Whether the Step-boundary and Tool PEPs collapse into one evaluation for a `tool` Step | Document | A later revision of this document, with [`../50-workflows/`](../50-workflows/) |
 | What a Policy Decision references for a Tool call inside an Agent Run | Document | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), or an ADR |
-| Whether a retried Step Execution is re-evaluated, and whether retry creates a new one | Document | The same document; blocked on domain model I4 |
 | What an evaluation failure records — a `deny`, or a Step Execution error | Document | Reliability model in [`../60-operations/`](../60-operations/). ADR-0013 already settles that the action MUST NOT proceed; only the record and the Run outcome are open |
 | Where evaluation executes — in-process at each PEP, or a separate component | Document | [`../10-architecture/`](../10-architecture/); an ADR if it constrains the datastore |
 | What satisfies an Approval Chain, and how it escalates and delegates | Document | [`approval-workflows.md`](approval-workflows.md) |

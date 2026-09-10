@@ -169,17 +169,20 @@ erDiagram
   AGENT ||--o{ CONVERSATION : "answers in"
 ```
 
-**The open question here is what a Tool call inside an Agent Run keys on.** A Step is a node in a
-Workflow, so a Run of an Agent — where the model chooses the sequence at runtime — has no Steps. Yet
-I4 makes Step Execution the unit of idempotency, retry and compensation, and ADR-0009 meters Tool
-invocations at that grain. Two answers are available: compile an Agent Run so each Tool call is a
-Step Execution against a synthesised Step, or introduce a second execution record for the agentic
-case. **Neither is decided.** The planned `execution-semantics.md` in
-[`../50-workflows/`](../50-workflows/) decides it, or an ADR if the choice proves costly to reverse.
-Until then the compensation and metering guarantees are exact for Workflow Runs and undefined for
-Agent Runs, which is the most consequential gap in this document. Whether a retry produces a new Step
-Execution or updates the existing one belongs to the same document; the cardinality above admits
-both.
+**A Tool call inside an Agent Run is not a Step Execution.** A Step is a node in a Workflow, so a
+Run of an Agent — where the model chooses the sequence at runtime — has no Steps, no Step boundaries
+and therefore no Step Executions. That is settled:
+[`../40-governance/policy-model.md`](../40-governance/policy-model.md) E4 is normative, and
+[`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) states the same.
+
+What holds instead: the Tool enforcement point governs every Tool invocation in an Agent Run, E4
+makes it non-optional there, and the invocation is itself the anchor for idempotency and
+compensation — CLAUDE.md rule 6 holds everywhere, so a partially executed tool call is never blindly
+retried whatever the Run's shape.
+
+What remains open is narrower than it looks: what that anchor is *called*, and what its Policy
+Decision, Audit Record and meter record key on. Until that is named, the compensation and metering
+guarantees are exact for Workflow Runs and unnamed rather than undefined for Agent Runs.
 
 ## 5. Capability and connectivity
 
@@ -382,7 +385,7 @@ that question should be settled early rather than left to implementation.
 | --- | --- | --- |
 | Attributes, keys, indexes, partitioning | The schema work that follows a datastore decision | No |
 | The datastore engine | An architecture decision, constrained by ADR-0011 to one enforcing row-level security | **Yes** — ADR-0011 constrains the choice but does not make it |
-| Whether a Tool call in an Agent Run is a Step Execution, and whether a retry creates a new one | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) | No — but neither compensation nor metering can be applied retroactively |
+| What a Tool invocation in an Agent Run is called, and what its Policy Decision, Audit Record and meter record key on | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) section 11, with `audit-model.md` | No — but neither compensation nor metering can be applied retroactively |
 | How platform operator action is attributed under I2 | The audit and threat models in [`../40-governance/`](../40-governance/) | **Yes** — it changes the identity model and the audit contract |
 | Whether a cross-tenant person record exists, and how a Service Account authenticates | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | No |
 | Whether a Conversation may span Agents | A product decision, not yet taken | No |

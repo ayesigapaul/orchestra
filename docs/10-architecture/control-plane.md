@@ -141,8 +141,9 @@ registered **ADR** in [`data-plane.md`](data-plane.md) section 11 and
 Three consequences land here. **"What is live" has no single answer**, because a superseded version
 still governs every Run pinned to it, so the surface shows a set of versions and their in-flight
 populations. **A Retired version can stay undrainable indefinitely**, since a Run can suspend at an
-approval for an unbounded time; whether a force-drain exists is undecided, owned by
-`execution-semantics.md` in [`../50-workflows/`](../50-workflows/). And **two staleness signals are
+approval for an unbounded time; a force-drain is cancellation of every Run pinned to the
+version and nothing else, settled by `execution-semantics.md` X6 in
+[`../50-workflows/`](../50-workflows/). And **two staleness signals are
 assigned here by name** — a Tool's MAJOR schema bump surfaces as a control-plane warning
 ([VERSIONING](../VERSIONING.md) W5), and a Connector below the minimum supported protocol version
 raises a control-plane alert (section 9 there).

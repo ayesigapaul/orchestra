@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-10
 owners: [platform-architecture]
@@ -22,9 +22,39 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 - `10-architecture/` — connector and deployment topologies, once ADR-0007 and the BYOK question
   are settled
 - `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
-- `50-workflows/` — workflow DSL, step types, execution semantics, worked examples
+- `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/` — observability, reliability, quotas & metering
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.10.0] — 2026-09-10
+
+### Added
+
+- `50-workflows/workflow-dsl.md`, `step-types.md` and `execution-semantics.md` — the definition
+  language, the eight step types and the execution semantics. The language is a permanent public
+  contract even though the section is not normative, because W1 freezes a published version and R3
+  makes the contract additive-only.
+- `40-governance/policy-model.md` gains **V4**: at the boundary of
+  an `approval` Step the verdict set narrows to `require_approval` and `deny`, and `allow` MUST NOT
+  be returned. The Step declares that a gate belongs there; Policy decides the chain, not whether
+  the gate exists. The rule had first been written in the workflows section, where it bound
+  nothing — a constraint on verdicts belongs to the document that owns them.
+
+### Changed
+
+- `50-workflows/workflow-dsl.md` — a cyclic graph is rejected at compile time until an ADR admits
+  one. Leaving it unchecked would not have been neutral: it decides the question permissively, W1
+  then freezes every definition written under it, and admitting cycles later is MINOR while
+  withdrawing them is MAJOR. The language admits no iteration in the interim.
+- `20-domain/domain-model.md` — a Tool call in an Agent Run is not a Step Execution. A Step is a
+  node in a Workflow, so an Agent Run has none; the Tool enforcement point governs the invocation
+  and the invocation is itself the idempotency and compensation anchor. What remains open is only
+  what that anchor is called and what its records key on.
+- `20-domain/lifecycle-state-machines.md`, `10-architecture/control-plane.md` — a force-drain is
+  cancellation of every Run pinned to a version and nothing else, settled by `execution-semantics.md`.
+  Both had registered it as undecided.
 
 ---
 
