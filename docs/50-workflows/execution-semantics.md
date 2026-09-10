@@ -1,7 +1,7 @@
 ---
 title: Execution Semantics
 doc_id: DOC-063
-version: 0.10.0
+version: 0.10.1
 status: Draft
 last_updated: 2026-09-10
 owners: [platform-architecture]
@@ -189,7 +189,7 @@ retryable:
 
 | Position | Example | Permitted response |
 | --- | --- | --- |
-| The attempt provably never left Orchestra | An enforcement point denied it; a model call failed inside the plane | Retry, where the owning component holds retry — the Model Broker does, Tool Invocation does not ([`data-plane.md`](../10-architecture/data-plane.md) section 9) |
+| The attempt provably never left Orchestra | An enforcement point denied it; a model call failed inside the plane; a connector observed unreachable before the invocation was dispatched (`reliability.md` F20) | Retry, where the owning component holds retry — the Model Broker does, Tool Invocation does not ([`data-plane.md`](../10-architecture/data-plane.md) section 9) |
 | It left Orchestra and the outcome is unknown | A timeout, a dropped tunnel, a connector refusal (`tool-authorization.md` TA18) | **No retry.** Unknown is not the same as not done |
 | It completed and something later failed | A payment succeeded, the next Step Execution failed | Compensation (section 6), never retry |
 
@@ -495,7 +495,7 @@ governance refusal recorded as a fault — and ADR-0009 makes it billing-adjacen
 | Expired gate | Nobody decided; no human declined | No | Re-raise undecided | `approval-workflows.md` section 7; attribution in `audit-model.md` section 9 |
 | Quota wait | The customer's own provider capacity, scheduled around | **Not a failure at all** | Not applicable — nothing failed | [ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md); `quotas-and-metering.md` |
 | Model failure | A fault inside the plane, no external effect | Yes | Yes — the Model Broker owns retry and ordered fallback | ADR-0006; `reliability.md` |
-| Tool failure | A fault outside the plane, possibly a side effect | Yes | **No** — X9 position two or three | `reliability.md`; compensation in section 6 |
+| Tool failure | A fault outside the plane, possibly a side effect | Yes | **By position (X9), never blanket** — positions two and three admit none at all; position one is safe to attempt, but no component holds retry for a Tool invocation | `reliability.md` F19 and F20; compensation in section 6 |
 
 Two distinctions carry the table. **A quota wait is not a failure**: a waiting Run is still
 `Running`, and the Quota Envelope is capacity rather than a verdict — no Policy Decision, nothing
@@ -504,12 +504,30 @@ caller is registered against `quotas-and-metering.md`, repeated not revised. And
 is retryable while a tool failure is not** (X9): CLAUDE.md working rule 6, ADR-0006's fallback
 constraint and ADR-0008's prohibition on blind retry state one rule three times.
 
+**The tool half of that asymmetry turns on who holds retry, not only on where the fault sits.** A
+failed model call is X9 position one *and* has a component that attempts it again — the Model
+Broker, under ADR-0006. A tool fault reaches position one too: a connector observed unreachable
+before the invocation is dispatched left nothing outside Orchestra, which is why
+[`gateway-api.md`](../30-protocol/gateway-api.md) section 7 rates an unreachable connector *safe or
+indeterminate* rather than always indeterminate, and why `reliability.md` F20 places the condition
+by dispatch rather than by connector state — both resting on
+[ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed**. It is
+still not a retry: no component holds retry for a Tool invocation (X9,
+[`data-plane.md`](../10-architecture/data-plane.md) section 9), so the fault fails the Step
+Execution that carried it (`reliability.md` F19) instead of being attempted again inside Orchestra,
+and any later invocation of the same Tool is a fresh act crossing the enforcement point again (X12),
+never another attempt at the one that failed. Positions two and three admit nothing whatever, and
+X9's caveat holds throughout: the transport signal is never the evidence that nothing left —
+dispatch is, and a refusal or a drop mid-call is unknown rather than not-done
+(`tool-authorization.md` TA18).
+
 **Where the taxonomy is owned.** Not here. The fault half belongs to `reliability.md` in
-[`../60-operations/`](../60-operations/), planned there as *failure taxonomy including connector
-and quota conditions*; the refusal half needs a Run outcome dimension that does not exist and lands
-in the ADR sections 6.2, 7 and 8 converge on. What this document fixes is that the six MUST stay
-distinguishable in the audit trail, in the metered outcome and to the caller — three surfaces, one
-enumeration, not addable retroactively.
+[`../60-operations/`](../60-operations/), which carries the failure taxonomy including connector and
+quota conditions and cuts faults operationally into four classes — refusal, wait, fault, degradation
+— a coarsening that classifies a condition and does not replace these six; the refusal half needs a
+Run outcome dimension that does not exist and lands in the ADR sections 6.2, 7 and 8 converge on.
+What this document fixes is that the six MUST stay distinguishable in the audit trail, in the
+metered outcome and to the caller — three surfaces, one enumeration, not addable retroactively.
 
 ## 11. Open questions
 

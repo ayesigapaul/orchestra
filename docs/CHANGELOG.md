@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-10
 owners: [platform-architecture]
@@ -23,8 +23,37 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
   are settled
 - `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
-- `60-operations/` — observability, reliability, quotas & metering
+- `60-operations/runbooks/` — operational procedures, once there is something to operate
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.11.0] — 2026-09-10
+
+### Added
+
+- `60-operations/observability.md`, `reliability.md` and `quotas-and-metering.md` — what is
+  observable, how the platform fails, and what is counted. No service-level objective, error budget,
+  latency target, alert threshold, retention period, price, tier or seat cost appears in any of
+  them, because none is decided; where a figure is load-bearing the documents say what bounds it and
+  register the question.
+
+### Changed
+
+- `60-operations/reliability.md` F11 had placed a failed Policy Decision write inside the degradable
+  record class. ADR-0013 makes the classification a property of the record class rather than a
+  runtime choice and rates that reclassification an existential risk. Both evaluation failure and
+  decision-write failure are halts; an audit-store outage opens a degraded period concurrently, for
+  the second class buffering behind it, and that period is bracketed while the decision write is
+  not.
+- The degraded-period signal is specified once, by `reliability.md`, which ADR-0013 and
+  `audit-model.md` A6 name as its owner. `observability.md` had claimed the specification as well
+  and defined it differently; it now specifies only how the signal is surfaced and read.
+- `60-operations/quotas-and-metering.md` recorded a Tool invocation refused at the Connector as not
+  metered, on the grounds that the origin was never called. `tool-authorization.md` TA18 is
+  normative and puts a connector refusal or a mid-call tunnel drop in an unknown state, which is
+  precisely why neither may be retried blindly — so the claim cannot be made. A refusal resolved
+  before dispatch is not metered; the connector case waits on TA18 separating the two.
 
 ---
 

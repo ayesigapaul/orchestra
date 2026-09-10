@@ -107,8 +107,11 @@ class rather than treating audit as one undifferentiated thing.
   permission is not an instruction: a degraded write is still a write, and a record never written is
   a gap rather than a saving.
 - A degraded period MUST be recoverable from the trail, so that a gap is attributable rather than
-  silent. `reliability.md` in [`../60-operations/`](../60-operations/) owns the failure taxonomy and
-  the signals that make one visible.
+  silent. It brackets the degradable class only: a Policy Decision that cannot be written halts the
+  gated action under the first bullet rather than opening one, though the same audit store outage
+  will usually open a period concurrently for the records buffering behind it. `reliability.md` in
+  [`../60-operations/`](../60-operations/) owns the failure taxonomy and the signals that make one
+  visible.
 - The class is a property of the record, not a runtime choice. An implementation MUST NOT reclassify
   a Policy Decision as degradable under load.
 
@@ -456,7 +459,7 @@ unreachable audit store does to a governed action.
 | Whether immutability is additionally cryptographic — hash chain, write-once storage, notarisation | A security review, and the datastore selection ADR-0011 constrains but does not make | **Yes** — it narrows the datastore choice |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand | A design-partner conversation; forwarding attaches an availability obligation to Orchestra | **Yes** |
 | Whether a record ever carries an acted-for Principal alongside the acting one | The delegation, escalation and reassignment decision [`approval-workflows.md`](approval-workflows.md) owns; A3 holds on any answer, since the record names whoever acted | **Yes** — classified as its owning document classifies it |
-| How a degraded period is represented and signalled, for the writes ADR-0013 permits to degrade | ADR-0013 settles the split and requires that a gap be attributable rather than silent; `reliability.md` in [`../60-operations/`](../60-operations/) owns the failure taxonomy and the signals | No |
+| How a degraded period is represented and signalled, for the writes ADR-0013 permits to degrade | ADR-0013 settles the split and requires that a gap be attributable rather than silent; `reliability.md` in [`../60-operations/`](../60-operations/) owns the failure taxonomy and the signals, and hands one part back — whether the bracket marking such a period is itself an Audit Record class, which section 3's enumeration decides | No |
 | What value identifies a metered occurrence across the audit and metering stores, and whether it is also the meter idempotency key | The metering design with `event-protocol.md` in [`../30-protocol/`](../30-protocol/); ADR-0009 requires the reconciliation but names no such value | No |
 | Export format, schema, transport and completeness proof | A later governance or protocol document, once the forwarding question above is settled | No |
 | Whether a discarded `Draft` definition version's content is retained | The retention decision above. The discard is audited under A2 regardless, and no Run ever pinned a Draft, so no reconstruction depends on its content; only whether rejected content is itself evidence is in question | No — a later document, once retention exists |
