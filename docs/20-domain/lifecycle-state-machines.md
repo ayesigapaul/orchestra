@@ -237,11 +237,12 @@ version. Runs already pinned are unaffected.
 **`Retired → Archived` is not an administrative act** but an observed condition — the last Run
 pinned to the version reached a terminal state. That couples the version lifecycle to the Run
 lifecycle, with an uncomfortable consequence: because a Run can suspend on an approval for days, a
-Retired version can stay undrainable for an unbounded period. **No force-drain mechanism is
-decided.** W3 forbids *migrating* in-flight executions, not ending them, so a force-drain would have
-to cancel Runs pinned to a Retired version rather than move them. Whether that is acceptable is
-undecided.
-`50-workflows/execution-semantics.md` decides it.
+Retired version can stay undrainable for an unbounded period. **A force-drain is cancellation of
+every Run pinned to the version, and nothing else** — settled by
+`50-workflows/execution-semantics.md` X6. W3 forbids *migrating* in-flight executions, not ending
+them, so a drain cancels rather than moves; it decomposes into individually audited cancellations,
+and it may not be paired with re-submission on a newer version, which would be migration wearing
+another name.
 
 **Archived is retention-bound, not dead:** the definition is retained for the full audit-retention
 period, because an audit must reconstruct the exact process a decision followed. **No retention
@@ -345,7 +346,6 @@ billing-adjacent surface.
 | What satisfies an Approval Chain, and how does it escalate or delegate? | Approval Request | `40-governance/approval-workflows.md` |
 | Is there a decision deadline, and may a request be re-raised after expiry? | Approval Request | `40-governance/approval-workflows.md` |
 | Do approval transitions survive disconnect and replay? | Approval Request | ADR-0004 validation step 2, then `30-protocol/event-protocol.md` |
-| Can a Retired version be force-drained? | Workflow version | `50-workflows/execution-semantics.md` |
 | What audit-retention period ends `Archived`? | Workflow version | `40-governance/audit-model.md` |
 | May a `Draft` version be deleted, given audit-retention obligations? | Workflow version | `40-governance/audit-model.md`, ADR-0011 follow-on |
 | How is an action with no acting Principal attributed — expiry, platform-operator work? | Approval Request, Audit Record | `40-governance/audit-model.md` |
