@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.15.0
+version: 0.15.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -19,6 +19,33 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.15.1] — 2026-09-11
+
+A correction to the reasoning recorded for the schema `$id` base, and the decision to keep it. The
+0.15.0 entry below stands as written; this one corrects it, on the same principle `audit-model.md`
+A2 sets for the records the platform keeps — a correction appends and names what it corrects, the
+original stays readable.
+
+### Fixed
+
+- `VERSIONING.md` section 6 described `schemas.orchestra.dev` as merely unregistered, and the
+  0.15.0 entry below repeats that. **It is registered, by a third party, and parked** — DNS resolves
+  to a lander, HTTPS presents no certificate for the host, and the apex publishes a null MX. So the
+  old `$id` was not an address that nothing resolved; it resolved to someone else. The conclusion
+  was right and its stated reason was weaker than the facts.
+
+### Changed
+
+- The GitHub-hosted `$id` base is now recorded as **decided rather than provisional**, and
+  `schemas/README.md` no longer carries the move as a pending question. Moving the base changes
+  every `$id` at once; that is free today, with no consumer and no published SDK, and stops being
+  free at the first one. **The first external consumer is the deadline, not a date.**
+- `CLAUDE.md` — the provisional-names note now says plainly that `orchestra.dev` is not ours, and
+  to check `dig MX` before publishing a contact address. The repository published three addresses
+  in sequence, none of which had a mailbox behind it, before that check was run.
 
 ---
 

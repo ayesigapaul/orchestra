@@ -1,7 +1,7 @@
 ---
 title: Versioning & Compatibility Policy
 doc_id: DOC-001
-version: 0.15.0
+version: 0.15.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -180,10 +180,14 @@ Schemas are the source of truth for wire contracts and live in
 
 - `$id` embeds the major version and resolves today, on a GitHub-hosted base URI:
   `https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/agent-event.v1.schema.json`.
-  It was a vanity domain that is not registered; an `$id` nothing resolves is worse than an ugly one
-  a validator can fetch. Moving to a registered domain later changes every `$id` at once, which any
-  consumer resolving schemas by `$id` would notice — a migration to plan rather than an edit to make
-  quietly.
+  **It stays GitHub-hosted until a domain is actually owned.** The base was
+  `schemas.orchestra.dev`, and an earlier revision of this bullet called it merely unregistered.
+  That was understated: the domain belongs to a third party and is parked, so DNS resolves to a
+  lander, HTTPS presents no certificate for the host, and the apex publishes a null MX. The old
+  `$id` was not an address that nothing resolved — it resolved to someone else. Moving the base
+  changes every `$id` at once, which any consumer resolving schemas by `$id` would notice; that is
+  free today with no consumer and no published SDK, and stops being free at the first one. The
+  first external consumer is the deadline, not a date.
 - MINOR and PATCH changes update the file in place and are recorded in the changelog; they MUST be
   additive and MUST NOT tighten an existing constraint.
 - `additionalProperties` MUST NOT be set to `false` on any wire-facing object. Doing so makes

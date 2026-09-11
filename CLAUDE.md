@@ -114,12 +114,18 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   `github.event.pull_request.title` from the event payload, and re-running a job replays the
   payload it was triggered with. `hygiene.yml` therefore listens for `edited` as well as the
   default pull_request types, so retitling actually re-checks.
+- **A bare `#NN` in a commit body fails the build.** commitlint's parser treats `#` as an issue
+  prefix, so `in #16` mid-paragraph is read as a footer and warns `footer-leading-blank` — and the
+  hygiene job sets `failOnWarnings: true`. Write `pull request 16`, and note that commitlint exits
+  **0** on warnings, so a local run that checks only the exit code will call it clean.
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
-  taken. Schema `$id`s were on an unregistered `schemas.orchestra.dev`; they are now GitHub-hosted
-  and resolve, and `scripts/validate-schemas.mjs` fails CI if one drifts from its filename.
+  taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
+  and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that
+  reason and stay that way, and `scripts/validate-schemas.mjs` fails CI if one drifts from its
+  filename. Check `dig MX <domain>` before publishing any contact address.
 
 ## Front-end work
 
