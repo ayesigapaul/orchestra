@@ -1,7 +1,7 @@
 ---
 title: "ADR-0003: Position Orchestra as a governance layer, not an agent framework"
 adr_id: ADR-0003
-status: Accepted
+status: Superseded
 date: 2026-09-08
 deciders: [product-owner, platform-architecture]
 tags: [product, strategy, scope]
@@ -12,7 +12,14 @@ depends_on: [ADR-0001, ADR-0002]
 
 ## Status
 
-Accepted
+**Superseded by [ADR-0015](adr-0015-governed-action-positioning.md).**
+
+The central move below — build the control surface rather than the rails — is carried forward. What
+ADR-0015 changes is which capabilities count as that surface. Five of the nine differentiation
+claims derived from this record were rated contestable on 2026-09-10 evidence, reachability most
+clearly of all, and the absorption risk this record rated Medium on no evidence has since shipped
+from several platform vendors. The text below is retained unedited because the reasoning trail is
+the point of the practice.
 
 ## Context
 

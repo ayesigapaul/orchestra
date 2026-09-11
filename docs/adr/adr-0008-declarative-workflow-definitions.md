@@ -1,7 +1,7 @@
 ---
 title: "ADR-0008: Customer-defined workflows as declarative definitions"
 adr_id: ADR-0008
-status: Accepted
+status: Superseded
 date: 2026-09-08
 deciders: [product-owner, platform-architecture]
 tags: [workflows, scope, product]
@@ -12,7 +12,13 @@ depends_on: [ADR-0003, ADR-0005]
 
 ## Status
 
-Accepted
+**Superseded by [ADR-0014](adr-0014-run-supervisor-is-orchestras.md).**
+
+The decision below — that customer workflows are declarative and compiled rather than interpreted —
+is carried forward unchanged. What ADR-0014 corrects is the boundary of what Orchestra builds: the
+reduction to "a schema and a compiler" conflated workflow execution semantics, which the runtime
+does supply under a composable licence, with run supervision, which it does not. The text below is
+retained unedited because the reasoning trail is the point of the practice.
 
 ## Context
 

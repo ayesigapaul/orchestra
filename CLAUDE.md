@@ -24,17 +24,19 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | --- | --- | --- |
 | 0001 | Multi-tenant SaaS; multi-tenancy is MVP, not Phase 3 | Accepted |
 | 0002 | Enterprise segment, BYOK model credentials | Accepted |
-| 0003 | Governance layer, not an agent framework | Accepted |
+| 0003 | Governance layer, not an agent framework | Superseded by 0015 |
 | 0004 | AG-UI internally; the public contract is an Orchestra-versioned profile | Proposed |
 | 0005 | LangGraph is a compilation target, never a public boundary | Accepted |
 | 0006 | Model layer is a credential and endpoint broker, not a router | Accepted |
 | 0007 | Outbound connector for enterprise tool reachability | Proposed |
-| 0008 | Customer workflows are declarative and compiled, not interpreted | Accepted |
+| 0008 | Customer workflows are declarative and compiled, not interpreted | Superseded by 0014 |
 | 0009 | Meter from day one; defer tiering | Accepted |
 | 0010 | A2UI as GenUI interchange, deferred | Proposed |
 | 0011 | Tenant isolation: shared schema with row-level security | Accepted |
 | 0012 | Policy Decisions are a class of Audit Record over versioned Policies | Accepted |
 | 0013 | Policy Decision writes are fail-closed; other audit writes may degrade | Accepted |
+| 0014 | Orchestra builds the run supervisor; the runtime is an execution substrate | Accepted |
+| 0015 | Differentiate on governed, accountable actions, not on connectivity | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

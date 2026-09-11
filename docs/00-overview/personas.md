@@ -1,11 +1,11 @@
 ---
 title: Personas
 doc_id: DOC-013
-version: 0.3.0
+version: 0.13.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0008, ADR-0009]
+depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0009, ADR-0014, ADR-0015]
 ---
 
 # Personas
@@ -93,7 +93,8 @@ achievable for them and what their security teams demand of software inside thei
 ### 2.2 Developer
 
 **Doing.** Defining Agents and Workflows as versioned declarative definitions
-([ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md)), embedding the result in the
+([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md), carrying forward the declarative and
+compiled decision of superseded ADR-0008), embedding the result in the
 customer's own application, minting Session Tokens from their backend for their End Users.
 
 **Needs.** A public contract with no rail types in it: LangGraph, MCP and provider vocabulary MUST
@@ -107,7 +108,8 @@ and binding only after a spike proves the approval lifecycle survives disconnect
 its custom-event mechanism.
 
 **Refuses when.** Debugging a Run means learning the runtime underneath it. The definition language
-cannot express their process — a risk ADR-0008 rates high and accepts, since the escape hatch is a
+cannot express their process — a risk superseded ADR-0008 rated high and accepted, and which
+ADR-0014 carries forward, since the escape hatch is a
 reviewed custom step type and never raw customer code, and each new step type costs an ADR. There is
 also no visual designer at MVP; authoring is schema-first and reviewed as code.
 
@@ -131,11 +133,13 @@ task by hand, or lands somewhere they do not work — no ADR names a notificatio
 and that is genuinely undecided.
 
 **Why they are load-bearing.** The approver is the control standing between a prompt-injected agent
-and a financial side effect. [ADR-0003](../adr/adr-0003-governance-layer-positioning.md) is explicit
-that injection is defended by policy the model cannot argue past: an action above threshold requires
-a human regardless of how persuasively the agent justifies it. An approver who rubber-stamps under
-volume is not a control, and nothing in the ADR set addresses approval fatigue — it belongs to the
-planned approval-workflows document in [`40-governance/`](../40-governance/).
+and a financial side effect. [ADR-0015](../adr/adr-0015-governed-action-positioning.md) carries
+forward, unchanged, the rule its superseded predecessor stated: injection is defended by policy the
+model cannot argue past, at an enforcement point the definition author cannot write around. An
+action above threshold requires a human regardless of how persuasively the agent justifies it. An
+approver who rubber-stamps under volume is not a control, and nothing in the ADR set addresses
+approval fatigue — it belongs to
+[`approval-workflows.md`](../40-governance/approval-workflows.md).
 
 **Reads nothing.** The reading paths in [`README.md`](../README.md) §2 have no approver entry, and
 that is right: what is written for the approver is the approval surface. Per
@@ -150,7 +154,8 @@ under which policy. Before purchase: satisfying themselves that such a reconstru
 **Needs.** Audit Records that are append-only and immutable. Policy Decisions recorded **including
 allows** — a denial-only trail cannot show a control was working. Evidence Set retention, so the
 reconstruction includes what the approver saw. A Run tied to the exact definition version it pinned,
-which ADR-0008 guarantees by never migrating a running instance. `tenant_id` on every record, event
+which VERSIONING.md rule W3 guarantees by never migrating a running
+instance. `tenant_id` on every record, event
 and log line.
 
 **Refuses when.** Audit is a log level rather than a product surface. Retention, residency and
@@ -175,8 +180,9 @@ product, and the customer's application takes the blame.
 
 ## 3. Who holds the veto
 
-[ADR-0003](../adr/adr-0003-governance-layer-positioning.md) states plainly that security and
-compliance stakeholders hold the veto in this segment. That is the premise of the whole positioning:
+[ADR-0015](../adr/adr-0015-governed-action-positioning.md) carries forward from its superseded
+predecessor that security and compliance stakeholders hold the veto in this segment. That is the
+premise of the whole positioning:
 the purchase driver is not the ability to build an agent, which is now inexpensive, but the ability
 to answer under audit who may use this agent, which capabilities it holds, who approved this action,
 on what evidence, at what cost, and how it is stopped.
