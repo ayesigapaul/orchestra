@@ -1,9 +1,9 @@
 ---
 title: UI Protocol
 doc_id: DOC-044
-version: 0.9.0
+version: 0.14.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -359,7 +359,7 @@ carry the owning document's classification unchanged and are not revised here.
 | Whether any Orchestra surface is ever React Native, given that no renderer exists and [`../VERSIONING.md`](../VERSIONING.md) section 7 already names the SDK | A product decision on mobile surfaces, with [`../../ui-template/README.md`](../../ui-template/README.md); a yes commits Orchestra to building and maintaining a renderer against a moving specification | **Yes** |
 | Whether R3 records the narrowing AS4 applies to it — a renderer failing closed only where a region AS1 requires is missing — and how the deprecation table treats a component type | [`../VERSIONING.md`](../VERSIONING.md), which owns both rules; section 9 states the reconciliation this document composes with, and it needs recording there | No |
 | Whether [`../GLOSSARY.md`](../GLOSSARY.md) widens *UI Surface* beyond agent-produced and *UI Action* beyond an End User, whether the approval surface gains its own entry, and whether *component catalog* and *surface definition* gain theirs | [`../GLOSSARY.md`](../GLOSSARY.md); section 7 names the gap and this document specifies on the wider reading meanwhile | No |
-| The accessibility conformance target for the approval surface, and who attests to it | `compliance-roadmap.md` in [`../70-delivery/`](../70-delivery/), against an enterprise review; ADR-0004, **Proposed**, treats the absence as a procurement stop | No |
+| The accessibility conformance target for the approval surface, and who attests to it | [`../70-delivery/compliance-roadmap.md`](../70-delivery/compliance-roadmap.md) section 4, which states why no level is set: it is a procurement fact following from the buyer and the jurisdiction, and no customer exists. ADR-0004, **Proposed**, treats the absence as a procurement stop | No |
 | How an approval surface renders on-brand, given the interchange removes theming | The renderer-path decision above, with the front-end platform; it sits outside the interchange either way | No |
 | Whether *request more information* is a state, given the lifecycle admits only Approved, Rejected, Expired and Withdrawn | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) | No — *repeated* |
 | Whether the Evidence Set is materialised by value or by reference | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 4; AS3 answers only the surface half | No — *repeated* |
