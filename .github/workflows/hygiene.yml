@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # `edited` is not in the default set, and pr-title below reads the title out of the event
+    # payload. Without it a pull request whose title failed that check can never go green by
+    # being retitled: a re-run replays the stored payload and sees the old title, so the only
+    # remedy would be an otherwise pointless push.
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read

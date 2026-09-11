@@ -6,7 +6,7 @@
 
 Report privately through
 [GitHub Security Advisories](https://github.com/ayesigapaul/orchestra/security/advisories/new),
-or by email to [security@smsone.co.ug](mailto:security@smsone.co.ug).
+or by email to [security@orchestra.io](mailto:security@orchestra.io).
 
 Please include: what you found, how to reproduce it, the affected component and version, and the
 impact you believe it has.
