@@ -1,7 +1,7 @@
 ---
 title: Scope and Non-Goals
 doc_id: DOC-014
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -217,13 +217,13 @@ authoritative on the states a customer can observe. They are one entity seen fro
 forward; ADR-0007 added a Connector, conditionally, because it is Proposed and section 2.8 records
 that its survival is now an open question; ADR-0014 adds a distributed run supervisor. ADR-0014
 counts the three without that qualification, which is fair on its own date — it predates ADR-0015's
-demotion of the Connector. `70-delivery/mvp-definition.md` is unwritten and has to account for all
-three rather than discovering them one at a time. The supervisor's size is not
-known: ADR-0014 leaves open whether it is glue
-around an executor or a substantial distributed runtime, and says so deliberately rather than
-guessing. Leasing, liveness, recovery and backpressure are the class of work where subtle bugs cost
-most, which is an argument for sizing it before an MVP is committed to, not for assuming it is
-small.
+demotion of the Connector. [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md)
+section 4 accounts for all three in one place rather than leaving them to be discovered one at a
+time, and takes the Connector back out of the slice on ADR-0015's demotion. The supervisor's size is
+not known: ADR-0014 leaves open whether it is glue around an executor or a substantial distributed
+runtime, and says so deliberately rather than guessing. Leasing, liveness, recovery and backpressure
+are the class of work where subtle bugs cost most, which is an argument for sizing it before an MVP
+is committed to, not for assuming it is small.
 
 ### 2.4 Governance — Principal, Policy, approval, authorization
 
@@ -436,7 +436,7 @@ build toward it or promise it.
 | Whether Orchestra builds the tunnel at all, or only the governance carried on it | ADR-0015 removes the differentiation claim but takes no build decision; a decision belongs to [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md)'s validation or to a record superseding it |
 | Whether the Connector survives that validation | ADR-0007's three validation steps, plus the reopener [`../80-reference/mcp-evaluation.md`](../80-reference/mcp-evaluation.md) section 3 recommends: a partner already running a vendor tunnel makes it build-or-integrate |
 | Whether the run supervisor is glue or a substantial distributed runtime | The sizing exercise [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) names as its first follow-on, before an MVP is committed to |
-| What the MVP's first vertical slice contains, after three scope increases | `70-delivery/mvp-definition.md`, unwritten; ADR-0015 argues for an approval surface with defensible evidence rather than a connectivity demonstration |
+| Whether the MVP's first vertical slice can be committed to | Its contents are settled by [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) — one Workflow whose every consequential step is provably governed, not a connectivity demonstration — but that document declines to be a plan until the supervisor is sized |
 | Which datastore engine backs the platform | An architecture decision, constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security |
 | Whether BYOK means spend control or data non-egress | Design-partner validation, named in [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) and ADR-0007 |
 | Compensation semantics beyond the requirement to declare them | [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md), which also owns the Step Execution retry that job-level retry MUST NOT be conflated with |

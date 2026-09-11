@@ -1,7 +1,7 @@
 ---
 title: Roadmap
 doc_id: DOC-015
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -219,9 +219,9 @@ Against the archived v0.1 brief, the decisions so far have made the first releas
 
 ADR-0004 would also remove the cost of authoring an event protocol, but it is Proposed, so that
 saving MUST NOT be counted yet. The net effect is an MVP materially larger than the one v0.1
-described, reached through decisions each of which is individually defensible. The MVP definition
-and milestones documents planned in [`70-delivery/`](../70-delivery/README.md) must be written
-against this scope, not the original one.
+described, reached through decisions each of which is individually defensible. [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md)
+and [`../70-delivery/milestones.md`](../70-delivery/milestones.md) are scoped against this, not
+against the original.
 
 ## 10. What this roadmap does not decide
 

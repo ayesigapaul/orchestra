@@ -1,9 +1,9 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.8.0
+version: 0.14.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -404,6 +404,6 @@ unchanged.
 | How a Platform User is deprovisioned, and what becomes of grants held by a Principal who can no longer authenticate | The same assignment from [`identity-and-access.md`](identity-and-access.md); the domain model fixes that a Principal outlives its credentials, not what removes its authority | No — *repeated* |
 | Whether an identity-provider group may be the subject of an Orchestra grant | The Control Plane authorization ADR [`identity-and-access.md`](identity-and-access.md) registers, which spans this surface, group mapping and audit | **ADR** — *repeated* |
 | Audit export: format, transport, completeness proof, and self-serve versus operator-assisted | [`audit-model.md`](../40-governance/audit-model.md) section 12, which separates on-demand export from continuous forwarding | No |
-| Whether the Control Plane ships as one duplicated front-end surface or several | `mvp-definition.md` in [`../70-delivery/`](../70-delivery/), against the duplication rule in the UI template | No |
+| Whether the Control Plane ships as one duplicated front-end surface or several | Answered for the first slice only by [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) section 6 — one surface, because duplication pays before divergence exists. It reopens when a second audience does, such as an auditor who only reads | No |
 | Whether a Connector administration surface exists at all, and what separates `Degraded` from `Healthy` | ADR-0007 binding first, then `connector.md` in this section with `reliability.md` in [`../60-operations/`](../60-operations/) | No |
 | Whether a Service Account authenticating here consumes a seat | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/); the wording gap is registered in [`../00-overview/personas.md`](../00-overview/personas.md) | No |

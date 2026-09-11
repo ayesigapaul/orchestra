@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -20,7 +20,42 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 - `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
-- `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.14.0] — 2026-09-11
+
+The delivery section was written, which forced the specification set to say what it would actually
+build first. Three of the four documents decline to give a number that a reader would expect, and
+each says why.
+
+### Added
+
+- `70-delivery/mvp-definition.md` — the first vertical slice is one Workflow whose every
+  consequential step is provably governed, following directly from ADR-0015. A connectivity
+  demonstration is explicitly *not* the slice, which it would have been under superseded ADR-0003.
+  The document carries eight exit criteria, the accounting of scope growth, and a statement that it
+  **is not yet a plan**: ADR-0014 leaves the run supervisor's size open, and the answer changes both
+  the sequence and, in one direction, the positioning.
+- `70-delivery/milestones.md` — five milestones defined by entry and exit criteria rather than by
+  dates, of which none are given. One piece of work is genuinely calendar-bound and is sequenced
+  accordingly: SOC 2 readiness runs in parallel from M1.
+- `70-delivery/testing-strategy.md` — organised by which guarantees fail silently rather than by test
+  level, because those are the ones where a test is the control rather than a check on one. Eight
+  such guarantees are named with the record that requires each.
+- `70-delivery/compliance-roadmap.md` — what a security review asks, and which of it is already
+  decided as a governance rule rather than pending as compliance work.
+
+### Changed
+
+- `docs/README.md` — the change table now marks ADR-0003 and ADR-0008 as superseded where it cites
+  them, rather than listing them as though they still stood.
+
+### Notes
+
+- No date, coverage target, audit window, accessibility conformance level, assessor or certification
+  commitment appears in this release. Each was considered and each is undecided; where a figure is
+  load-bearing the document says what bounds it and registers the question.
 
 ---
 

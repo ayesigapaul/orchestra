@@ -1,9 +1,9 @@
 ---
 title: Orchestra Documentation
 doc_id: DOC-000
-version: 0.13.0
+version: 0.14.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-11
 owners: [platform-architecture]
 ---
 
@@ -112,7 +112,7 @@ implying consensus.
 
 ## 4. Status of this documentation set
 
-This set is at **v0.13.0** and is **pre-implementation**. It supersedes the single-file v0.1 vision
+This set is at **v0.14.0** and is **pre-implementation**. It supersedes the single-file v0.1 vision
 brief, retained at [`archive/vision-v0.1-2026-09-08.md`](archive/vision-v0.1-2026-09-08.md).
 
 Substantive changes from v0.1, each recorded as an ADR:
@@ -121,14 +121,17 @@ Substantive changes from v0.1, each recorded as an ADR:
 | --- | --- |
 | Product shape fixed as multi-tenant SaaS | [ADR-0001](adr/adr-0001-product-shape-multi-tenant-saas.md) |
 | Target segment: enterprise, BYOK model credentials | [ADR-0002](adr/adr-0002-enterprise-segment-and-byok.md) |
-| Repositioned as governance layer, not agent framework | [ADR-0003](adr/adr-0003-governance-layer-positioning.md) |
+| Repositioned as governance layer, not agent framework | [ADR-0003](adr/adr-0003-governance-layer-positioning.md), superseded by [ADR-0015](adr/adr-0015-governed-action-positioning.md) |
 | Client event protocol: AG-UI internally, behind an Orchestra-versioned profile | [ADR-0004](adr/adr-0004-adopt-ag-ui-event-protocol.md) |
 | LangGraph confined behind a compilation boundary | [ADR-0005](adr/adr-0005-langgraph-as-compilation-target.md) |
 | Model layer reduced to a credential/endpoint broker | [ADR-0006](adr/adr-0006-model-layer-as-credential-broker.md) |
 | Enterprise reachability via outbound connector | [ADR-0007](adr/adr-0007-outbound-connector-for-enterprise-reachability.md) |
-| Customer-defined workflows, compiled not interpreted | [ADR-0008](adr/adr-0008-declarative-workflow-definitions.md) |
+| Customer-defined workflows, compiled not interpreted | [ADR-0008](adr/adr-0008-declarative-workflow-definitions.md), superseded by [ADR-0014](adr/adr-0014-run-supervisor-is-orchestras.md) |
 | Meter from day one; defer tiering | [ADR-0009](adr/adr-0009-meter-first-defer-tiering.md) |
 | A2UI as GenUI interchange — deferred pending evaluation | [ADR-0010](adr/adr-0010-a2ui-genui-interchange.md) |
+
+Decisions taken since — tenant isolation, audit semantics, the run supervisor and the positioning
+that supersedes ADR-0003 — are in the [ADR index](adr/README.md), which is the complete list.
 
 ---
 

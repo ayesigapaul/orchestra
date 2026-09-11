@@ -1,7 +1,7 @@
 ---
 title: Product Thesis
 doc_id: DOC-012
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -421,7 +421,7 @@ Decisions that are unmade, with what decides each:
 | Audit export | [`audit-model.md`](../40-governance/audit-model.md) section 12 states the requirement and records that nothing has designed it |
 | Attribution for facts with no acting Principal | [`audit-model.md`](../40-governance/audit-model.md) section 9 owns it and does not close it |
 | The run supervisor's size, and whether it dominates the build | [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)'s first follow-on: enumerate its responsibilities precisely enough to size it, before an MVP is committed to |
-| MVP scope | `70-delivery/mvp-definition.md`, unwritten. ADR-0015 says the first vertical slice is an approval surface with defensible evidence, not a connectivity demonstration |
+| Whether the MVP can be committed to as a plan | [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) scopes the slice against ADR-0015 — governed actions with defensible evidence, not a connectivity demonstration — and states that it is not yet a plan, because the row above is unanswered |
 
 Two Accepted decisions carry live questions of their own.
 [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) records that "BYOK" may mean control of
