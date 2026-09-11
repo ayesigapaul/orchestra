@@ -46,6 +46,10 @@ jobs:
       # Five such rows existed before this check did.
       - name: Check every open question defers to a document that exists or is planned
         run: node scripts/open-questions.mjs --check
+      # `additionalProperties: false` on a wire-facing object breaks VERSIONING R3 and looks like a
+      # working schema until a consumer breaks on a field it was promised it could ignore.
+      - name: Validate the wire schemas against VERSIONING section 6
+        run: node scripts/validate-schemas.mjs
 
   mermaid:
     name: Mermaid diagrams render

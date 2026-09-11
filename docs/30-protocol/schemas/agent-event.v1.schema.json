@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/agent-event.v1.schema.json",
+  "title": "Agent Event — Orchestra Agent Event Profile v1",
+  "description": "One event on a Run's stream. The profile is Orchestra's own contract over a pinned upstream event format: which type constants may appear, what each carries, and the four per-event guarantees. It is not a re-export of that format.",
+  "$comment": "Normative prose: 30-protocol/event-protocol.md. This schema rests on ADR-0004, which is Proposed — it binds only after the prototype of the approval lifecycle through a disconnect. THE PIN IS NOT SET. event-protocol.md section 3.1 requires this file to state one full upstream commit identifier; none is stated because no implementation exists to pin one against, and section 11 registers it. Until it is set, the per-type enumeration below is complete for the families the profile admits but cannot be exhaustive over the upstream constants, which section 3.2 requires it to be.",
+  "type": "object",
+  "required": ["type", "metadata"],
+  "properties": {
+    "type": {
+      "description": "The upstream type constant. The profile keeps these on the wire deliberately: the interoperability ADR-0004 buys — any format-aware frontend can read Orchestra's stream — exists only if it does. Emitting a type the profile does not admit is non-conformant.",
+      "$comment": "The families admitted are fixed by event-protocol.md section 3.2: Run lifecycle, text message, tool call, state snapshot and delta, and the orchestra.-prefixed custom envelope. Not admitted, each for a stated reason: reasoning (who may see model reasoning is undecided), activity (a second progress vocabulary for Step Execution, a defect under CLAUDE.md rule 3), and subagent attribution (an execution shape the domain model does not have). The two streamed families are matched by prefix rather than enumerated because their exact member constants are fixed by the pin section 3.1 requires and this file does not yet carry; replacing these patterns with the constant list is the first thing the pin makes possible.",
+      "anyOf": [
+        {
+          "enum": [
+            "RUN_STARTED",
+            "RUN_FINISHED",
+            "RUN_ERROR",
+            "STATE_SNAPSHOT",
+            "STATE_DELTA",
+            "CUSTOM"
+          ]
+        },
+        { "type": "string", "pattern": "^TEXT_MESSAGE_" },
+        { "type": "string", "pattern": "^TOOL_CALL_" }
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Informational only.",
+      "$comment": "A consumer MUST NOT use it to order events. Ordering is the profile's, carried by metadata.orchestra.seq — event-protocol.md section 5, which also requires gap detection."
+    },
+    "rawEvent": {
+      "not": {},
+      "description": "MUST NOT be populated, on any event. Declared unsatisfiable so that a populated raw-event field fails validation rather than passing silently.",
+      "$comment": "The base event's raw-event field carries the underlying provider or runtime payload verbatim. Populating it would put a rail's vocabulary into a public contract — CLAUDE.md working rule 2, audit-model.md A8, ADR-0005, and invariant I6 which forbids a Checkpoint ever being referenced."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "The base event's open-by-key metadata object. The ag-ui key is reserved upstream; every other key is application space.",
+      "required": ["orchestra"],
+      "properties": {
+        "orchestra": { "$ref": "#/$defs/orchestra_metadata" }
+      }
+    }
+  },
+  "$defs": {
+    "orchestra_metadata": {
+      "type": "object",
+      "title": "The four per-event guarantees",
+      "description": "Carried together under the vendor-prefixed orchestra key inside metadata, and never duplicated as top-level event fields.",
+      "$comment": "EG1 to EG3. Top-level carriage is schema-invalid against the published upstream schema, and worse than invalid: it currently parses in two upstream SDKs, so a prototype that puts these at the top level will appear to succeed while the binary transport binding drops them silently. Field naming here is snake_case — Orchestra's own contract — inside an envelope that is camelCase (EG4). ONE HALF OF EG1 IS UNENFORCEABLE HERE AND THAT IS STRUCTURAL: requiring these four under metadata is checkable, but forbidding them as top-level duplicates would need additionalProperties: false on the event, which VERSIONING section 6 forbids because it breaks R3. An event carrying both passes this schema. The conformance suite the profile requires is where that check belongs, and it does not exist yet.",
+      "required": ["seq", "run_id", "tenant_id", "event_id"],
+      "properties": {
+        "seq": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Per-Run monotonic sequence, minted once per Run rather than once per subscription. Increases by exactly one per emitted event within a Run.",
+          "$comment": "Contiguity is what makes gap detection decidable. Because seq is minted per Run, a Run's stream MUST be delivered whole and the profile admits no per-reader filtering: a filtered reader would see a false gap that a conformant client is obliged to raise. Narrowing a read is served off the stream by an authorized surface, not by narrowing the stream. Re-sequencing per subscription would be a profile MAJOR."
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Run the event belongs to. On every event, not only the lifecycle ones.",
+          "$comment": "Where a pinned upstream event type declares a run identifier of its own, the profile MUST populate it with the same value; metadata.orchestra.run_id is authoritative if the two ever disagree."
+        },
+        "tenant_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Resolved from the authenticated Principal at stream establishment, whatever credential established it. Every event, without exception.",
+          "$comment": "Invariant I1 and ADR-0001. Any credential the Gateway accepts may establish a stream; what the profile requires is that it resolve to exactly one Principal and one Tenant before the first event is emitted."
+        },
+        "event_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Server-assigned, unique within the Tenant. The deduplication key, and never a client-supplied value."
+        }
+      }
+    }
+  }
+}

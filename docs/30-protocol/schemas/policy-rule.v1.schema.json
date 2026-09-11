@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/policy-rule.v1.schema.json",
+  "title": "Policy Rule",
+  "description": "One tenant-authored rule within a Policy version: where it is evaluated, what it yields, and the conditions under which it matches.",
+  "$comment": "Normative prose: 40-governance/policy-model.md. THE MATCH LANGUAGE IS NOT DEFINED HERE AND CANNOT BE. policy-model.md section 8 requires the policy language to be an ADR rather than a later document, on the ground that it becomes a permanent public contract the moment a customer authors against it. The match member below is therefore deliberately unconstrained: this file fixes the envelope a rule lives in — scope, enforcement point, verdict, versioning — and the ADR fixes what may be written inside it. Rule precedence is likewise unmade, and D4 makes it a prerequisite rather than a later convenience: if two Policies match one action and precedence is undefined, the verdict is not a function of the inputs and determinism is unsatisfiable. No precedence member appears here for that reason.",
+  "type": "object",
+  "required": ["policy_id", "tenant_id", "enforcement_points", "verdict", "match"],
+  "properties": {
+    "policy_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The Policy this rule belongs to."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Assigned and frozen by publication, never authored. A draft carries none.",
+      "$comment": "P5 — a Policy is immutably versioned on the same terms as Agent and Workflow definitions (VERSIONING sections 2 and 8, W1 to W4). Editing a Policy means publishing a new version. A published version MUST be retained at least as long as any Audit Record referencing it."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mandatory. A Policy MUST NOT be evaluated against another Tenant's inputs.",
+      "$comment": "P2 and invariant I1 — isolation is enforced by row-level security in the datastore, not by application code (ADR-0011)."
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional administrative scope. A Workspace scopes administration and visibility, never isolation."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Author-assigned name, for diagnosis and for the audit surface."
+    },
+    "enforcement_points": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The enforcement points at which this rule is evaluated.",
+      "$comment": "E1 fixes the minimum set — Run admission, every Workflow Step boundary, and before any Tool invocation — and calls it a minimum, not a maximum. A later document may add an enforcement point; none of these three may be removed without superseding that section. Adding a member here is MINOR under VERSIONING R2, unlike the verdict set below.",
+      "items": {
+        "enum": ["run_admission", "step_boundary", "tool_invocation"]
+      }
+    },
+    "verdict": {
+      "enum": ["allow", "deny", "require_approval"],
+      "description": "What this rule yields when it matches. An evaluation yields exactly one verdict: never two, never none.",
+      "$comment": "P3 — the verdict set is closed. There is no warn, no allow-with-conditions, no silent pass-through. A fourth verdict is NOT the additive case VERSIONING R2 makes MINOR: the set is exhaustive and every consumer branches across all of it, so a new value repurposes the enum rather than adding one a consumer may ignore under R3. It is MAJOR and needs an ADR. One narrowing exists and is not expressible here: at the boundary of an approval Step the set narrows to require_approval and deny, and an implementation MUST NOT return allow there (V4) — a constraint on the evaluation, not on what a rule may be authored to yield."
+    },
+    "match": {
+      "description": "The conditions under which this rule applies. Unconstrained by design — see this file's top-level comment.",
+      "$comment": "policy-model.md N1 fixes what every evaluation receives and a rule MAY match on: the Principal and its subtype, the Tenant, the Workspace, the pinned definition version, the pinned Policy versions, the Step and its type at a Step boundary, the Side-Effect Class as a primary input, the Tool, its schema major, its Tool Catalog registration state, the Agent version's capability grant set, the proposed action including its arguments, the enforcement point, and the Run. N3 requires any input outside that table — wall-clock time, aggregate state, a value fetched during evaluation — to be captured in the Policy Decision, and whether a Policy may depend on aggregate state at all is unmade. D4 forbids a model in the evaluation path: a model call is neither deterministic nor attributable to a rule."
+    },
+    "description": {
+      "type": "string",
+      "description": "Author-supplied prose. Explains the rule; never constrains it."
+    }
+  }
+}

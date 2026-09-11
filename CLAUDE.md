@@ -78,6 +78,8 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
 # Run exactly what CI runs, in the order CI runs it
 npx --yes markdownlint-cli2@0.23.2        # style — version must match .github/workflows/docs.yml
 node scripts/validate-docs.mjs            # front matter, ADR index, doc ids, internal links
+node scripts/open-questions.mjs --check   # every register defers to a document that exists
+node scripts/validate-schemas.mjs         # wire schemas, against VERSIONING.md §6
 npx --yes lychee --config lychee.toml .   # external links
 
 # Mermaid parse check needs its dependencies present
@@ -111,8 +113,9 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.
-- **Provisional names.** `@orchestra/*` and `schemas.orchestra.dev` are placeholders. The unscoped
-  npm name `orchestra` is taken and the domain is unregistered.
+- **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
+  taken. Schema `$id`s were on an unregistered `schemas.orchestra.dev`; they are now GitHub-hosted
+  and resolve, and `scripts/validate-schemas.mjs` fails CI if one drifts from its filename.
 
 ## Front-end work
 

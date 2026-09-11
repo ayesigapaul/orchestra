@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/approval-request.v1.schema.json",
+  "title": "Approval Request",
+  "description": "A human decision gate raised by a require_approval verdict, carrying the proposed action, the Evidence Set the Agent relied on, the Approval Chain, the causing Policy Decision, and its resolution.",
+  "$comment": "Normative prose: 40-governance/approval-workflows.md and 20-domain/lifecycle-state-machines.md section 3. Almost everything about chain behaviour is unmade and none of it is invented here: what satisfies a chain (all, quorum, first decision), whether one rejection in a parallel chain is decisive, escalation, delegation, reassignment after raise, re-raise after expiry, whether a deadline exists at all, and whether an ordered chain's partial progress is a substate of Pending or an attribute of it.",
+  "type": "object",
+  "required": ["approval_request_id", "tenant_id", "run_id", "state", "proposed_action", "evidence_set", "approval_chain", "causing_policy_decision", "raised_at"],
+  "properties": {
+    "approval_request_id": { "type": "string", "minLength": 1 },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Every request is tenant-scoped like every other record. An Approval Chain MUST NOT resolve to a Principal outside the Tenant (R1)."
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The suspended Run this request gates."
+    },
+    "state": {
+      "enum": ["Pending", "Approved", "Rejected", "Expired", "Withdrawn"],
+      "description": "Pending awaits the decisions the chain requires; Approved, Rejected, Expired and Withdrawn are terminal.",
+      "$comment": "Expired is PROVISIONAL — whether a deadline mechanism exists at all is undecided (lifecycle section 3.1). If one is adopted, Expired MUST be distinct from Rejected: a human said no and nobody looked are different facts about a control, and an audit that cannot separate them cannot report on that control. Expiry also has no acting Principal, which invariant I2 does not admit; audit-model.md owns that gap together with platform-operator action. Withdrawn means the gated Run ended for another reason and there is nothing left to gate."
+    },
+    "proposed_action": {
+      "type": "object",
+      "description": "The action as it would execute. Recorded, never paraphrased.",
+      "$comment": "R1 — an action re-derived at resume time, or whose arguments are templated and evaluated later, is not the action that was approved. If the arguments cannot be fixed at raise time, the gate is decorative.",
+      "required": ["side_effect_class", "arguments"],
+      "properties": {
+        "step_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Step gated, in a Workflow Run. Absent in an Agent Run, which has no Steps."
+        },
+        "tool": {
+          "type": "object",
+          "description": "The Tool to be invoked, where the gated action is a Tool invocation.",
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "schema_major": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "side_effect_class": { "$ref": "#/$defs/side_effect_class" },
+        "arguments": {
+          "description": "The arguments as they would execute. Unconstrained here: their shape is the Tool's own registered schema.",
+          "$comment": "policy-model.md E6 — if the proposed action changes between verdict and invocation, the prior verdict does not cover it and the enforcement point MUST be evaluated again."
+        }
+      }
+    },
+    "evidence_set": {
+      "type": "array",
+      "description": "The exact inputs the Agent relied on, so that a human decides on the same information the model had rather than on the model's summary of it. Exactly one set per request.",
+      "$comment": "E1 — a summary, extract, description or rationale is not an input and MUST NOT stand in for one. E3 — the set MUST cover everything the model had that is not reconstructible from the pinned definition; instructions and Tool bindings are reconstructible and need not be copied, the variable inputs are not and MUST be. E4 — captured at raise and immutable thereafter, derived from lifecycle 3.2, the glossary's append-only Audit Record, and audit-model.md A2 and A4; mutable evidence makes a recorded approval unfalsifiable. Whether the set is materialised by value or by reference to immutable content-addressed records is an implementation choice constrained by E4 and E6. How a large set is made reviewable rather than merely available belongs with the approval surface schema ADR-0010 requires.",
+      "items": { "$ref": "#/$defs/evidence_item" }
+    },
+    "agent_argument": {
+      "type": "object",
+      "description": "A model-generated summary or justification accompanying the Evidence Set. Optional.",
+      "$comment": "E2 — it MUST be recorded as model-generated and attributed to the Agent version that produced it, MUST NOT be the only content presented, and MUST NOT be presented in a form indistinguishable from the inputs. The summary is written by the component a prompt injection has already compromised: a faithful, competent summary of a malicious supplier document reproduces the attack while discarding the only thing that would expose it.",
+      "required": ["content", "agent"],
+      "properties": {
+        "content": { "type": "string" },
+        "agent": { "$ref": "#/$defs/definition_pin" }
+      }
+    },
+    "approval_chain": {
+      "type": "object",
+      "description": "The Principals whose decisions this request requires, derived from Policy and recorded as resolved at raise time.",
+      "$comment": "C1 — derived from Policy at raise and recorded as resolved at that moment; a chain that cannot be reconstructed later cannot be audited. It is not a static list on the request and not whoever happened to be asked. What satisfies the chain is unmade — see this file's top-level comment — so no satisfaction member appears here.",
+      "required": ["mode", "members"],
+      "properties": {
+        "mode": {
+          "enum": ["ordered", "parallel"],
+          "description": "Whether the chain's decisions are sequenced or concurrent."
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/chain_member" }
+        }
+      }
+    },
+    "causing_policy_decision": {
+      "type": "object",
+      "description": "Why this request exists, answerable from the request alone.",
+      "$comment": "R2 — it references the Policy version evaluated and MUST NOT embed the rule text. A Run pins the Policy versions in force at admission for its whole life, so a Policy edited while a request is pending MUST NOT change the verdict the suspended Run receives, and the version a request names stays resolvable for as long as the request does.",
+      "required": ["decision_id", "verdict"],
+      "properties": {
+        "decision_id": { "type": "string", "minLength": 1 },
+        "policy_version": { "$ref": "#/$defs/policy_version_ref" },
+        "verdict": {
+          "const": "require_approval",
+          "$comment": "Only require_approval raises a request (V2), and V3 forbids rewriting it: an approval resolution does not retroactively change the verdict. Audit must distinguish an action permitted by rule from one permitted by a human."
+        },
+        "inputs": { "description": "The inputs the decision rested on." }
+      }
+    },
+    "resolution": {
+      "type": "object",
+      "description": "Present once the request is terminal.",
+      "required": ["outcome"],
+      "properties": {
+        "outcome": { "enum": ["Approved", "Rejected", "Expired", "Withdrawn"] },
+        "decisions": {
+          "type": "array",
+          "description": "The decisions that produced the outcome. A Withdrawn resolution has none.",
+          "items": { "$ref": "#/$defs/decision" }
+        },
+        "resolved_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "raised_at": { "$ref": "#/$defs/timestamp" }
+  },
+  "$defs": {
+    "evidence_item": {
+      "type": "object",
+      "description": "One input the Agent relied on, with its provenance.",
+      "$comment": "E6 — each item MUST record its origin and whether it is content the Agent read or text the Agent itself authored. Provenance is what lets an approver, and a later audit, tell a supplier's document from the model's gloss on it. E5 requires each item's provenance to be presented with the item.",
+      "required": ["origin", "authorship"],
+      "properties": {
+        "origin": {
+          "type": "object",
+          "description": "Where this item came from: which Tool result, which retrieved document, which prior message.",
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["tool_result", "retrieved_document", "prior_message"] },
+            "reference": { "type": "string", "minLength": 1 }
+          }
+        },
+        "authorship": {
+          "enum": ["read_by_agent", "authored_by_agent"],
+          "description": "Content the Agent read, or text the Agent itself authored."
+        },
+        "content": { "description": "The input itself, or a reference to immutable content-addressed storage holding it." },
+        "truncated": {
+          "type": "boolean",
+          "description": "Whether a presentation of this item was truncated for display.",
+          "$comment": "E5 — where a presentation truncates, the record MUST permit the untruncated content to be retrieved and the truncation MUST be visible as one."
+        }
+      }
+    },
+    "chain_member": {
+      "type": "object",
+      "description": "One position in the chain, as resolved at raise time.",
+      "required": ["principal_id"],
+      "properties": {
+        "principal_id": { "type": "string", "minLength": 1 },
+        "position": { "type": "integer", "minimum": 1, "description": "Order within an ordered chain." }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "description": "One recorded human decision on this request.",
+      "$comment": "lifecycle 3.2 — each decision MUST record the deciding Principal, the authenticated identity behind them and the timestamp; the resolution MUST record which decisions produced it. G11 — a replayed approval decision MUST NOT record a second decision, since every Audit Record resolves to exactly one Principal.",
+      "required": ["principal_id", "authenticated_identity", "decided", "decided_at"],
+      "properties": {
+        "principal_id": { "type": "string", "minLength": 1 },
+        "authenticated_identity": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Carried so that attribution survives a rename or the Principal's deletion."
+        },
+        "decided": { "enum": ["approve", "reject"] },
+        "decided_at": { "$ref": "#/$defs/timestamp" },
+        "comment": { "type": "string" }
+      }
+    },
+    "definition_pin": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "policy_version_ref": {
+      "type": "object",
+      "required": ["policy_id", "version"],
+      "properties": {
+        "policy_id": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "side_effect_class": {
+      "enum": ["read", "write", "destructive", "financial", "external-communication"]
+    },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}

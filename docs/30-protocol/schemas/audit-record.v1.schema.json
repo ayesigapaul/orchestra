@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/audit-record.v1.schema.json",
+  "title": "Audit Record",
+  "description": "One append-only, immutable, tenant-scoped record of a governed act, resolving to exactly one Principal. A Policy Decision is a class of this record, not a neighbour of one.",
+  "$comment": "Normative prose: 40-governance/audit-model.md, properties A1 to A8, and ADR-0012. The retention period is DECIDED NOWHERE in this repository and no number appears here; no implementation can claim conformance to the term until it exists. Export is a stated requirement that nothing has designed. Whether immutability is additionally cryptographic — hash chain, write-once storage, external notarisation — is not decided, so no member expresses it.",
+  "type": "object",
+  "required": ["record_id", "tenant_id", "record_class", "principal", "action", "occurred_at", "ordering_key", "policy_basis"],
+  "properties": {
+    "record_id": { "type": "string", "minLength": 1 },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mandatory, without exception.",
+      "$comment": "A1 — the audit store is subject to the same forced row-level security policy, and the same CI control, as every other tenant-scoped table. An action affecting more than one Tenant MUST produce one record per Tenant affected: a record spanning Tenants could not be read under a tenant predicate without a bypass."
+    },
+    "record_class": {
+      "enum": ["policy_decision", "governed_act"],
+      "description": "Which class this record belongs to. The class is a property of the record, not a runtime choice.",
+      "$comment": "ADR-0013 splits the write by class. A policy_decision MUST be durable before the gated action is attempted, and if it cannot be written the action MUST NOT proceed. Every other record MAY degrade — buffered, retried, or written behind the action — and that permission is not an instruction: a record never written is a gap, not a saving. An implementation MUST NOT reclassify a Policy Decision as degradable under load. The cost is accepted in the open: audit store availability bounds the availability of every governed action."
+    },
+    "principal": {
+      "$ref": "#/$defs/principal",
+      "description": "Exactly one, and the one who acted."
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What happened, in Orchestra's own vocabulary.",
+      "$comment": "A8 — the orchestration runtime's, a model provider's or the tool protocol's vocabulary MUST NOT appear in the audit surface, and a Checkpoint is never referenced (invariant I6)."
+    },
+    "entities": {
+      "type": "array",
+      "description": "The entities the action touched, by identifier and by the values as they stood at the time.",
+      "$comment": "A5 — a record MUST stay readable and meaningful after the Agent, Workflow version, Tool, Policy, Model Binding or Principal it names is deleted. It holds identifiers and recorded values, never a foreign key a later deletion could null.",
+      "items": { "$ref": "#/$defs/entity_ref" }
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Present where the act belongs to a Run. Absent where it does not — an administrative act, for instance."
+    },
+    "step_execution_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The Step Execution gated, at a Step boundary.",
+      "$comment": "A Tool call inside an Agent Run has no Step Execution to key on. What the resulting Policy Decision references is an open question in the domain model, carried into policy-model.md E4 and section 9 — exact for Workflow Runs, unnamed rather than undefined for Agent Runs."
+    },
+    "occurred_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "Wall-clock time. Informational for ordering purposes."
+    },
+    "ordering_key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The deterministic ordering key for records within a Run.",
+      "$comment": "A7 — wall-clock timestamps MUST NOT be the sole basis for order, because clocks skew across the components that write records. This key is INDEPENDENT of the event stream's seq, structurally and not stylistically: Audit Records exist for actions that belong to no Run and therefore have no seq, and A6 puts the record ahead of the gated action while the corresponding event is emitted after it. A record MAY carry the event's identifier as a correlation value; it MUST NOT use it as the ordering key."
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Correlation only, where a corresponding Agent Event exists. Never the ordering key."
+    },
+    "policy_basis": {
+      "description": "On what authority the act happened. Required, and required to be explicit when nothing applies.",
+      "$comment": "A4 — where no Policy Decision applies the record MUST SAY SO rather than omit the field, since deny-by-default makes no-rule-matched a decision rather than a missing record.",
+      "oneOf": [
+        { "$ref": "#/$defs/policy_decision_basis" },
+        { "$ref": "#/$defs/gated_by_basis" },
+        { "$ref": "#/$defs/no_policy_basis" }
+      ]
+    },
+    "evidence_set_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The Evidence Set this act rested on, where one exists.",
+      "$comment": "A4 names it as part of on-what-basis. Held by reference; the Approval Request carries the set itself."
+    },
+    "inputs": {
+      "description": "The inputs the act rested on, recorded as values.",
+      "$comment": "For a Policy Decision this is D2's inputs evaluated, and policy-model.md N3 requires any input outside N1's table — wall-clock time, aggregate state, a value fetched during evaluation — to be recorded here, or the decision is not reconstructible. D4 and D5: the same inputs MUST produce the same verdict, and reconstruction MUST NOT require re-evaluation. Replaying an old action against today's Policies may produce a different verdict; that is expected and is not a defect."
+    },
+    "corrects": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The record this one corrects.",
+      "$comment": "A2 — a record MUST NOT be updated or deleted within its retention period. A correction is a new record naming the one it corrects; the original stays readable, and both are returned by any query covering the period. Immutability MUST be structural, not conventional: the role that writes audit MUST NOT hold update or delete privilege on it."
+    },
+    "external_reference": {
+      "type": "string",
+      "description": "An opaque identifier minted by a rail, retained only so a customer can reconcile against their own provider-side records.",
+      "$comment": "A8 — permitted as an opaque value, and MUST NOT be typed, named or structured so as to expose the rail through a public contract. Under BYOK those provider-side records are the customer's own. Typed as a bare string for exactly that reason."
+    }
+  },
+  "$defs": {
+    "principal": {
+      "type": "object",
+      "description": "The one Principal who acted.",
+      "$comment": "A3 and invariant I2 — every record MUST resolve to exactly one Principal and MUST carry the authenticated identity behind it, so attribution survives a rename or the Principal's deletion. Under delegation the record names the delegate who decided; the delegation grant is a separate audited fact with its own acting Principal. Whether a record ever carries an acted-for Principal alongside the acting one depends on a delegation and impersonation mechanism no document defines. Two execution paths have no acting Principal today — platform-operator work, and Approval Request expiry if a deadline mechanism is adopted — and both are unresolved; policy-model.md N2 fails such a path closed rather than admitting an unattributed record.",
+      "required": ["principal_id", "type", "authenticated_identity"],
+      "properties": {
+        "principal_id": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["platform_user", "end_user", "service_account", "connector"] },
+        "authenticated_identity": { "type": "string", "minLength": 1 }
+      }
+    },
+    "entity_ref": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": { "type": "string", "minLength": 1 },
+        "id": { "type": "string", "minLength": 1 },
+        "recorded_values": { "description": "The values as they stood at the time, so the record survives deletion of the entity." }
+      }
+    },
+    "policy_decision_basis": {
+      "type": "object",
+      "description": "This record IS the Policy Decision. Used with record_class policy_decision.",
+      "$comment": "D2 — a Policy Decision MUST carry the tenant, the Run, the enforcement point, the Principal, the verdict, the timestamp, the inputs evaluated, the Policy version that matched OR the explicit fact that none did, and at a Step boundary the Step Execution it gates. Those first six live on the record itself; what is particular to the decision is here. P5 — it references the version and MUST NOT embed the rule text: an audit that resolves a decision against today's text reports a rule that may never have run.",
+      "required": ["kind", "enforcement_point", "verdict"],
+      "properties": {
+        "kind": { "const": "policy_decision" },
+        "enforcement_point": { "enum": ["run_admission", "step_boundary", "tool_invocation"] },
+        "verdict": { "enum": ["allow", "deny", "require_approval"] },
+        "policy_version": {
+          "$ref": "#/$defs/policy_version_ref",
+          "description": "The Policy version that matched. Absent exactly when matched_policy is false."
+        },
+        "matched_policy": {
+          "type": "boolean",
+          "description": "Whether any Policy matched. False is a decision under deny-by-default, not a missing record."
+        }
+      }
+    },
+    "gated_by_basis": {
+      "type": "object",
+      "description": "This record is a governed act permitted or gated by a Policy Decision recorded elsewhere.",
+      "required": ["kind", "decision_id"],
+      "properties": {
+        "kind": { "const": "gated_by" },
+        "decision_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "no_policy_basis": {
+      "type": "object",
+      "description": "No Policy Decision applies to this act, stated explicitly rather than omitted.",
+      "required": ["kind", "reason"],
+      "properties": {
+        "kind": { "const": "none" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "policy_version_ref": {
+      "type": "object",
+      "required": ["policy_id", "version"],
+      "properties": {
+        "policy_id": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "timestamp": { "type": "string", "format": "date-time" }
+  }
+}
