@@ -60,9 +60,15 @@ configuration moves it. What crosses into this plane is therefore an artifact, n
 Python-to-TypeScript boundary the compiler sits on, and what that artifact is. It is not settled
 here; section 11 says why.
 
-**What this plane does not build.** Durability, checkpointing, interrupts and resumption are the
-runtime's (ADR-0005, ADR-0008); Orchestra builds the compiler, enforcement, versioning,
-observability and the audit trail. Its only public surfaces are the Gateway API and the Run event
+**What this plane does not build.** Durability, checkpointing, interrupts and resume are the
+runtime's, and remain so ([ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md),
+[ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)). Orchestra builds the compiler,
+enforcement, versioning, observability and the audit trail — **and the run supervisor**. ADR-0014
+separates the two layers the earlier boundary conflated: the runtime supplies execution semantics,
+while run supervision — lifecycle persistence, queueing, worker leasing and recovery, per-Tenant
+concurrency, scheduling, job-level retry and drain — is Orchestra's. A checkpoint says a graph
+reached a state; it does not say which worker owns the run, or who wakes it
+tomorrow. Its only public surfaces are the Gateway API and the Run event
 stream. The orchestration runtime's, a model provider's and the tool protocol's vocabulary stop at
 the edge — none appears in an API, schema, SDK or customer-facing document
 ([`audit-model.md`](../40-governance/audit-model.md) A8), and the compiled artifact is retained for

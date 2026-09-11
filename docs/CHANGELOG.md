@@ -1,9 +1,9 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.12.0
+version: 0.13.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-11
 owners: [platform-architecture]
 ---
 
@@ -17,12 +17,50 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 ### Planned
 
-- `80-reference/` — MCP and LangGraph evaluations, prior-art survey
-
 - `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
 - `70-delivery/` — MVP definition, milestones, testing strategy, compliance roadmap
+
+---
+
+## [0.13.0] — 2026-09-11
+
+The reference section was written, and the evidence it gathered superseded two Accepted ADRs. This
+is the release where the documentation set checked its own decisions against the world and found two
+of them wrong.
+
+### Added
+
+- `80-reference/mcp-evaluation.md`, `langgraph-evaluation.md` and `prior-art-survey.md` — completing
+  the section at five evaluations. Every claim carries a source, and each records what an adversarial
+  verification pass overturned.
+- [ADR-0014](adr/adr-0014-run-supervisor-is-orchestras.md) — the run supervisor is Orchestra's; the
+  runtime is an execution substrate. Supersedes ADR-0008, whose declarative-and-compiled decision is
+  carried forward unchanged. What was wrong was the reduction to "a schema and a compiler": it
+  conflated workflow execution semantics, which the runtime supplies under a permissive licence,
+  with run supervision, which ships under terms a hosted multi-tenant product cannot build on.
+  Durability at the graph level does not give durable service-level run orchestration — a checkpoint
+  says a graph reached a state, not which worker owns the run or who wakes it tomorrow.
+- [ADR-0015](adr/adr-0015-governed-action-positioning.md) — differentiate on governed, accountable
+  actions, not on connectivity. Supersedes ADR-0003. Five of nine differentiation claims were rated
+  contestable on evidence: two model vendors ship SaaS-to-private-network tunnels with no inbound
+  listener, and platform vendors now ship centralised agent governance, approval, ownership and
+  audit as product capabilities. The claim becomes a model rather than a capability list — a
+  consequential agent action is a governed state transition with an accountable Principal, an
+  applicable Policy, an explicit approval state where required, and durable evidence of the
+  decision, enforced at points a definition author cannot write around. The ADR explicitly does not
+  claim governance is uniquely Orchestra's, because the evidence makes that untenable.
+
+### Changed
+
+- `00-overview/` — all five documents rewritten or brought onto ADR-0014 and ADR-0015.
+  `product-thesis.md` was ADR-0003 expanded and is now ADR-0015 expanded; `roadmap.md` gains the run
+  supervisor and records MVP scope having grown three times — multi-tenancy pulled forward by
+  ADR-0001, a connector added by ADR-0007, a supervisor added by ADR-0014.
+- `10-architecture/data-plane.md` and `containers.md` — the run supervisor added to what Orchestra
+  builds, with durability, checkpointing, interrupts and resume still the runtime's.
+- `adr/README.md`, `CLAUDE.md`, `80-reference/README.md` — indexes and the decision table follow.
 
 ---
 

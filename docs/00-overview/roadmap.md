@@ -1,11 +1,11 @@
 ---
 title: Roadmap
 doc_id: DOC-015
-version: 0.3.0
+version: 0.13.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010]
+depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0014, ADR-0015]
 ---
 
 # Roadmap
@@ -149,8 +149,9 @@ indistinguishable, above the transport, from a direct one.
 ## 6. Phase 4 — Workflow definitions and the compiler
 
 **Gate:** Phase 2 exit. The decision is not the gate —
-[ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md) is Accepted. What gates it is the
-runtime adapter and the Policy Enforcement Point injection proven in the slice.
+[ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) is Accepted, carrying forward the
+declarative and compiled decision of superseded ADR-0008. What gates it is the runtime adapter and
+the Policy Enforcement Point injection proven in the slice.
 **Entry:** the definition language specification from Phase 0; a golden-test harness mapping
 definitions to expected compiled graphs.
 
@@ -167,7 +168,8 @@ definitions to expected compiled graphs.
   model call MAY be retried; a partially executed Tool call MUST NOT be. Idempotency keys are scoped
   to the Step Execution, not the Run.
 
-**Deliberately excluded:** a visual designer. ADR-0008 records it as a later product decision, and
+**Deliberately excluded:** a visual designer. Superseded ADR-0008 recorded it as a later product
+decision, carried forward by ADR-0014, and
 as the point where workflow products most often stall.
 
 ## 7. Phase 5 — Enterprise maturity
@@ -210,7 +212,8 @@ Against the archived v0.1 brief, the decisions so far have made the first releas
 | Change | ADR | Direction |
 | --- | --- | --- |
 | Multi-tenancy, RBAC, tenant administration and secret management moved out of a later phase into MVP | ADR-0001 | Increase |
-| A Workflow definition language and a validating compiler added | ADR-0008 | Increase |
+| A Workflow definition language and a validating compiler added | ADR-0008, superseded by ADR-0014 | Increase |
+| A run supervisor added — run lifecycle, queueing, worker leasing and recovery, per-Tenant concurrency, scheduling, job-level retry, drain. Durability, checkpointing, interrupts and resume stay with the runtime | ADR-0014 | Increase |
 | A Connector added — installation, enrolment, health, signed releases, upgrade; a distinct product, not a library | ADR-0007, Proposed | Increase |
 | Capability-based and preference-based model routing removed | ADR-0006 | **The only decrease** |
 
@@ -226,6 +229,7 @@ against this scope, not the original one.
 - **The tenant isolation strategy.** Deferred by ADR-0001 to a decision not yet made; Phase 0 work.
 - **Whether BYOK means data non-egress.** Phase 1 answers it by validation, not by choice.
 - **Prices, tiers and packaging.** Deferred by ADR-0009 until production usage exists.
-- **Whether a visual workflow designer is ever built.** ADR-0008 leaves it open.
+- **Whether a visual workflow designer is ever built.** ADR-0014 carries the question forward
+  unanswered from superseded ADR-0008.
 - **Who the design partners are.** There are none. Every phase gated on them is gated on work that
   has not started.
