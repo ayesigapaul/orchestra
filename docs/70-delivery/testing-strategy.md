@@ -1,7 +1,7 @@
 ---
 title: Testing Strategy
 doc_id: DOC-083
-version: 0.14.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -75,7 +75,11 @@ authority quickly. What is stated is which guarantees must have a test at all â€
 that follows from the decisions.
 
 The test framework, the runner, and where the suites live are implementation choices waiting on a
-language and datastore neither of which is selected.
+datastore that is not yet selected, and on which side of the Python-to-TypeScript boundary the
+compiler sits â€” unmade, and registered in
+[`../10-architecture/data-plane.md`](../10-architecture/data-plane.md). The languages themselves
+are recorded: [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md) carries
+forward ADR-0005's Python runtime and TypeScript control plane unchanged.
 
 ## 5. Open questions
 

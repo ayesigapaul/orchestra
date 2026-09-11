@@ -26,7 +26,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0002 | Enterprise segment, BYOK model credentials | Accepted |
 | 0003 | Governance layer, not an agent framework | Superseded by 0015 |
 | 0004 | AG-UI internally; the public contract is an Orchestra-versioned profile | Proposed |
-| 0005 | LangGraph is a compilation target, never a public boundary | Accepted |
+| 0005 | LangGraph is a compilation target, never a public boundary | Superseded by 0016 |
 | 0006 | Model layer is a credential and endpoint broker, not a router | Accepted |
 | 0007 | Outbound connector for enterprise tool reachability | Proposed |
 | 0008 | Customer workflows are declarative and compiled, not interpreted | Superseded by 0014 |
@@ -37,6 +37,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0013 | Policy Decision writes are fail-closed; other audit writes may degrade | Accepted |
 | 0014 | Orchestra builds the run supervisor; the runtime is an execution substrate | Accepted |
 | 0015 | Differentiate on governed, accountable actions, not on connectivity | Accepted |
+| 0016 | The compilation target is the LangGraph library, never its server | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

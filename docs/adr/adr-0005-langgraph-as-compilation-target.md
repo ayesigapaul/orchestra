@@ -1,7 +1,8 @@
 ---
 title: "ADR-0005: LangGraph as a compilation target, not a public boundary"
 adr_id: ADR-0005
-status: Accepted
+status: Superseded
+superseded_by: [ADR-0016]
 date: 2026-09-08
 deciders: [platform-architecture]
 tags: [runtime, architecture, boundaries]
@@ -11,7 +12,15 @@ tags: [runtime, architecture, boundaries]
 
 ## Status
 
-Accepted
+**Superseded by [ADR-0016](adr-0016-compile-to-the-langgraph-library.md).**
+
+The decision below — that Agents and Workflows are compiled into LangGraph execution graphs, and
+that LangGraph is never a public contract — is carried forward unchanged. What ADR-0016 corrects is
+what the decision was said to buy. This record names *LangGraph* without saying which artefact: its
+*"come free"* consequence holds for the MIT library and not for the Elastic-2.0 server tier, only
+one durability mode is a guarantee, resumption supplies the mechanism but not the supervision, and
+substitution is a drain rather than a recompile. The text below is retained unedited because the
+reasoning trail is the point of the practice.
 
 ## Context
 

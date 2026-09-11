@@ -1,7 +1,7 @@
 ---
 title: Vision
 doc_id: DOC-011
-version: 0.13.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -429,10 +429,12 @@ Other questions are unmade, and this document does not pretend otherwise.
 - **Whether the evidence model can be sold.** ADR-0015 rates *evidence semantics are too abstract to
   sell* at Medium likelihood and High impact. A packaging answer, not an architecture one, and
   untested pre-customer.
-- **[ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md) needs the correction ADR-0014
-  made.** It says durability, checkpointing, interrupts and resumption come free, which is true of
-  the MIT library and not of the server tier, and it draws no library-versus-server distinction.
-  That is a superseding ADR nobody has written.
+- **The compiler rules the runtime evidence implies.**
+  [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md) supersedes ADR-0005 to correct its
+  *"come free"* — true of the MIT library, not of the server tier — and names four rules it does not
+  decide: the durability mode fixed outside the definition language, the `approval` Step compiled as
+  an interrupt-only node, retry policy per Side-Effect Class, and node names stable across
+  recompiles. Each is costly to reverse and none is recorded.
 - **What BYOK means to a given customer** — control of spend and provider relationship, or a
   requirement that data never transit Orchestra infrastructure. Only the second implies a hybrid
   topology with a customer-deployed data plane. ADR-0002 requires this be tested with design

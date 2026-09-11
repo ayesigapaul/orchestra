@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.15.1
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -19,6 +19,48 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.16.0] — 2026-09-11
+
+ADR-0005 was superseded on the evidence ADR-0014 already cited. That closes the last correction the
+LangGraph evaluation registered against an Accepted record's reasoning; the compiler rules it names
+remain open.
+
+### Added
+
+- [ADR-0016](adr/adr-0016-compile-to-the-langgraph-library.md) — the compilation target is
+  the LangGraph library, never its server. Supersedes ADR-0005 and carries its decision forward
+  unchanged. What it corrects
+  is what that decision was said to buy: *"durability, checkpointing, interrupts and resumption come
+  free"* held for the MIT library and not for the Elastic-2.0 server, and ADR-0005 never said which
+  artefact it meant. Durability is a guarantee only in `sync` mode. Resumption is half inherited —
+  the mechanism is the library's and the supervision is ADR-0014's. Substitution is a drain rather
+  than a recompile, because persisted state does not migrate.
+
+### Changed
+
+- `10-architecture/data-plane.md` — the Runtime row no longer says the runtime supplies resumption
+  outright.
+- `00-overview/vision.md` — the ADR-0005 bullet among the open items becomes the four compiler rules
+  ADR-0016 names and does not decide.
+- `80-reference/langgraph-evaluation.md` section 9 records finding 1 as addressed.
+- `70-delivery/testing-strategy.md` claimed no implementation language was selected. ADR-0005,
+  carried forward by ADR-0016, records Python for the runtime and TypeScript for the control plane;
+  what is unselected is the datastore engine and which side of that boundary the compiler sits on.
+- `70-delivery/milestones.md` — M1's exit text said the schemas remained. They are written, and
+  `50-workflows/examples/` is the one planned item left.
+
+### Notes
+
+- Considered and rejected: reopening the substrate choice. The evaluation tested both limbs of
+  ADR-0005's revisit criterion and established neither. One alternative is better at patching
+  in-flight code, but no comparison against the eight Step types has been made, and superseding a
+  decision on an argument nobody has done is the error being corrected, made in the other direction.
+- Two suspected defects in ADR-0005 turned out not to be defects and are carried forward: its
+  escape hatch is consistent with the closed step-type set, which gates it as a ninth type, and its
+  Python runtime is what three architecture documents build on.
 
 ---
 

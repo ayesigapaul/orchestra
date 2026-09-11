@@ -1,9 +1,9 @@
 ---
 title: LangGraph Evaluation
 doc_id: DOC-094
-version: 0.13.0
+version: 0.16.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0005, ADR-0008, ADR-0001, ADR-0011]
 ---
@@ -524,12 +524,15 @@ Both limbs are tested here, and neither resolves:
 **Five findings argue for ADR work, and this document does none of it.**
 
 1. **The licence boundary.** ADR-0005 does not distinguish the MIT library it depends on from the
-   ELv2 server it cannot host under ADR-0001's product shape (sections 3 and 5).
+   ELv2 server it cannot host under ADR-0001's product shape (sections 3 and 5). **Recorded since:
+   [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md), 2026-09-11**, which
+   supersedes ADR-0005 on this evaluation's evidence and carries its compilation decision
+   forward unchanged.
 2. **The Run supervisor.** ADR-0008's negative list is broader than the evidence supports, and the
    supervisor was named and scoped nowhere (section 5). **Recorded since:
    [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md), 2026-09-11**, which supersedes
    ADR-0008, cites this evaluation as its evidence, and scopes the supervisor in a responsibility
-   table. Findings 1 and 3 to 5 remain unrecorded.
+   table. Findings 3 to 5 remain unrecorded.
 3. **Compiler rules the evidence implies, none of them recorded.** Durability mode fixed by the
    compiler (§5); the `approval` Step compiled as an interrupt-only node (§6.1); retry policy per
    Side-Effect Class (§6.3); byte-identical node names across recompiles as a golden-test invariant
@@ -538,11 +541,11 @@ Both limbs are tested here, and neither resolves:
 5. **Security patch uptake** beside ADR-0005's pinning mitigation, and a review of ADR-0011's
    row-level-security design against the store-isolation and filter-key defect classes (§4.1).
 
-ADR-0001, ADR-0005 and ADR-0011 are **Accepted** and therefore immutable per
-[`README.md`](../README.md) §5, so recording any of the remaining findings means a superseding or a
-new ADR. ADR-0008 was Accepted at the investigation date and was superseded by ADR-0014 on
-2026-09-11, after this evaluation was carried out. That
-is a decision for the repository owner. An evaluation records evidence; it does not decide, and it
+ADR-0001 and ADR-0011 are **Accepted** and therefore immutable per [`README.md`](../README.md) §5,
+so recording any of the remaining findings means a superseding or a new ADR, and that is a decision
+for the repository owner. ADR-0005 and ADR-0008 were Accepted at the investigation date; ADR-0016
+superseded the first and ADR-0014 the second, both on 2026-09-11, after this evaluation was carried
+out. An evaluation records evidence; it does not decide, and it
 does not issue requirements on components no ADR specifies.
 
 ## 10. What this does not establish
