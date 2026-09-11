@@ -1,9 +1,3 @@
-+++
-version = "2.1"
-aliases = ["/version/2/1"]
-reportingPlaceholder = "[INSERT CONTACT METHOD]"
-+++
-
 # Contributor Covenant Code of Conduct
 
 ## Our Pledge
@@ -42,7 +36,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at [INSERT CONTACT METHOD]. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported privately to the repository owner, [@ayesigapaul](https://github.com/ayesigapaul). There is no email channel yet; a dedicated address will be published once the project has a domain it controls. Conduct in GitHub spaces can also be reported to GitHub itself, independently of this project. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
@@ -87,7 +81,3 @@ For answers to common questions about this code of conduct, see the FAQ at [http
 [Mozilla CoC]: https://github.com/mozilla/diversity
 [FAQ]: https://www.contributor-covenant.org/faq
 [translations]: https://www.contributor-covenant.org/translations
-
-## Enforcement contact
-
-Report concerns to [conduct@orchestra.io](mailto:conduct@orchestra.io).
