@@ -90,4 +90,4 @@ For answers to common questions about this code of conduct, see the FAQ at [http
 
 ## Enforcement contact
 
-Report concerns to [conduct@smsone.co.ug](mailto:conduct@smsone.co.ug).
+Report concerns to [conduct@orchestra.io](mailto:conduct@orchestra.io).
