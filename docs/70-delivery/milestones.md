@@ -1,7 +1,7 @@
 ---
 title: Milestones
 doc_id: DOC-082
-version: 0.14.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -45,7 +45,7 @@ scheduling choice.
 ### M1 — Specification complete
 
 **Exit:** every planned document written, or explicitly held with its reason stated in the section
-README. At the time of writing, `30-protocol/schemas/` remains, and three documents are held
+README. At the time of writing, `50-workflows/examples/` remains, and three documents are held
 deliberately — the connector and deployment-topology pair were written against an assumed partner,
 and `60-operations/runbooks/` waits for something to operate.
 

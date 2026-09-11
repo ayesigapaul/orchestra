@@ -1,9 +1,9 @@
 ---
 title: Data Plane
 doc_id: DOC-024
-version: 0.8.0
+version: 0.16.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -45,7 +45,7 @@ open.
 | Component | Responsibility | Grounding |
 | --- | --- | --- |
 | **Gateway** | The plane's only ingress. Authenticates the calling Principal by any credential the Gateway contract accepts, resolving it to exactly one Principal and one Tenant; admits Runs; terminates the Run event stream. | `gateway-api.md` and `event-protocol.md` in [`../30-protocol/`](../30-protocol/) |
-| **Runtime** | Executes the compiled artifact. Supplies durability, checkpointing, interrupts and resumption. | [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md), [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md) |
+| **Runtime** | Executes the compiled artifact on the MIT library, never its server. Supplies durability — a guarantee only in `sync` mode — checkpointing, interrupts and the resume mechanism. It does not supply the supervision that notices a waiting or crashed Run and re-invokes it; that is the run supervisor's. | [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md), [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) |
 | **Policy Enforcement Points** | Not a component — places in the path where policy is evaluated and enforced. Whether the evaluator is a component of its own is open; section 5. | [`policy-model.md`](../40-governance/policy-model.md) E1 |
 | **Durable decision write** | Whatever carries a Policy Decision across a crash ahead of the gated action. [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) fixes the requirement and leaves the mechanism open — a shared transaction with the datastore, a durable outbox, or a node-local append all satisfy it. It is drawn below as a participant because the write is on the path, not because its shape is decided. | [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) |
 | **Model Broker** | Endpoint resolution, explicit selection, ordered fallback, quota-aware scheduling, normalised invocation and streaming. It resolves a credential reference and uses the credential at invocation; it holds none, and custody is a Control Plane duty. | [ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md); [`identity-and-access.md`](identity-and-access.md) section 10 |

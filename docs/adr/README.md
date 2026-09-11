@@ -1,9 +1,9 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.2.0
+version: 0.16.0
 status: Draft
-last_updated: 2026-09-08
+last_updated: 2026-09-11
 owners: [platform-architecture]
 ---
 
@@ -31,7 +31,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0002](adr-0002-enterprise-segment-and-byok.md) | Enterprise segment with BYOK model credentials | Accepted | 2026-09-08 |
 | [0003](adr-0003-governance-layer-positioning.md) | Position Orchestra as a governance layer, not an agent framework | Superseded by 0015 | 2026-09-08 |
 | [0004](adr-0004-adopt-ag-ui-event-protocol.md) | Adopt AG-UI as the internal event format behind an Orchestra profile | Proposed | 2026-09-09 |
-| [0005](adr-0005-langgraph-as-compilation-target.md) | LangGraph as a compilation target, not a public boundary | Accepted | 2026-09-08 |
+| [0005](adr-0005-langgraph-as-compilation-target.md) | LangGraph as a compilation target, not a public boundary | Superseded by 0016 | 2026-09-08 |
 | [0006](adr-0006-model-layer-as-credential-broker.md) | Model layer is a credential and endpoint broker | Accepted | 2026-09-08 |
 | [0007](adr-0007-outbound-connector-for-enterprise-reachability.md) | Outbound connector for enterprise tool reachability | Proposed | 2026-09-08 |
 | [0008](adr-0008-declarative-workflow-definitions.md) | Customer-defined workflows as declarative definitions | Superseded by 0014 | 2026-09-08 |
@@ -42,6 +42,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0013](adr-0013-fail-closed-policy-decision-writes.md) | Policy Decision writes are fail-closed; other audit writes may degrade | Accepted | 2026-09-09 |
 | [0014](adr-0014-run-supervisor-is-orchestras.md) | The run supervisor is Orchestra's; the runtime is an execution substrate | Accepted | 2026-09-11 |
 | [0015](adr-0015-governed-action-positioning.md) | Differentiate on governed, accountable actions — not on connectivity | Accepted | 2026-09-11 |
+| [0016](adr-0016-compile-to-the-langgraph-library.md) | The compilation target is the LangGraph library, never its server | Accepted | 2026-09-11 |
 
 ## Decision dependency graph
 
@@ -64,13 +65,15 @@ flowchart TD
   A3 -.->|superseded by| A15["ADR-0015<br/>Governed actions, not connectivity"]
   A12 --> A15
   A13 --> A15
+  A5 -.->|superseded by| A16["ADR-0016<br/>The library, never the server"]
+  A14 --> A16
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A5,A6,A9,A11,A12,A13,A14,A15 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16 accepted;
   class A4,A7,A10 proposed;
-  class A3,A8 superseded;
+  class A3,A5,A8 superseded;
 ```
 
 **Accepted** decisions are binding on implementation. **Proposed** decisions require a named
