@@ -1,9 +1,9 @@
 ---
 title: Workflow Definition Language
 doc_id: DOC-061
-version: 0.10.0
+version: 0.16.1
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0005, ADR-0008, ADR-0011]
 ---
@@ -59,10 +59,13 @@ made true rather than promised.
 **L4 — No rail vocabulary appears in the language.** The orchestration runtime's, a model provider's
 and the tool protocol's vocabularies MUST NOT appear in a key, enum value, step type or diagnostic
 (ADR-0005, `gateway-api.md` G17, `audit-model.md` A8), and a Checkpoint is not addressable from a
-definition (domain model I6). Durability, checkpointing, interrupts and resumption are the runtime's
-and absent deliberately — that absence is the reduction ADR-0008 bought: "build a workflow engine"
-became "build a schema and a compiler". Orchestra owns the schema, the compiler, policy injection,
-versioning and audit, and builds none of those four.
+definition (domain model I6). Durability, checkpointing, interrupts and the resume mechanism are the
+runtime library's and absent from the language deliberately
+([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)). Run supervision is absent too,
+for the opposite reason: it is Orchestra's own subsystem
+([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)), and a definition declares a process,
+not how the platform schedules one. ADR-0008 called what remained "a schema and a compiler"; it was
+a schema, a compiler and a run supervisor.
 
 ## 2. The document shape
 

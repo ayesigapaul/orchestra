@@ -1,7 +1,7 @@
 ---
 title: Data Plane
 doc_id: DOC-024
-version: 0.16.0
+version: 0.16.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -233,9 +233,12 @@ never exposed in a public contract
 
 Resolution does not rewrite the verdict: an action permitted by a human is a different fact from one
 permitted by rule ([`policy-model.md`](../40-governance/policy-model.md) V3), so a resumed Run
-carries two records rather than one amended record. Two things are called resumption here and only
-one is inherited — Run resumption after a gate comes from the runtime, while replay and resumption
-of the *event stream* to a disconnected client are Orchestra's to build
+carries two records rather than one amended record. Three things are called resumption here, and
+only one is inherited. The mechanism that continues a Run after a gate is the runtime library's
+([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)). Noticing that the gate has
+resolved and re-invoking the Run is the run supervisor's
+([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)). And replay and resumption of the
+*event stream* to a disconnected client are Orchestra's to build
 ([ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) — **Proposed**).
 
 ## 8. The Model Broker, the Quota Envelope and egress

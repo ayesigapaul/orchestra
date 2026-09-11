@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.16.0
+version: 0.16.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -19,6 +19,30 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.16.1] — 2026-09-11
+
+The boundary sweep ADR-0014 asked for and never fully received. Six documents still described the
+runtime as supplying resumption outright, or Orchestra's build as "a schema and a compiler". Both
+claims were corrected at the ADR level — ADR-0014 on 2026-09-11 and ADR-0016 in the release below —
+and this release brings the prose into line with them.
+
+### Fixed
+
+- `50-workflows/README.md` and `workflow-dsl.md` L4 — "a schema and a compiler" was ADR-0008's
+  reduction, and ADR-0014 superseded it on exactly this point. Both now name the run supervisor.
+- `20-domain/lifecycle-state-machines.md` — the conventions cited ADR-0005 and ADR-0008 for
+  durability and resumption. They now separate the resume mechanism from its supervision, and
+  record the reconciliation ADR-0014 required: the supervisor's run states map onto this lifecycle,
+  which stays authoritative on what a customer can observe.
+- `10-architecture/data-plane.md` section 7 said two things are called resumption. There are three:
+  the library's mechanism, the supervisor's re-invocation, and event-stream replay.
+- `10-architecture/containers.md` section 10 — a checkpoint store is still not a container, but for
+  a different reason: checkpointing is a library mechanism persisting to Orchestra's own datastore.
+  The runtime library, not ADR-0008, is why there is no workflow engine.
+- `00-overview/vision.md` — names the library as the source and the server as out of bounds.
 
 ---
 

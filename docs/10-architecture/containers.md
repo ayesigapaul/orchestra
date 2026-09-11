@@ -1,9 +1,9 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.8.0
+version: 0.16.1
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -236,10 +236,16 @@ next to the Runtime — and what crosses the boundary.
 
 ## 10. What is deliberately not a container
 
-- **A checkpoint store.** Durability and resumption are the runtime's; a Checkpoint is not
-  addressable, not versioned by Orchestra, and not in any public contract (domain model I6).
+- **A checkpoint store.** Checkpointing is a library mechanism inside the Runtime container,
+  persisting to Orchestra's own datastore
+  ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)), not a store of its own. A
+  Checkpoint is not addressable, not versioned by Orchestra, and not in any public contract (domain
+  model I6).
 - **A model router.** Removed from scope by ADR-0006.
-- **A workflow engine.** ADR-0008 buys a schema and a compiler, not an execution substrate.
+- **A workflow engine.** The runtime library is the execution substrate
+  ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)). What Orchestra adds over it is
+  a compiler and a run supervisor ([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)), not
+  an engine of its own.
 - **A per-tenant deployment.** ADR-0011 chose shared schema. The promotion path for a single Tenant
   is designed for and not built, and it is a topology question rather than a container.
 - **A bespoke Admin Console.** Front-end surfaces duplicate the template in

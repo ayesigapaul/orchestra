@@ -1,7 +1,7 @@
 ---
 title: Workflows
 doc_id: DOC-060
-version: 0.15.0
+version: 0.16.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -10,6 +10,8 @@ owners: [platform-architecture]
 # Workflows
 
 The declarative Workflow definition language and its execution semantics, per
+[ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md), which carries forward the
+declarative-and-compiled decision of superseded
 [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md).
 
 This section is not one of the two normative sections — only [`../30-protocol/`](../30-protocol/)
@@ -26,11 +28,16 @@ approval may sit for days. W1 freezes a published version; R3 makes the contract
 | [`step-types.md`](step-types.md) | The eight step types, what each declares, and what a Policy Enforcement Point sees at its boundary |
 | [`execution-semantics.md`](execution-semantics.md) | Version pinning, idempotency, compensation, cancellation and the failure taxonomy |
 
-## What ADR-0008 reduced
+## What ADR-0008 reduced, and what ADR-0014 put back
 
-"Build a workflow engine" became "build a schema and a compiler". Orchestra owns the definition
-language, the validating compiler, policy injection, versioning and the audit trail. Durability,
-checkpointing, interrupts and resumption come from the runtime and are not built here.
+"Build a workflow engine" became "build a schema and a compiler". Half of that held. Orchestra does
+not build graph execution, checkpointing, interrupts or the resume mechanism, which are the runtime
+library's ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)). But the reduction
+conflated execution semantics with run supervision, and
+[ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) names the second as Orchestra's:
+persisting run intent, leasing work to workers, per-Tenant concurrency, waking a waiting Run, and
+job-level retry. Orchestra owns the definition language, the validating compiler, policy injection,
+versioning, the audit trail and the run supervisor.
 
 Compilation is the governance mechanism rather than an implementation detail: the compiler emits a
 Policy Enforcement Point at every Step boundary, so governance cannot be bypassed by how a definition

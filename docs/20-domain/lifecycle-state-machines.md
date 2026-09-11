@@ -1,9 +1,9 @@
 ---
 title: Entity Lifecycle State Machines
 doc_id: DOC-032
-version: 0.7.0
+version: 0.16.1
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011]
 ---
@@ -32,10 +32,13 @@ Requirement keywords carry their [RFC 2119](https://www.rfc-editor.org/rfc/rfc21
   [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) requires a datastore that
   enforces row-level security itself but selects none. No product is chosen.
 - Run state is **Orchestra's** governance vocabulary, not the runtime's. Durability, checkpointing,
-  interrupts and resumption come from the runtime
-  ([ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md),
-  [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md)); a Checkpoint is never exposed in
-  a public contract, and these states MUST NOT be a projection of runtime internals.
+  interrupts and the resume mechanism come from the runtime library
+  ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)); noticing a waiting or crashed
+  Run and re-invoking it is the run supervisor's
+  ([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)). A Checkpoint is never exposed in a
+  public contract, and these states MUST NOT be a projection of runtime internals — nor of the
+  supervisor's, whose own run states map onto these rather than replacing them. This lifecycle is
+  authoritative on the states a customer can observe.
 
 | Entity | Typical lifetime | What moves it | Grounding |
 | --- | --- | --- | --- |
