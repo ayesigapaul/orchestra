@@ -110,6 +110,10 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   requests only, and the secret scan calls a pinned `gitleaks` binary in whole-history mode rather
   than the action wrapper. The weekly link check reports instead of failing, because rot on a
   third-party site would otherwise redden `main` with nobody having touched the repository.
+- **A re-run cannot see a corrected pull request title.** `pr-title` reads
+  `github.event.pull_request.title` from the event payload, and re-running a job replays the
+  payload it was triggered with. `hygiene.yml` therefore listens for `edited` as well as the
+  default pull_request types, so retitling actually re-checks.
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.
