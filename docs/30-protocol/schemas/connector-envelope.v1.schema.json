@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/connector-envelope.v1.schema.json",
+  "title": "Connector Envelope",
+  "description": "One frame on the tunnel between a customer-deployed Connector and the Orchestra-side connector fabric. This is the tunnel's own contract, not the Gateway's Connector resource.",
+  "$comment": "THIS SCHEMA RESTS ON A PROPOSED DECISION. ADR-0007 binds only after design-partner validation confirms that public MCP exposure is unachievable for those partners and establishes what their security teams require of software inside their network; if that validation goes the other way, this contract is provisional in its entirety. ADR-0015 separately demotes the Connector from differentiation to plumbing, and 70-delivery/mvp-definition.md takes it out of the first slice, which reaches Tools over direct HTTPS. What follows is confined to what the repository actually decides — 10-architecture/connector.md, VERSIONING.md section 9, and lifecycle-state-machines.md section 5. THE FRAME VOCABULARY IS NOT DECIDED ANYWHERE: no document enumerates the message kinds a tunnel carries, so the enum below is the minimum the negotiation and dispatch rules imply and is registered as open in schemas/README.md rather than presented as settled.",
+  "type": "object",
+  "required": ["protocol_version", "connector_id", "tenant_id", "kind", "correlation_id"],
+  "properties": {
+    "protocol_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The connector protocol version, negotiated at enrolment and on every reconnection.",
+      "$comment": "VERSIONING section 9 — the Connector runs inside the customer's network and cannot be force-upgraded, so skew is permanent and designed for rather than treated as an exception. The gateway supports the current major plus the previous one for 12 months after the newer major reaches GA. Renegotiation on reconnection is load-bearing: the gateway's minimum can rise while an installation is down, and admitting it afterwards on the strength of an earlier negotiation would let an unsupported version proxy traffic indefinitely. The supported-version window is a support commitment, NOT a health threshold — no interval, timeout or threshold in this area is decided anywhere."
+    },
+    "connector_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The enrolled installation. Revocation is terminal for the installation, not for the customer: re-enrolling is a new installation with a new identity.",
+      "$comment": "The Connector is itself a Principal (domain model section 3), which is what makes enrolment, first session, every version-negotiation outcome including every refusal, and revocation auditable with an acting Principal."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mandatory on every frame, as on every record, event and log line (invariant I1, ADR-0011)."
+    },
+    "kind": {
+      "enum": ["negotiate", "negotiate_result", "invoke", "invoke_result", "refusal", "fault"],
+      "description": "What this frame carries.",
+      "$comment": "Minimum implied by the decided rules, not an enumeration any document fixes — see this file's top-level comment. refusal and fault are distinct because TA16 makes a refusal a governance outcome rather than a transport error, and TA17 forbids routing around one by choosing another path to the same Tool: route-shopping past the customer's second list is the one way their last control can be undone from inside Orchestra."
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Ties a result, refusal or fault to the frame that caused it, over a multiplexed session."
+    },
+    "outcome_known": {
+      "type": "boolean",
+      "description": "On a fault frame: whether the invocation's outcome is known. Absent is not the same as false.",
+      "$comment": "TA18, normative conditional on ADR-0007 binding and void with it: a connector refusal, or a tunnel drop mid-call, MUST NOT be retried blindly — the invocation is in an unknown state, and unknown is not the same as not done. Connector state MUST NOT be used to infer that a side effect did not occur: Offline says the transport failed, not that the far system declined the work. What decides which side of the line a condition falls on is dispatch, not connector state (reliability.md F20). Metering records a refusal at the Connector as unresolved for the same reason."
+    },
+    "payload": {
+      "description": "The frame's content. Deliberately unconstrained.",
+      "$comment": "What the seam must hide is transport-invariant and lives ABOVE it, never in this envelope: the Tool's identity, its schema version, its Side-Effect Class, the capability grant, the Policy that matched and the verdict. TA15 is normative and requires the same grant and the same Policy to produce the same verdict whether a Tool is reached directly or through a tunnel, which is achievable only if every enforcement point sits above the seam. A payload member that carried a verdict, a grant or a Policy reference would move an enforcement decision below it."
+    }
+  }
+}

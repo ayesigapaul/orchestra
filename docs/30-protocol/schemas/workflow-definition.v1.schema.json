@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/workflow-definition.v1.schema.json",
+  "title": "Workflow Definition",
+  "description": "A customer-authored Workflow definition: the document a Platform User writes, a compiler validates, and publication freezes as an immutable version.",
+  "$comment": "Normative prose: 50-workflows/workflow-dsl.md section 2, which is the specification of this document's shape, and 50-workflows/step-types.md. THIS SCHEMA IS NOT THE VALIDATION AUTHORITY AND CANNOT BE. workflow-dsl.md L9: an unrecognised construct is rejected rather than ignored, and the compiler rejects it, not the schema — R3's must-ignore rule binds consumers of an Orchestra contract, and the compiler is not one but the authority deciding what a definition means. VERSIONING section 6 forbids additionalProperties: false here, so the closure lives where ui-protocol.md CC3 put the same closure for the component catalog: the schema stays open and a compiler pass checks every construct against an allow-list. What this file carries is the shape; what rejects an unknown key is a compiler pass.",
+  "type": "object",
+  "required": ["name", "inputs", "entry", "steps", "edges"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable identifier within the Tenant. Never renamed, never reused.",
+      "$comment": "L5 — a definition is retained for the full audit-retention period (W4), so a reused name makes every audit reference to it ambiguous across that period. Identity is this name plus the publication-assigned version, addressed name@version."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Assigned and frozen by publication, never authored. A draft carries none.",
+      "$comment": "L5 — an author-supplied version would make immutability an authoring convention, since two drafts could claim the same number. Absent from the required list for exactly that reason."
+    },
+    "workspace": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Administrative scope. Never an isolation boundary."
+    },
+    "inputs": {
+      "type": "object",
+      "description": "The declared values a Run supplies at admission. MAY be empty.",
+      "$comment": "The type notation for an input is NOT decided. workflow-dsl.md section 3 marks the notation in its worked example as illustrative, and section 11 registers the type system with the choice of concrete syntax. This object is deliberately unconstrained rather than given a shape nothing has chosen."
+    },
+    "entry": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The identifier of the Step at which execution begins. MUST name a key of steps."
+    },
+    "steps": {
+      "type": "object",
+      "description": "Declared Steps, keyed by author-assigned identifier unique within the version.",
+      "$comment": "L6 — the identifier is authored, not generated: it is the unit of traceability and the anchor of every diagnostic. Object keys carry that uniqueness.",
+      "additionalProperties": { "$ref": "#/$defs/step" }
+    },
+    "edges": {
+      "type": "array",
+      "description": "The graph. Control flow lives here and nowhere else.",
+      "$comment": "L8 — an explicit edge list is more verbose than a next field per Step, and buys a graph analysable without reading any Step body, which is what the reachability, acyclicity and enforcement-point passes need. A condition or parallel Step declares its outcome labels; the edges leaving it carry the targets.",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "description": "One declared Step. Every Step declares a type and a Side-Effect Class whatever else it carries.",
+      "$comment": "What each type declares beyond these two is deliberately unconstrained here. The tool object shape, the expression and reference syntax, the predicate on a condition Step and the branch labels leaving it are all notation in workflow-dsl.md's worked example and are explicitly NOT decided — sections 3, 8 and 11 register them, and section 8 is the point at which a definition language would become a programming language. A compiler pass, not this schema, checks a Step body against the allow-list for its type.",
+      "required": ["type", "side_effect_class"],
+      "properties": {
+        "type": {
+          "enum": ["agent", "tool", "approval", "condition", "parallel", "wait", "transform", "subworkflow"],
+          "description": "The step type. The set is closed at eight.",
+          "$comment": "step-types.md section 3 — a ninth type is denied by default. Only a tool Step names a Tool to invoke; every other type names none (L7)."
+        },
+        "side_effect_class": {
+          "$ref": "#/$defs/side_effect_class",
+          "$comment": "L6 — a Step with no business effect declares a class too: the class is an input to Policy, never a precondition for evaluation (policy-model.md E3). On a tool Step the declaration is a restatement the compiler checks against the Tool Catalog registration, never an assertion it adopts; a mismatch is rejected. What a declared class constrains on the seven types that reach no Tool of their own is unmade — workflow-dsl.md section 11."
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "description": "One directed edge between two Steps.",
+      "required": ["from", "to"],
+      "properties": {
+        "from": { "type": "string", "minLength": 1, "description": "Source Step identifier." },
+        "to": { "type": "string", "minLength": 1, "description": "Target Step identifier." },
+        "branch": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The outcome label this edge leaves by, on an edge out of a condition or parallel Step.",
+          "$comment": "The label vocabulary is NOT decided — workflow-dsl.md section 8 registers it with the expression syntax, and the labels in the worked example are notation. Typed as a free string rather than an enum for that reason."
+        }
+      }
+    },
+    "side_effect_class": {
+      "enum": ["read", "write", "destructive", "financial", "external-communication"],
+      "description": "The declared consequence class of a Step or Tool, and a primary input to Policy.",
+      "$comment": "GLOSSARY.md, tool-authorization.md. Every Step is evaluated whatever its class (policy-model.md E3): narrowing enforcement by class would leave the platform unable to answer what an Agent read, and would make a declared class a self-issued exemption from the control that reads it."
+    }
+  }
+}

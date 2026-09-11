@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.14.0
+version: 0.15.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -17,9 +17,66 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 ### Planned
 
-- `30-protocol/schemas/` — the JSON Schemas the protocol prose describes
 - `50-workflows/examples/` — worked finance, logistics and procurement processes
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.15.0] — 2026-09-11
+
+The seven wire schemas were written, and CI became the control over the rule that governs them. This
+completes the planned documentation set: every section named in `README.md` is now written.
+
+### Added
+
+- `30-protocol/schemas/` — `run.v1`, `agent-event.v1`, `workflow-definition.v1`, `policy-rule.v1`,
+  `approval-request.v1`, `audit-record.v1` and `connector-envelope.v1`. Each member carries its
+  reasoning in `$comment`, against the numbered rule it derives from, so that a schema read on its
+  own says why a field is shaped as it is and which document owns what it leaves open.
+- `scripts/validate-schemas.mjs`, wired into the `Structure and conventions` job. It checks the
+  dialect, that each `$id` agrees with its filename, that this list and the section README agree
+  with the files on disk, and — the one that matters — that `additionalProperties: false` appears
+  nowhere at any depth. That prohibition is what rule R3 rests on, and a schema that closes an
+  object in passing looks like a working document until a consumer breaks on a field it was
+  promised it could ignore.
+
+### Changed
+
+- `VERSIONING.md` section 6 — schema `$id`s move from the unregistered `schemas.orchestra.dev` to a
+  GitHub-hosted base URI that resolves today. An `$id` nothing can fetch is worse than an ugly one a
+  validator can. Moving to a registered domain later changes every `$id` at once, which the section
+  now records as a migration to plan rather than an edit to make quietly.
+- `30-protocol/README.md` and `50-workflows/README.md` — status blocks corrected, and narrowed
+  rather than simply cleared. The prose is no longer unvalidated; two gaps named in their place.
+
+### Notes
+
+Three things these schemas deliberately do not do, each recorded in the files themselves.
+
+- **They do not close.** `additionalProperties` is unset or `true` everywhere, without exception.
+- **`workflow-definition.v1` does not validate a definition.** `workflow-dsl.md` L9 puts that
+  authority in the compiler: R3's must-ignore rule binds *consumers* of a contract, and a compiler
+  is not one but the authority deciding what a definition means. The schema fixes the shape; a
+  compiler pass rejects the construct, closed by allow-list lookup as `ui-protocol.md` CC3 already
+  closes the component catalog.
+- **They do not catch everything the prose forbids.** Keeping every object open is what R3 needs,
+  and it makes a rule of the form *this field MUST NOT also appear here* inexpressible.
+  `event-protocol.md` EG1 requires the four per-event guarantees under `metadata.orchestra` and
+  forbids duplicating them at the top level; `agent-event.v1` enforces the first half and cannot
+  enforce the second. It says so in place rather than appearing to check it.
+- **They do not invent what is unmade.** The policy match language, rule precedence, the expression
+  syntax in a definition, what satisfies an Approval Chain, and the Connector tunnel's frame
+  vocabulary are all left unconstrained, each pointing at the document that owns it. A schema is the
+  worst place to guess, because a guess published here is a contract.
+
+Two gaps stay open and are stated rather than papered over. `agent-event.v1` **carries no pin**:
+`event-protocol.md` section 3.1 requires one full upstream commit identifier in the schema file, and
+none exists to pin against, so two streamed families are matched by prefix where an exhaustive
+constant list is owed. And **eight contracts the protocol prose describes have no schema** — the
+seven `gateway-api.md` section 8 names plus its error envelope. `schemas/README.md` answers the
+question assigned to it there: two of the eight are ADR-required and the other six wait on a
+resource model given in prose rather than in fields. One of them, the Session Token mint, carries a
+standing security question rather than a scheduling one.
 
 ---
 

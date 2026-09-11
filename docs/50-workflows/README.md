@@ -1,9 +1,9 @@
 ---
 title: Workflows
 doc_id: DOC-060
-version: 0.10.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-11
 owners: [platform-architecture]
 ---
 
@@ -42,7 +42,10 @@ cyclic graph is rejected** until an ADR admits one: not checking would not be ne
 decide the question permissively and W1 would then freeze every definition written under it.
 Admitting cycles later is MINOR; withdrawing them is MAJOR.
 
-> **Status.** Examples under [`examples/`](examples/) are not yet written, and the
-> `workflow-definition` schema that makes the language checkable lives in
-> [`../30-protocol/schemas/`](../30-protocol/schemas/) and is not yet written either. Until it is,
-> this section describes a contract that nothing validates.
+> **Status.** Examples under [`examples/`](examples/) are not yet written.
+> [`../30-protocol/schemas/workflow-definition.v1.schema.json`](../30-protocol/schemas/workflow-definition.v1.schema.json)
+> now fixes the document shape `workflow-dsl.md` section 2 specifies — and fixes only that. It
+> deliberately does not make the language checkable: L9 puts that authority in the compiler rather
+> than the schema, because ignoring an unknown construct would drop an author's intent, and where
+> that intent was a governance one the loss is invisible. The expression syntax, the input type
+> notation and the branch labels stay unconstrained there because they are undecided here.

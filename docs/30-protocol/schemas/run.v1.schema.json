@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/run.v1.schema.json",
+  "title": "Run",
+  "description": "One execution of an Agent version or a Workflow version: the unit of execution, observability, billing and audit. This is the representation the Gateway returns, not a submission body.",
+  "$comment": "Normative prose: 20-domain/lifecycle-state-machines.md section 2; 20-domain/domain-model.md section 4; 30-protocol/gateway-api.md section 5.1. additionalProperties is left unset throughout, per VERSIONING.md section 6 — false would break rule R3.",
+  "type": "object",
+  "required": ["run_id", "tenant_id", "state", "target", "submitted_at"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Assigned at admission. Stable for the life of the Run."
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The Tenant this Run belongs to.",
+      "$comment": "G7 — a caller-settable tenant identifier MUST NOT exist on this contract. Here it is an echo of what the presented credential established, never an input. Invariant I1 and ADR-0011 make it mandatory on every record."
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Administrative scope. Never an isolation boundary (domain model section 3, G9)."
+    },
+    "conversation_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Present only where the Run belongs to a Conversation. A Workflow Run started by a schedule or a Service Account has none."
+    },
+    "state": {
+      "enum": ["Pending", "Running", "Suspended", "Succeeded", "Failed", "Cancelled", "Denied"],
+      "description": "Orchestra's Run state, never a projection of runtime internals.",
+      "$comment": "Compensating is deliberately absent. lifecycle-state-machines.md section 2.4 marks it Provisional and leaves open whether a Run carries an observable roll-up state while its Step Executions compensate; event-protocol.md section 3.2 makes the same exclusion so that one answer exists rather than two. Consumers branch across this set exhaustively, so admitting Compensating later is MAJOR, not the MINOR that VERSIONING R2 would otherwise make an added enum value."
+    },
+    "target": {
+      "type": "object",
+      "description": "The definition version this Run pinned at admission and executes for its whole life.",
+      "$comment": "Domain model section 4 — a Run targets exactly one of the two, never both and never neither. The pin is immutable: VERSIONING W2 and W3, lifecycle section 2.3. There is no migration transition and there will never be one.",
+      "oneOf": [
+        { "$ref": "#/$defs/target_agent" },
+        { "$ref": "#/$defs/target_workflow" }
+      ]
+    },
+    "pinned_policy_versions": {
+      "type": "array",
+      "description": "The Policy versions in force at admission, pinned for the life of the Run.",
+      "$comment": "policy-model.md P6 — editing a Policy MUST NOT change the verdict a Run in flight receives. A Run suspended at an Approval Request for days resumes under the versions it was admitted under. Whether an immediately effective revocation path may override the pin is registered open in tool-authorization.md and policy-model.md.",
+      "items": { "$ref": "#/$defs/policy_version_ref" }
+    },
+    "suspension": {
+      "type": "object",
+      "description": "Present while state is Suspended. Absent otherwise.",
+      "$comment": "lifecycle section 2.2 — approval and wait are one Suspended state with a recorded reason, not two states. Suspended state MUST be durable and MUST NOT depend on a live process, connection or in-memory continuation; suspension may last days (VERSIONING section 8).",
+      "required": ["reason"],
+      "properties": {
+        "reason": {
+          "enum": ["approval", "wait"],
+          "description": "Why the Run is halted."
+        },
+        "approval_request_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Approval Request gating the Run. Present when reason is approval."
+        },
+        "step_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Step whose boundary suspended the Run, where one applies."
+        },
+        "suspended_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "admission_decision_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The admission Policy Decision. Present on every Run including a Denied one.",
+      "$comment": "lifecycle section 2.1 and policy-model.md D1 — the admission decision is audited whichever way it goes, and ADR-0013 requires it durable before execution begins. A Run refused at admission is a created Run in Denied, not a failed submission (G13)."
+    },
+    "submitted_at": { "$ref": "#/$defs/timestamp" },
+    "started_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "When admission returned allow and execution began. Absent on a Denied Run."
+    },
+    "ended_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "When the Run reached a terminal state. Terminal is permanent: re-running means a new Run referencing this one."
+    }
+  },
+  "$defs": {
+    "target_agent": {
+      "type": "object",
+      "description": "A Run targeting an Agent version.",
+      "properties": { "agent": { "$ref": "#/$defs/definition_pin" } },
+      "required": ["agent"]
+    },
+    "target_workflow": {
+      "type": "object",
+      "description": "A Run targeting a Workflow version.",
+      "properties": { "workflow": { "$ref": "#/$defs/definition_pin" } },
+      "required": ["workflow"]
+    },
+    "definition_pin": {
+      "type": "object",
+      "description": "A definition and the immutable version the Run pinned.",
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier within the Tenant. Never renamed, never reused (workflow-dsl.md L5)."
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Assigned and frozen by publication, never authored."
+        }
+      }
+    },
+    "policy_version_ref": {
+      "type": "object",
+      "description": "A Policy resolved by version, never by embedded rule text.",
+      "$comment": "ADR-0012 and policy-model.md P5 — a Policy version MUST be retained for at least as long as any record referencing it.",
+      "required": ["policy_id", "version"],
+      "properties": {
+        "policy_id": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp. Informational — audit-model.md A7 forbids wall-clock time as the sole basis for ordering."
+    }
+  }
+}

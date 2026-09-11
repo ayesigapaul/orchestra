@@ -1,9 +1,9 @@
 ---
 title: Versioning & Compatibility Policy
 doc_id: DOC-001
-version: 0.2.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-08
+last_updated: 2026-09-11
 owners: [platform-architecture]
 depends_on: [ADR-0004, ADR-0008]
 ---
@@ -178,15 +178,23 @@ Schemas are the source of truth for wire contracts and live in
   connector-envelope.v1.schema.json
 ```
 
-- `$id` embeds the major version:
-  `https://schemas.orchestra.dev/agent-event/v1/agent-event.v1.schema.json`
-  *(base URI provisional — pending domain registration)*
+- `$id` embeds the major version and resolves today, on a GitHub-hosted base URI:
+  `https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/agent-event.v1.schema.json`.
+  It was a vanity domain that is not registered; an `$id` nothing resolves is worse than an ugly one
+  a validator can fetch. Moving to a registered domain later changes every `$id` at once, which any
+  consumer resolving schemas by `$id` would notice — a migration to plan rather than an edit to make
+  quietly.
 - MINOR and PATCH changes update the file in place and are recorded in the changelog; they MUST be
   additive and MUST NOT tighten an existing constraint.
 - `additionalProperties` MUST NOT be set to `false` on any wire-facing object. Doing so makes
   additive evolution impossible and breaks rule R3.
 - Every schema change requires a passing round-trip contract test against the previous minor version
   before merge.
+- `scripts/validate-schemas.mjs` enforces the rules above in CI — the dialect, the `$id`, the
+  `additionalProperties` prohibition at every depth, and the agreement between this list, the section
+  README and the files on disk. Each of them fails silently otherwise: a schema that closes an object
+  in passing looks like a working document until a consumer breaks on a field R3 promised it could
+  ignore.
 
 ---
 

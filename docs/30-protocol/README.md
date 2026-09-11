@@ -1,9 +1,9 @@
 ---
 title: Protocol
 doc_id: DOC-040
-version: 0.9.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-11
 owners: [platform-architecture]
 ---
 
@@ -44,6 +44,12 @@ fields, which one transport binding silently drops.
 
 > **Status.** [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) and
 > [ADR-0010](../adr/adr-0010-a2ui-genui-interchange.md) are both **Proposed**. Every claim resting on
-> them is marked in place. The conformance suite the profile requires does not exist yet, and the
-> schemas under [`schemas/`](schemas/) are not yet written — until they are, the prose describes a
-> contract that nothing validates.
+> them is marked in place, and the conformance suite the profile requires does not exist yet.
+>
+> The seven schemas under [`schemas/`](schemas/) are written, and CI now enforces the rules of
+> [`../VERSIONING.md`](../VERSIONING.md) section 6 over them. Two things they do not settle. The
+> profile's pin is still unset — section 3.1 requires `agent-event.v1` to carry one full upstream
+> commit identifier, and none exists to pin against — so that schema matches two streamed families by
+> prefix where it owes an exhaustive constant list. And eight contracts this section describes in
+> prose have no schema at all, including the error envelope of [`gateway-api.md`](gateway-api.md)
+> section 7; [`schemas/README.md`](schemas/README.md) says why each must wait.
