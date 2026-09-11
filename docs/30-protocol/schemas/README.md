@@ -1,7 +1,7 @@
 ---
 title: Schemas
 doc_id: DOC-041
-version: 0.15.0
+version: 0.15.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -91,4 +91,4 @@ than after.
 | Rule precedence, which `policy-rule.v1` therefore carries no member for | [`../../40-governance/policy-model.md`](../../40-governance/policy-model.md) D4.3, a prerequisite rather than a later convenience | **Yes** |
 | Whether a Policy version has a drawn lifecycle of its own, which no document draws and `policy-rule.v1` does not assert | [`../../20-domain/lifecycle-state-machines.md`](../../20-domain/lifecycle-state-machines.md), which draws the definition lifecycle P5 says Policies follow | No |
 | The Connector tunnel's frame vocabulary, which `connector-envelope.v1` states as a minimum rather than an enumeration | [`../../10-architecture/connector.md`](../../10-architecture/connector.md), and only if ADR-0007 binds | No |
-| Whether the `$id` base URI moves to a registered domain, which would change every `$id` at once | A domain registration; [`../../VERSIONING.md`](../../VERSIONING.md) §6 records the consequence | No |
+| Whether the `$id` base URI ever moves off GitHub, which would change every `$id` at once | Owning a domain. Staying GitHub-hosted is decided, not pending: `schemas.orchestra.dev` is parked by a third party, so the old base resolved to someone else's lander rather than to nothing. [`../../VERSIONING.md`](../../VERSIONING.md) §6 records why, and that the first external consumer is the deadline | No |
