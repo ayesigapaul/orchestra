@@ -18,7 +18,7 @@
  * Registers vary in shape — some carry an explicit "ADR required?" column, some fold the marker
  * into a "Needs" column, some have neither — so column roles are resolved from the header.
  */
-import { readFileSync, readdirSync, statSync, existsSync, lstatSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, dirname, resolve, basename } from 'node:path';
 
 const ROOT = resolve(process.argv[2] && !process.argv[2].startsWith('--') ? process.argv[2] : '.');
@@ -31,10 +31,10 @@ function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
-      // index.md files are symlinks to a directory's README.md, so Mintlify can serve a section
-      // index — it refuses to serve a page named README. Following them would count every such
-      // document twice.
-    if (lstatSync(p).isSymbolicLink()) continue;
+      // index.md is a generated copy of the directory's README.md, written by
+      // scripts/build-docs-nav.mjs because Mintlify will not serve a page named README and its
+      // cloud build does not follow symlinks. Reading it would count the document twice.
+      if (entry === 'index.md') continue;
     if (statSync(p).isDirectory()) {
       if (!SKIP_DIRS.has(entry)) walk(p, out);
     } else if (entry.endsWith('.md')) out.push(p);

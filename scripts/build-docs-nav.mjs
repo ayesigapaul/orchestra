@@ -13,9 +13,11 @@
  *   1. It will not serve a page named README — it treats README.md as a repository readme. It does
  *      redirect a directory to that README, which then 404s. That was the site's 404 on every
  *      section and on the home page. It does serve a page named index. So each directory holding a
- *      README.md gets an index.md symlink beside it, and the navigation points there. The README
- *      stays canonical, GitHub keeps rendering it on the directory page, and nothing is duplicated.
- *      Every other script in scripts/ skips symlinks so the alias is never counted as a second copy.
+ *      README.md gets a generated index.md copy beside it, and the navigation points there. The
+ *      README stays the file people edit; the copy is a build artifact, checked byte-for-byte in CI.
+ *      A symlink was tried first and works under `mint dev` but NOT in Mintlify's cloud build, which
+ *      does not follow them — verified against the deployed site. Every other script in scripts/
+ *      skips index.md so the copy is never counted as a second document.
  *
  *   2. It serves pages without the .md extension, so the ../section/page.md links that GitHub
  *      follows would 404. One redirect per page fixes that, including the README URLs, which point
@@ -24,10 +26,7 @@
  * Usage: node scripts/build-docs-nav.mjs           write docs.json and the aliases
  *        node scripts/build-docs-nav.mjs --check   fail if either is stale or missing
  */
-import {
-  readFileSync, readdirSync, statSync, lstatSync, existsSync, writeFileSync, symlinkSync,
-  readlinkSync, rmSync,
-} from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const ROOT = resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--')) ?? '.');
@@ -55,7 +54,7 @@ const label = (d) => LABELS[d] ?? d.replace(/^\d+-/, '').replace(/-/g, ' ').repl
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir).sort()) {
     const p = join(dir, entry);
-    if (lstatSync(p).isSymbolicLink()) continue; // an alias, not a document
+    if (entry === 'index.md') continue; // a generated copy of README.md, not a document
     if (statSync(p).isDirectory()) { if (!SKIP.has(entry)) walk(p, out); }
     else if (entry.endsWith('.md')) out.push(p);
   }
@@ -65,14 +64,14 @@ function walk(dir, out = []) {
 const problems = [];
 let created = 0;
 
-/** A directory's README.md needs an index.md beside it, because Mintlify will not serve README. */
+/** A directory's README.md needs an index.md copy beside it: Mintlify will not serve README. */
 function ensureAlias(dir) {
-  const link = join(DOCS, dir, 'index.md');
-  const ok = existsSync(link) && lstatSync(link).isSymbolicLink() && readlinkSync(link) === 'README.md';
-  if (ok) return;
-  if (CHECK) { problems.push(`missing or wrong alias: docs/${dir ? dir + '/' : ''}index.md -> README.md`); return; }
-  if (existsSync(link)) rmSync(link);
-  symlinkSync('README.md', link);
+  const readme = join(DOCS, dir, 'README.md');
+  const alias = join(DOCS, dir, 'index.md');
+  const want = readFileSync(readme, 'utf8');
+  if (existsSync(alias) && readFileSync(alias, 'utf8') === want) return;
+  if (CHECK) { problems.push(`stale or missing: docs/${dir ? dir + '/' : ''}index.md (copy of README.md)`); return; }
+  writeFileSync(alias, want);
   created++;
 }
 
@@ -136,5 +135,5 @@ if (CHECK) {
 } else {
   writeFileSync(OUT, json);
   console.log(`Wrote docs/docs.json — ${pages} page(s), ${ordered.length} group(s), ${redirects.length} redirect(s).`);
-  console.log(`${created} index alias(es) created.`);
+  console.log(`${created} index copy/copies written.`);
 }

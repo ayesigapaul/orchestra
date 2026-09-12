@@ -130,12 +130,14 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   prefix, so `in #16` mid-paragraph is read as a footer and warns `footer-leading-blank` — and the
   hygiene job sets `failOnWarnings: true`. Write `pull request 16`, and note that commitlint exits
   **0** on warnings, so a local run that checks only the exit code will call it clean.
-- **Mintlify will not serve a page named README.** It treats `README.md` as a repository readme, and
-  redirects a directory to it, which then 404s — that was a live 404 on the home page and on all 14
-  section indexes. Each directory therefore carries an `index.md` **symlink** to its `README.md`,
-  created and verified by `scripts/build-docs-nav.mjs`. Every other script in `scripts/` skips
-  symlinks so the alias is not counted as a second copy of the document. A checkout without symlink
-  support would break this.
+- **Mintlify will not serve a page named README**, and its cloud build does not follow symlinks.
+  README.md is treated as a repository readme: a directory redirects to it and then 404s, which was
+  a live 404 on the home page and all 14 section indexes. Each directory therefore carries a
+  generated `index.md` **copy** of its `README.md`, written and checked byte-for-byte by
+  `scripts/build-docs-nav.mjs`; every other script in `scripts/` skips `index.md` so the copy is not
+  counted as a second document. A symlink was tried first: it works under `mint dev` and fails in
+  the deployed build, so **verify docs-site behaviour against the deployed site, not the dev
+  server.**
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.
