@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "sequoia",
   "name": "Orchestra",
   "colors": {
     "primary": "#1f6f43",
