@@ -7,6 +7,7 @@ type Brand<B extends string> = string & { readonly [brand]: B };
 
 export type TenantId = Brand<'TenantId'>;
 export type PersonId = Brand<'PersonId'>;
+export type MembershipId = Brand<'MembershipId'>;
 export type PrincipalId = Brand<'PrincipalId'>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -19,4 +20,5 @@ function parse<B extends string>(value: string, kind: B): Brand<B> {
 
 export const TenantId = (value: string): TenantId => parse(value, 'TenantId');
 export const PersonId = (value: string): PersonId => parse(value, 'PersonId');
+export const MembershipId = (value: string): MembershipId => parse(value, 'MembershipId');
 export const PrincipalId = (value: string): PrincipalId => parse(value, 'PrincipalId');
