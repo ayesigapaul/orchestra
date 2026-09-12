@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.20.0
+version: 0.21.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -18,6 +18,29 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.21.0] — 2026-09-12
+
+A brand, a site that carries it, and a rule for every version in the stack.
+
+### Added
+
+- `assets/logo/` — the Orchestra mark, wordmark and lockups, with PNG rasters and a LinkedIn avatar
+  and post image. The mark is a ring with a gate on it: a Run's loop, and the enforcement point every
+  step passes through, drawn in the decision shape the diagrams already use. Four placements were
+  rejected first for meanings they borrowed — a power button, a refresh icon, the letter C. The
+  wordmark is Inter SemiBold, outlined with Inter's own kerning. The palette is a dark, shiny blue,
+  with `#10218b`, a deep indigo, as the primary. `assets/logo/README.md` says which file to use where.
+- The published site now carries the logo, the favicon and a description for search and AI indexing,
+  all set in `docs.json` by `scripts/build-docs-nav.mjs` rather than in the Mintlify dashboard,
+  whose edits commit to a file this script regenerates.
+- `10-architecture/tech-stack.md` section 1.1 — **every technology runs its latest stable release,
+  pinned exactly**, and latest LTS where a project has one. Versions were read from the registries
+  on the day rather than from memory. Two consequences are recorded rather than acted on here:
+  `ui-template/` is behind on Next.js and React, and Node.js is pinned to 24 LTS until 26 is promoted
+  on 2026-10-28.
 
 ---
 

@@ -65,6 +65,11 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
 
 ## Repository conventions
 
+- **Versions** — every technology runs its **latest stable release, pinned exactly**; where a project
+  has an LTS line, latest LTS. No floors, no ranges, no pre-releases. The pinned table is
+  [`docs/10-architecture/tech-stack.md`](docs/10-architecture/tech-stack.md) section 1.1 — re-check
+  against the registries, not memory, before relying on it.
+
 - **Commits** — Conventional Commits with a **required scope**, enforced by commitlint. Types:
   `feat fix docs adr rfc refactor perf test build ci chore revert`. Scopes are listed in
   [`.commitlintrc.json`](.commitlintrc.json).
