@@ -1,0 +1,111 @@
+openapi: 3.1.2
+info:
+  title: Orchestra Gateway
+  version: 0.1.0
+  summary: The public HTTP boundary, reached through the edge.
+  description: |
+    Every response is a JSON:API 1.1 document, and every failure an error document with a registered
+    code and a retry safety — see docs/30-protocol/http-conventions.md (ADR-0025).
+
+    **Local stack.** Bring it up with `infra/compose/smoke.sh`. The Gateway has no published port: it
+    is reached through the edge, APISIX, on `http://localhost:9080`, where every route requires a
+    bearer credential. The `keycloakLocal` security scheme fetches one with the local stack's
+    throwaway user, so Postman's "Get New Access Token" works as imported.
+
+    This is Phase 0 of the contract. Credential resolution to a Principal and a Tenant, and the
+    resource paths of `gateway-api.md`, are not here yet.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://localhost:9080
+    description: Local stack, through the edge (infra/compose)
+security:
+  - keycloakLocal: []
+tags:
+  - name: Health
+    description: Whether the Gateway is serving.
+  - name: Diagnostics
+    description: Not part of the contract. Removed once credential resolution replaces it.
+paths:
+  /healthz:
+    get:
+      operationId: getGatewayHealth
+      tags: [Health]
+      summary: Report the Gateway's health
+      responses:
+        '200':
+          $ref: './json-api.yaml#/components/responses/Healthy'
+        '401':
+          $ref: './json-api.yaml#/components/responses/Unauthenticated'
+        '406':
+          $ref: './json-api.yaml#/components/responses/NotAcceptable'
+        '500':
+          $ref: './json-api.yaml#/components/responses/InternalError'
+  /_probe/identity:
+    get:
+      operationId: probeIdentity
+      tags: [Diagnostics]
+      summary: Show the subject and issuer of the verified credential
+      description: >-
+        Proves the path from the edge to a credential the Gateway verified itself. An identity asserted
+        in a header, such as X-Userinfo, is never a credential. Not part of the contract.
+      responses:
+        '200':
+          description: The credential was verified.
+          headers:
+            Orchestra-Request-Id:
+              $ref: './json-api.yaml#/components/headers/RequestId'
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/IdentityProbeDocument'
+              example:
+                jsonapi: { version: '1.1' }
+                data:
+                  type: identity-probes
+                  id: <subject>
+                  attributes:
+                    subject: <subject>
+                    issuer: http://localhost:8080/realms/orchestra
+        '401':
+          $ref: './json-api.yaml#/components/responses/Unauthenticated'
+        '406':
+          $ref: './json-api.yaml#/components/responses/NotAcceptable'
+        '500':
+          $ref: './json-api.yaml#/components/responses/InternalError'
+components:
+  securitySchemes:
+    keycloakLocal:
+      type: oauth2
+      description: >-
+        Local stack only. Client `orchestra-cli`, user `dev`, password `dev-local-only` — throwaway
+        values from infra/compose, valid nowhere else.
+      flows:
+        password:
+          tokenUrl: http://localhost:8080/realms/orchestra/protocol/openid-connect/token
+          scopes: {}
+  schemas:
+    IdentityProbeDocument:
+      type: object
+      required: [jsonapi, data]
+      properties:
+        jsonapi:
+          $ref: './json-api.yaml#/components/schemas/JsonApiObject'
+        data:
+          type: object
+          required: [type, id, attributes]
+          properties:
+            type:
+              type: string
+              const: identity-probes
+            id:
+              type: string
+            attributes:
+              type: object
+              required: [subject, issuer]
+              properties:
+                subject:
+                  type: string
+                issuer:
+                  type: string

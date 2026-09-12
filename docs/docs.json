@@ -68,7 +68,14 @@
               "30-protocol/section-index",
               "30-protocol/event-protocol",
               "30-protocol/gateway-api",
+              "30-protocol/http-conventions",
               "30-protocol/ui-protocol"
+            ]
+          },
+          {
+            "group": "Protocol/openapi",
+            "pages": [
+              "30-protocol/openapi/section-index"
             ]
           },
           {
@@ -164,6 +171,7 @@
               "adr/adr-0022-tenant-user-management-owns-tenancy",
               "adr/adr-0023-no-foreign-key-constraints",
               "adr/adr-0024-global-person-with-tenant-memberships",
+              "adr/adr-0025-json-api-http-contract",
               "adr/adr-template"
             ]
           },
@@ -173,6 +181,13 @@
               "rfc/section-index"
             ]
           }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "openapi": [
+          "30-protocol/openapi/gateway.openapi.yaml",
+          "30-protocol/openapi/tenant-user-management.openapi.yaml"
         ]
       }
     ]
@@ -285,6 +300,22 @@
     {
       "source": "/30-protocol/gateway-api.md",
       "destination": "/30-protocol/gateway-api"
+    },
+    {
+      "source": "/30-protocol/http-conventions.md",
+      "destination": "/30-protocol/http-conventions"
+    },
+    {
+      "source": "/30-protocol/openapi",
+      "destination": "/30-protocol/openapi/section-index"
+    },
+    {
+      "source": "/30-protocol/openapi/README",
+      "destination": "/30-protocol/openapi/section-index"
+    },
+    {
+      "source": "/30-protocol/openapi/README.md",
+      "destination": "/30-protocol/openapi/section-index"
     },
     {
       "source": "/30-protocol",
@@ -573,6 +604,10 @@
     {
       "source": "/adr/adr-0024-global-person-with-tenant-memberships.md",
       "destination": "/adr/adr-0024-global-person-with-tenant-memberships"
+    },
+    {
+      "source": "/adr/adr-0025-json-api-http-contract.md",
+      "destination": "/adr/adr-0025-json-api-http-contract"
     },
     {
       "source": "/adr/adr-template.md",

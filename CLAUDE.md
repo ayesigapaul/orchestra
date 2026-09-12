@@ -47,6 +47,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0022 | Tenant User Management owns Tenants, Persons and Principals; one Person per Tenant | Superseded by 0024 |
 | 0023 | No foreign key constraints; row-level security write policies refuse cross-tenant references | Accepted |
 | 0024 | One global Person per human, a Membership per Tenant; person attributes only from the identity provider | Accepted |
+| 0025 | HTTP APIs speak JSON:API 1.1 with one error contract; each service's API is an OpenAPI document | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -100,6 +101,12 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   Mintlify renders these fences as diagrams on the published site.
   Browsable HTML renders in `docs/assets/diagrams/` are generated from them by
   `scripts/build-diagrams.mjs`; re-run it after changing a diagram, because CI fails on a stale page.
+- **HTTP APIs** — every body is a JSON:API 1.1 document, and every failure an error document with a
+  registered `code` and a `meta.retry`
+  ([ADR-0025](docs/adr/adr-0025-json-api-http-contract.md),
+  [`http-conventions.md`](docs/30-protocol/http-conventions.md)). Each service's API is an OpenAPI
+  document in `docs/30-protocol/openapi/`, bundled by `scripts/build-openapi.mjs`. Document an
+  operation and every code it returns before shipping it.
 
 ## Commands
 
@@ -111,6 +118,7 @@ node scripts/open-questions.mjs --check   # every register defers to a document 
 node scripts/validate-schemas.mjs         # wire schemas, against VERSIONING.md §6
 node scripts/build-diagrams.mjs --check   # HTML diagram pages match the Mermaid; drop --check to rebuild
 node scripts/build-docs-nav.mjs --check   # docs/docs.json matches the tree; drop --check to rebuild
+node scripts/build-openapi.mjs --check    # OpenAPI bundles match openapi/src and lint; drop --check to rebuild
 npx --yes lychee --config lychee.toml .   # external links
 node scripts/check-service-boundaries.mjs # ADR-0020: no coupling between services
 

@@ -1,7 +1,7 @@
 ---
 title: Schemas
 doc_id: DOC-041
-version: 0.15.1
+version: 0.15.2
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -62,20 +62,20 @@ contract.
 
 ## What is not here
 
-Eight contracts the prose describes have no schema, seven named by
-[`../gateway-api.md`](../gateway-api.md) section 8 and the eighth added by its section 7: an Agent
-definition, a Tool registration, a capability grant, a Model Binding, a Session Token mint, a usage
-report, the Workspace, Principal and Tenant administrative contracts, and the error envelope.
+Seven contracts the prose describes have no schema, all named by
+[`../gateway-api.md`](../gateway-api.md) section 8: an Agent definition, a Tool registration, a
+capability grant, a Model Binding, a Session Token mint, a usage report, and the Workspace, Principal
+and Tenant administrative contracts. The error envelope that its section 7 once added as an eighth is
+decided by [ADR-0025](../../adr/adr-0025-json-api-http-contract.md), and lives in
+[`../http-conventions.md`](../http-conventions.md) and the shared OpenAPI components under
+[`../openapi/`](../openapi/) rather than in a JSON Schema here.
 
-**That question was assigned here, and this is the answer: none of the eight can be written yet, and
-for two different reasons.** The error envelope and the endpoint shape are both marked ADR-required
-by `gateway-api.md` section 9 — whether the envelope is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457)
-problem details or Orchestra-defined is a permanent public contract on every endpoint and in every
-SDK, and customers branch on codes. Writing either here would take a decision this directory has no
-standing to take. The other six wait on nothing so much as a resource model that
-`gateway-api.md` section 5 gives in prose and not in fields.
+**That question was assigned here, and this is the answer: none of the seven can be written yet.**
+The endpoint shape they sit under is still ADR-required by `gateway-api.md` section 9, and all of
+them wait on a resource model that `gateway-api.md` section 5 gives in prose and not in fields.
+Writing one here would take a decision this directory has no standing to take.
 
-One of the six carries a standing security question rather than a scheduling one: `gateway-api.md`
+One of the seven carries a standing security question rather than a scheduling one: `gateway-api.md`
 section 3 records that a **replayed Session Token mint returns a live bearer credential**. That is a
 contract nothing is scheduled to write, and it should be written before it is implemented rather
 than after.
@@ -85,8 +85,8 @@ than after.
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | The upstream commit `agent-event.v1` must pin, and the exhaustive type constants that replace its two family prefixes | [`../event-protocol.md`](../event-protocol.md) §3.1, once an implementation exists to pin against | No |
-| The error envelope and the code vocabulary, and the endpoint shape of the Gateway contract | [`../gateway-api.md`](../gateway-api.md) §9 | **Yes**, both |
-| Schemas for the remaining six contracts above | [`../gateway-api.md`](../gateway-api.md), once its resource model is expressed in fields | No |
+| The endpoint shape of the Gateway contract | [`../gateway-api.md`](../gateway-api.md) §9 | **Yes** |
+| Schemas for the seven contracts above | [`../gateway-api.md`](../gateway-api.md), once its resource model is expressed in fields | No |
 | The policy match language, which `policy-rule.v1` leaves unconstrained | [`../../40-governance/policy-model.md`](../../40-governance/policy-model.md) §8, which argues it cannot be a later document | **Yes** |
 | Rule precedence, which `policy-rule.v1` therefore carries no member for | [`../../40-governance/policy-model.md`](../../40-governance/policy-model.md) D4.3, a prerequisite rather than a later convenience | **Yes** |
 | Whether a Policy version has a drawn lifecycle of its own, which no document draws and `policy-rule.v1` does not assert | [`../../20-domain/lifecycle-state-machines.md`](../../20-domain/lifecycle-state-machines.md), which draws the definition lifecycle P5 says Policies follow | No |

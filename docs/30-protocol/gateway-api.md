@@ -1,7 +1,7 @@
 ---
 title: Gateway API
 doc_id: DOC-043
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -407,9 +407,10 @@ what a customer's change-management process must track.
 ## 7. Error taxonomy
 
 A policy deny, an approval gate, a quota wait and an unreachable connector are different outcomes.
-What the taxonomy *is* — envelope, code vocabulary, status mapping — **is not decided**, and no
-example error body appears here, because inventing one would be read as the decision. What the
-governance rules already determine about it:
+The envelope, code vocabulary and status mapping are decided by
+[ADR-0025](../adr/adr-0025-json-api-http-contract.md): a JSON:API 1.1 error document, specified with
+its code registry in [`http-conventions.md`](http-conventions.md). The governance rules below bounded
+that choice, and they bind every code added to the registry:
 
 - **G21 — Every failure MUST carry a retry-safety classification with three values, not two** —
   *safe*, *unsafe*, *indeterminate*. ADR-0006 requires that a failed model call, safe to retry, be
@@ -446,11 +447,11 @@ determining what a caller observes.
 
 Section 5 names the planned file for each resource, and **seven** have **none planned** — an Agent
 definition, a Tool registration, a capability grant, a Model Binding, a Session Token mint, a usage
-report, and the Workspace, Principal and Tenant administrative contracts — to which section 7's
-error envelope adds an eighth that section 5 does not model as a resource at all. So the prose above
-describes contracts nothing is scheduled to define. The mint is the one to name twice: section 3
-records that a replayed mint returns a live bearer credential, which is a standing security question
-against a contract nothing is scheduled to write. Every wire-facing object leaves
+report, and the Workspace, Principal and Tenant administrative contracts. Section 7's error
+envelope, once an eighth, is specified by [`http-conventions.md`](http-conventions.md). So the prose
+above describes contracts nothing is scheduled to define. The mint is the one to name twice:
+section 3 records that a replayed mint returns a live bearer credential, which is a standing
+security question against a contract nothing is scheduled to write. Every wire-facing object leaves
 `additionalProperties` unset or `true`
 ([`../VERSIONING.md`](../VERSIONING.md) section 6), since `false` breaks R3; the `$id` embeds the
 major version, on a base URI provisional pending domain registration.
@@ -467,7 +468,6 @@ event stream** — any this contract accepts, G25.
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
-| The error envelope, code vocabulary and HTTP status mapping — whether the envelope is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) problem details or Orchestra-defined | This document with `reliability.md` in [`../60-operations/`](../60-operations/), which owns the internal failure taxonomy the wire codes project | **ADR** — a permanent public contract on every endpoint and in every SDK, and customers branch on codes |
 | The `Idempotency-Key` retention window, and the outcome of a key reused with a different payload | A later revision of this document; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes the obligation and names no window | No |
 | Whether a Session Token mint response may be stored under an `Idempotency-Key` at all, given a replay returns a live bearer credential | This document with a security review | No — but it must be settled before the first security review |
 | What a Session Token's scope may contain, which leaves the End User cancellation row with an undefined term | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — *repeated* |
@@ -479,10 +479,10 @@ event stream** — any this contract accepts, G25.
 | Audit export: format, transport, completeness proof, and self-serve versus operator-assisted | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 12 | No — *repeated* |
 | Whether an out-of-band replay endpoint exists alongside in-stream resumption — resumption itself is fixed by [`../VERSIONING.md`](../VERSIONING.md) section 5 and is not open, section 2 | [`event-protocol.md`](event-protocol.md) section 11 assigns it here, with its section 5; [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) leaves it open and is **Proposed** | No — *repeated* |
 | What a Quota Envelope delay carries, and whether an envelope is declared, discovered or both — the carrier is settled, [`event-protocol.md`](event-protocol.md) section 10 putting the delay in the reserved `orchestra.quota.*` family rather than in the Run state machine, on [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md), **Proposed** | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), on the quota design ADR-0006 calls for | No — *repeated* |
-| Schemas for an Agent definition, a Tool registration, a capability grant, a Model Binding, a Session Token mint, a usage report and the administrative contracts, plus the error envelope — the eight of section 8, none of which is planned | [`schemas/README.md`](schemas/README.md), in the schema batch | No |
+| Schemas for an Agent definition, a Tool registration, a capability grant, a Model Binding, a Session Token mint, a usage report and the administrative contracts — the seven of section 8, none of which is planned | [`schemas/README.md`](schemas/README.md), in the schema batch | No |
 | Which transport bindings this contract serves for the Run event stream, given that only the binary one drops top-level extras silently and only the server-sent-events one carries a cursor | This document; [`event-protocol.md`](event-protocol.md) section 11 assigns it here, and its carriage guarantees hold on any answer | No — *repeated* |
 | By which path a Platform User's client reaches a Run event stream, G25 admitting any credential this contract accepts while no edge to a stream is drawn for the Admin Console | [`../10-architecture/containers.md`](../10-architecture/containers.md) section 3, with [`ui-protocol.md`](ui-protocol.md) | No |
-| The endpoint shape of this contract — path layout and resource addressing — assigned here by [`ui-protocol.md`](ui-protocol.md) section 1, and not something JSON Schema can carry | A later revision of this document, with the schema batch; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes only the `/v1` prefix | **ADR** — permanent for the life of `/v1` and reproduced in every SDK, on the same test as the error envelope above |
+| The endpoint shape of this contract — path layout and resource addressing — assigned here by [`ui-protocol.md`](ui-protocol.md) section 1, and not something JSON Schema can carry | A later revision of this document, with the schema batch; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes only the `/v1` prefix | **ADR** — permanent for the life of `/v1` and reproduced in every SDK, on the same test ADR-0025 applied to the error envelope |
 | Which surface provisions a Tenant, given G7 resolves the Tenant from the credential and G9 admits no operator route, so no caller of this contract can create one | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md), constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md), under which onboarding a Tenant is an insert rather than an infrastructure step | **ADR** — a pre-tenant path is the one route the isolation argument excludes, and admitting one moves the boundary ADR-0011 draws |
 | How a transition caused by an observed condition rather than an act is attributed, `Retired → Archived` included — G16 leaves it open here, and [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 4.1 answers it the other way | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 | **ADR** — *repeated* |
 | Who within a Tenant may read the audit surface, and who may read an Evidence Set, which sections 5.3 and 5.6 depend on | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 13, which owns the binding form of the derivation [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 6 routes to it | No — *repeated* |

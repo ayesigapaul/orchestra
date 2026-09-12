@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.25.0
+version: 0.26.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -35,6 +35,7 @@ These are not open. They constrain everything below.
 | The datastore is PostgreSQL: row-level security forced on every tenant-scoped table, tenant context set per transaction, through a transaction-mode pooler | [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) |
 | Tenants, Workspaces, Persons and Principals belong to the Tenant User Management service, and the Gateway resolves every credential through it; a Person is global, with a Membership per Tenant | [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) |
 | No table carries a foreign key constraint; a reference is an identifier, and a row-level security write policy refuses a reference to another Tenant's row | [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
+| Every HTTP API exchanges JSON:API 1.1 documents with one error contract, and each service's API is an OpenAPI document | [ADR-0025](../adr/adr-0025-json-api-http-contract.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 
@@ -65,6 +66,9 @@ snapshot, and it goes stale on the next release.
 | Zod | 4.6.2 | |
 | Pino | 10.3.1 | |
 | Vitest | 5.0.0 | |
+| JSON:API | 1.1 | Every HTTP document ([ADR-0025](../adr/adr-0025-json-api-http-contract.md)). 1.2 is still in development |
+| OpenAPI | 3.1.2 | 3.2.1 is newer, but Postman imports only 2.0, 3.0 and 3.1 and Mintlify renders only 3.0 and 3.1. Moves to 3.2 when both read it |
+| Redocly CLI | 2.52.1 | Bundles and lints the OpenAPI documents |
 | FastAPI | 0.141.1 | |
 | uvicorn | 0.52.4 | |
 | Pydantic | 2.13.5 | |

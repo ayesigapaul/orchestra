@@ -58,6 +58,10 @@ jobs:
       # appears in the navigation without anyone remembering to edit a config file.
       - name: Check the published navigation matches the documentation tree
         run: node scripts/build-docs-nav.mjs --check
+      # The OpenAPI bundles are what Postman, Insomnia, Bruno and the API reference import. A bundle
+      # that disagrees with its source, or does not lint, fails here rather than in someone's client.
+      - name: Check the OpenAPI documents match their sources and lint clean
+        run: node scripts/build-openapi.mjs --check
 
   mermaid:
     name: Mermaid diagrams render

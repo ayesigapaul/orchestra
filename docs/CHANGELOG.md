@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.26.0
+version: 0.27.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,33 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.27.0] — 2026-09-13
+
+Every HTTP API gets one contract and its own documentation. ADR-0025 answers the error-taxonomy
+question `gateway-api.md` left open, and the first API reference is published.
+
+### Added
+
+- [ADR-0025](adr/adr-0025-json-api-http-contract.md) — every Orchestra HTTP API exchanges JSON:API
+  1.1 documents, and each service's API is an OpenAPI document. OpenAPI 3.1.2 is used rather than
+  3.2.1 until Postman and Mintlify read 3.2.
+- `30-protocol/http-conventions.md` — the normative rules: media type negotiation, the document
+  shape, success statuses, the error object with a two-level `code` and a three-value `meta.retry`,
+  what an error never carries, and the first code registry.
+- `30-protocol/openapi/` — OpenAPI documents for the Gateway and Tenant User Management, bundled from
+  per-service sources and shared JSON:API components by `scripts/build-openapi.mjs`. They import into
+  Postman, Insomnia and Bruno, and the site renders them as an API reference tab.
+
+### Changed
+
+- `30-protocol/gateway-api.md` section 7 points at the decided contract, and its register loses the
+  error-envelope row.
+- `VERSIONING.md` section 4 and `30-protocol/README.md` reference the conventions, and
+  `10-architecture/tech-stack.md` pins JSON:API 1.1, OpenAPI 3.1.2 and Redocly CLI 2.52.1.
+- CI checks that every bundled OpenAPI document matches its source and lints clean.
 
 ---
 

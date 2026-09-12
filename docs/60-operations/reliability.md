@@ -1,7 +1,7 @@
 ---
 title: Reliability
 doc_id: DOC-072
-version: 0.12.0
+version: 0.12.1
 status: Draft
 last_updated: 2026-09-10
 owners: [platform-architecture]
@@ -401,8 +401,7 @@ owning document's classification unchanged.
 | Where a governance refusal lands as a Run outcome, `Failed` today carrying both a refusal and a crash | `approval-workflows.md` section 8 with the Run state machine and an ADR-0009 outcome dimension; F4 and F10 both assume a separation neither can create | **ADR** — *repeated* |
 | Whether compensation can fail terminally, and what a Run carrying a known unresolved side effect is called | `execution-semantics.md` section 6.2; F21 reaches the same condition by the connector route and adds urgency, not an answer | **ADR** — *repeated* |
 | Retry counts, backoff, attempt budgets and any bound on attempts | This document, once an implementation exists to measure against; section 11 states the bounds and section 6 admits no attempt at all in the indeterminate position | No — assigned here by `execution-semantics.md`, escalated as unanswerable pre-implementation |
-| The error envelope, code vocabulary and HTTP status mapping | `gateway-api.md` section 9 with this document; F24 fixes the constraint between them and names no code | **ADR** — *repeated* |
-| Which mechanism satisfies the durable Policy Decision write — shared transaction, durable outbox, or node-local append | `data-plane.md` with the datastore ADR that ADR-0011 constrains and does not make; section 10 is conditional on it | **ADR** — *repeated* |
+| Which mechanism satisfies the durable Policy Decision write — shared transaction, durable outbox, or node-local append | `data-plane.md`, against PostgreSQL ([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)); section 10 is conditional on it | **ADR** — *repeated* |
 | Whether the bracket marking a degraded audit period is itself an Audit Record class | `audit-model.md` section 3, which is the enumeration of audited events; F13 and F14 fix what it must survive and carry | No |
 | How a degraded period is **detected and ended**, and whether any duration bound halts execution | This document, after section 10's write mechanism is chosen — detection and closure ride whichever path F13 names. A halting bound would reintroduce the coupling ADR-0013's split exists to remove: operational audit volume able to halt a Run after all | No |
 | Drain timeout, flush deadline, and whether a process that cannot flush blocks a release | This document with the deployment topology work, after the write mechanism is chosen | No |

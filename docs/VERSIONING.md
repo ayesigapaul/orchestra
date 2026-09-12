@@ -1,7 +1,7 @@
 ---
 title: Versioning & Compatibility Policy
 doc_id: DOC-001
-version: 0.15.1
+version: 0.15.2
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -126,6 +126,9 @@ Idempotency-Key: <client-generated-uuid>
   for a replayed key within the retention window.
 - Deprecated endpoints return `Deprecation` and `Sunset` headers
   ([RFC 9745](https://www.rfc-editor.org/rfc/rfc9745), [RFC 8594](https://www.rfc-editor.org/rfc/rfc8594)).
+- Every request and response body is a JSON:API 1.1 document, and every failure an error document
+  with a registered code, as [`30-protocol/http-conventions.md`](30-protocol/http-conventions.md)
+  specifies ([ADR-0025](adr/adr-0025-json-api-http-contract.md)). Nothing in it changes this section.
 
 **Support window:** each dated revision is supported for **24 months** from the release of its
 successor. A major path version is supported for **36 months** after its successor becomes GA.
