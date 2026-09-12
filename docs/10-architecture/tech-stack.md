@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.19.0
+version: 0.20.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -31,6 +31,7 @@ These are not open. They constrain everything below.
 | Front-end surfaces duplicate the Next.js template rather than sharing code | [`../../ui-template/README.md`](../../ui-template/README.md) |
 | Identity is Keycloak, self-hosted, with a Keycloak Organization per Tenant | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) |
 | Apache APISIX is the edge in front of the Gateway, and is never the authorization boundary | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) |
+| The run supervisor is built on PostgreSQL, with Temporal as the named fallback | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
 
 ## 2. Data plane — Python
 
@@ -85,11 +86,16 @@ patching in-flight executions, visibility queries across many runs, and throughp
 concurrency, where Postgres lock contention and autovacuum pressure on a hot history table become
 real. It costs several services plus a persistence store and a visibility store to operate.
 
-**This is exactly what M2 has to answer.** [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)
-leaves the supervisor's size open and
-[`../70-delivery/milestones.md`](../70-delivery/milestones.md) makes sizing it the gate before an MVP
-is committed to. If sizing shows the supervisor is a substantial distributed runtime, that is the
-signal to buy Temporal rather than build — and ADR-0015 notes it would also threaten the positioning.
+**Decided:** [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) builds on PostgreSQL and keeps
+Temporal as the named fallback, with the triggers written down in advance — contention that bounds
+throughput, visibility queries the history tables cannot serve, a need to patch executions in
+flight, or scheduling that outgrows a wake-up table. The transactional enqueue is the reason, not
+just the lower cost: the record of what happened and the work that follows commit together.
+
+**M2 still has to size it.** ADR-0019 fixes the substrate, not the effort, and
+[`../70-delivery/milestones.md`](../70-delivery/milestones.md) M2 remains the gate before an MVP is
+committed to. The fallback stays affordable only if the supervisor's interface stays narrow, which
+ADR-0019 makes a requirement rather than an aspiration.
 
 ## 5. Control plane — TypeScript
 
@@ -179,7 +185,8 @@ because it fails silently and looks like latency.
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | The datastore engine, which section 3 recommends and no record selects | An architecture decision constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security | **Yes** |
-| Whether the run supervisor is built on Postgres or bought as Temporal | The M2 sizing in [`../70-delivery/milestones.md`](../70-delivery/milestones.md), which [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) requires before an MVP | **Yes** |
+| How large the PostgreSQL supervisor is to build, now that the substrate is fixed | The M2 sizing in [`../70-delivery/milestones.md`](../70-delivery/milestones.md), which [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) requires before an MVP | No — the substrate is decided by [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
+| The lease duration, renewal interval and wake-up poll interval | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md)'s follow-on; no interval is decided anywhere | No |
 | Which side of the Python-to-TypeScript boundary the compiler sits on, and what artifact crosses | [`data-plane.md`](data-plane.md), assigned by [`containers.md`](containers.md) section 12 | **Yes** — repeated |
 | How a Keycloak identity resolves to a Principal, and what an Organization maps to when a Tenant has several Workspaces | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md)'s follow-on, with [`identity-and-access.md`](identity-and-access.md) | No |
 | How APISIX configuration is declared and versioned, so routes are reviewable | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md)'s follow-on | No |
