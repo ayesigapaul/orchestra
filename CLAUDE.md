@@ -45,6 +45,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0020 | Services share a repository, never code — boundaries enforced in CI | Accepted |
 | 0021 | PostgreSQL is the datastore; tenant context is set per transaction, through the pooler | Accepted |
 | 0022 | Tenant User Management owns Tenants, Workspaces, Persons and Principals; one Person per Tenant | Accepted |
+| 0023 | No foreign key constraints; row-level security write policies refuse cross-tenant references | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

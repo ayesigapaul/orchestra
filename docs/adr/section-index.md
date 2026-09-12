@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.24.0
+version: 0.25.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -49,6 +49,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0020](adr-0020-monorepo-with-enforced-service-boundaries.md) | One repository, independent services — boundaries enforced as if the services were separate repositories | Accepted | 2026-09-12 |
 | [0021](adr-0021-postgresql-is-the-datastore.md) | PostgreSQL is the datastore | Accepted | 2026-09-13 |
 | [0022](adr-0022-tenant-user-management-owns-tenancy.md) | A Tenant User Management service owns Tenants, Persons and Principals | Accepted | 2026-09-13 |
+| [0023](adr-0023-no-foreign-key-constraints.md) | References are identifiers; no table carries a foreign key constraint | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -83,11 +84,13 @@ flowchart TD
   A17 --> A22["ADR-0022<br/>Tenant User Management owns tenancy"]
   A20 --> A22
   A21 --> A22
+  A20 --> A23["ADR-0023<br/>No foreign key constraints"]
+  A21 --> A23
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A22 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A22,A23 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8 superseded;
 ```

@@ -1,9 +1,9 @@
 ---
 title: Tool Authorization
 doc_id: DOC-053
-version: 0.7.0
+version: 0.8.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -62,10 +62,10 @@ deny-by-default authorization model before any tool executes.
 grant MUST NOT be creatable against a Tool outside the granting Tenant. There is one Catalog per
 Tenant and every record is tenant-scoped (I1,
 [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)), which places isolation below
-application code rather than in it. By what structure a cross-tenant grant is kept out of the
-datastore — tenant-qualified keys, check constraints, or how row-level security interacts with
-referential integrity — is not decided here: ADR-0011 names `multi-tenancy.md` in
-[`../10-architecture/`](../10-architecture/) as its home, and section 10 carries the question.
+application code rather than in it. A cross-tenant grant is kept out of the datastore by a
+row-level security write policy that requires the granted Tool to exist in the same Tenant, with no
+foreign key constraint ([ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md));
+[`multi-tenancy.md`](../10-architecture/multi-tenancy.md) section 6 specifies it.
 
 **TA3.** Each act MUST resolve to exactly one Principal (I2) and MUST be audited independently. A
 trail showing that a Tool was registered but not who granted it answers half the question.
@@ -360,7 +360,6 @@ ADR, because it is costly to reverse or spans components, or whether a later doc
 | Whether a `tool` Step naming a Tool is itself the permission, or Workflows need a grant subject of their own | This document with the workflow DSL in [`../50-workflows/`](../50-workflows/) | **ADR** |
 | Whether parameter-level or row-level restriction is a grant attribute or a Policy rule | Jointly with [`policy-model.md`](policy-model.md) | **ADR** |
 | Whether a Workspace constrains which Tools a grant may name | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | Later document |
-| By what structure a cross-tenant grant is kept out of the datastore, given that row-level security filters rather than forbids (TA2) | `multi-tenancy.md` in [`../10-architecture/`](../10-architecture/), which [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) names as its home | Later document |
 | Whether an Agent version pins a Tool's major schema version, and what a Tool MAJOR bump does to that version's grants | This document, with the grant-subject question; [`../VERSIONING.md`](../VERSIONING.md) is where the outcome is written, not where the choice is made | **ADR** |
 | How post-registration drift between the registered Tool record and what the origin now serves is detected, and what follows from detecting it (TA9) | This document with [`threat-model.md`](threat-model.md) T2, once a detection design exists | Later document |
 | What a Run does after a mid-Run `deny` at a Tool enforcement point, which the Run state machine has no transition for | [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2 with `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), aligned with [`policy-model.md`](policy-model.md) rule V1, which owns it | **ADR** |
