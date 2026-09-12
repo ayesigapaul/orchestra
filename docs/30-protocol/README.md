@@ -1,7 +1,7 @@
 ---
 title: Protocol
 doc_id: DOC-040
-version: 0.15.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -24,6 +24,8 @@ section and [`../40-governance/`](../40-governance/) are the two that bind.
 | --- | --- |
 | [`event-protocol.md`](event-protocol.md) | The Orchestra Agent Event Profile: what the Run event stream carries, its ordering and its replay |
 | [`gateway-api.md`](gateway-api.md) | The resource-oriented HTTP surface, its two authenticating entry points and its error taxonomy |
+| [`http-conventions.md`](http-conventions.md) | The response and error contract every HTTP API follows — JSON:API 1.1 documents, codes and retry safety (ADR-0025) |
+| [`openapi/`](openapi/) | One OpenAPI document per service, importable into Postman and rendered as the API reference |
 | [`ui-protocol.md`](ui-protocol.md) | Declarative agent-produced UI, the allow-listed catalog, and the approval surface |
 | [`schemas/`](schemas/) | JSON Schema — the source of truth for every contract above |
 
@@ -50,6 +52,7 @@ fields, which one transport binding silently drops.
 > [`../VERSIONING.md`](../VERSIONING.md) section 6 over them. Two things they do not settle. The
 > profile's pin is still unset — section 3.1 requires `agent-event.v1` to carry one full upstream
 > commit identifier, and none exists to pin against — so that schema matches two streamed families by
-> prefix where it owes an exhaustive constant list. And eight contracts this section describes in
-> prose have no schema at all, including the error envelope of [`gateway-api.md`](gateway-api.md)
-> section 7; [`schemas/README.md`](schemas/README.md) says why each must wait.
+> prefix where it owes an exhaustive constant list. And seven contracts this section describes in
+> prose have no schema yet; [`schemas/README.md`](schemas/README.md) says why each must wait. The
+> error envelope, once the eighth, is now specified by [`http-conventions.md`](http-conventions.md)
+> and described in the shared OpenAPI components under [`openapi/`](openapi/).

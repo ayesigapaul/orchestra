@@ -1,0 +1,38 @@
+openapi: 3.1.2
+info:
+  title: Orchestra Tenant User Management
+  version: 0.1.0
+  summary: Tenants, Persons, Memberships and Principals, and credential resolution for the Gateway.
+  description: |
+    An internal service: the Gateway and the Control Plane API call it, and no end client does
+    (ADR-0024). Every response is a JSON:API 1.1 document, and every failure an error document with a
+    registered code and a retry safety — see docs/30-protocol/http-conventions.md (ADR-0025).
+
+    **Run it locally** with `pnpm start` in `services/tenant-user-management`; it listens on
+    `http://localhost:8080`.
+
+    Only health is served. The credential-resolution operation is added here when its contract is
+    written, and not before.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://localhost:8080
+    description: Run directly with pnpm start
+security: []
+tags:
+  - name: Health
+    description: Whether the service is serving.
+paths:
+  /healthz:
+    get:
+      operationId: getTenantUserManagementHealth
+      tags: [Health]
+      summary: Report the service's health
+      responses:
+        '200':
+          $ref: './json-api.yaml#/components/responses/Healthy'
+        '406':
+          $ref: './json-api.yaml#/components/responses/NotAcceptable'
+        '500':
+          $ref: './json-api.yaml#/components/responses/InternalError'

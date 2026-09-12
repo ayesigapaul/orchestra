@@ -1,0 +1,370 @@
+# Shared JSON:API 1.1 components for every Orchestra OpenAPI document (ADR-0025).
+# The normative rules are docs/30-protocol/http-conventions.md; this file only describes them.
+# Service sources reference these by relative $ref, and scripts/build-openapi.mjs bundles them in.
+components:
+  headers:
+    RequestId:
+      description: This request's identifier. Equal to the `id` of any error in the body (HC12).
+      schema:
+        type: string
+    RetryAfter:
+      description: When the same request may be sent again, in seconds or as an HTTP date.
+      schema:
+        type: string
+    WwwAuthenticate:
+      description: The authentication scheme the caller must use.
+      schema:
+        type: string
+    Allow:
+      description: The methods this path accepts.
+      schema:
+        type: string
+
+  schemas:
+    JsonApiObject:
+      type: object
+      description: The JSON:API version this document follows.
+      required: [version]
+      properties:
+        version:
+          type: string
+          const: '1.1'
+
+    MetaDocument:
+      type: object
+      description: A JSON:API document carrying only metadata, such as a health report (HC6).
+      required: [jsonapi, meta]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiObject'
+        meta:
+          type: object
+
+    HealthDocument:
+      allOf:
+        - $ref: '#/components/schemas/MetaDocument'
+        - type: object
+          properties:
+            meta:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  const: ok
+
+    ErrorObject:
+      type: object
+      description: One problem with the request (HC8). Programs branch on `code`, never on `detail`.
+      required: [id, status, code, title, meta]
+      properties:
+        id:
+          type: string
+          description: This occurrence's identifier; the request identifier.
+        links:
+          type: object
+          properties:
+            about:
+              type: string
+              format: uri-reference
+            type:
+              type: string
+              format: uri-reference
+              description: Documentation for this code.
+        status:
+          type: string
+          pattern: '^[45][0-9]{2}$'
+        code:
+          type: string
+          description: >-
+            A registered code, class.name. Classes are request, auth, governance, resource, quota,
+            upstream and server; an unknown code is treated as its class (HC9).
+          pattern: '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'
+        title:
+          type: string
+          description: The code's fixed summary.
+        detail:
+          type: string
+          description: This occurrence, for a person. Free to change; never parsed.
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+              description: A JSON Pointer to the offending request member.
+            parameter:
+              type: string
+              description: The offending query parameter.
+            header:
+              type: string
+              description: The offending request header.
+        meta:
+          type: object
+          required: [retry]
+          properties:
+            retry:
+              type: string
+              enum: [safe, unsafe, indeterminate]
+              description: Whether sending the same request again is safe (HC10).
+            decision_ref:
+              type: string
+              description: For a governance refusal only, an opaque reference to the Policy Decision.
+
+    ErrorDocument:
+      type: object
+      description: Every failure's body (HC7). Never carries `data`.
+      required: [jsonapi, errors]
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiObject'
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        meta:
+          type: object
+
+  responses:
+    Healthy:
+      description: The service is healthy.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/HealthDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            meta: { status: ok }
+
+    BadRequest:
+      description: A query parameter is unknown or malformed, or the body is not a JSON:API document.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 6f1c1f3e-4f9a-4b8e-9d2a-0c7b1d5e2a11
+                status: '400'
+                code: request.invalid_parameter
+                title: A query parameter is unknown or malformed
+                source: { parameter: 'page[size]' }
+                meta: { retry: unsafe }
+
+    Unauthenticated:
+      description: No credential, or one that failed verification. The reason is never disclosed.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        WWW-Authenticate:
+          $ref: '#/components/headers/WwwAuthenticate'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 1d8e9a77-3b2c-4a41-8f0e-5c6d7e8f9a10
+                status: '401'
+                code: auth.unauthenticated
+                title: A valid credential is required
+                meta: { retry: unsafe }
+
+    Forbidden:
+      description: Authenticated, but refused — by a missing grant, or by governance on its merits.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 9a0b1c2d-3e4f-4a5b-8c6d-7e8f9a0b1c2d
+                status: '403'
+                code: governance.policy_denied
+                title: A Policy refused this action
+                meta: { retry: unsafe, decision_ref: <decision-reference> }
+
+    NotFound:
+      description: No such resource or path, or none this caller may know exists.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 2b3c4d5e-6f70-4812-9a3b-4c5d6e7f8091
+                status: '404'
+                code: resource.not_found
+                title: The resource does not exist
+                meta: { retry: unsafe }
+
+    MethodNotAllowed:
+      description: The path exists, but not for this method.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        Allow:
+          $ref: '#/components/headers/Allow'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 3c4d5e6f-7081-4923-8b4c-5d6e7f809102
+                status: '405'
+                code: request.method_not_allowed
+                title: This method is not allowed on this path
+                meta: { retry: unsafe }
+
+    NotAcceptable:
+      description: The Accept header asks only for JSON:API media type parameters this service does not support.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 4d5e6f70-8192-4a34-9c5d-6e7f80910213
+                status: '406'
+                code: request.not_acceptable
+                title: No acceptable representation
+                source: { header: Accept }
+                meta: { retry: unsafe }
+
+    Conflict:
+      description: The resource's state forbids the operation, or an Idempotency-Key was reused with a different request.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 5e6f7081-92a3-4b45-8d6e-7f8091021324
+                status: '409'
+                code: resource.conflict
+                title: The resource's state forbids this operation
+                meta: { retry: unsafe }
+
+    UnsupportedMediaType:
+      description: The Content-Type is not the JSON:API media type, or carries unsupported parameters.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 6f708192-a3b4-4c56-9e7f-809102132435
+                status: '415'
+                code: request.unsupported_media_type
+                title: Unsupported media type
+                source: { header: Content-Type }
+                meta: { retry: unsafe }
+
+    UnprocessableContent:
+      description: A request member is missing or invalid. One error per problem, each pointing at its member.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 708192a3-b4c5-4d67-8f80-910213243546
+                status: '422'
+                code: request.validation_failed
+                title: A request member is missing or invalid
+                detail: name must not be empty
+                source: { pointer: /data/attributes/name }
+                meta: { retry: unsafe }
+
+    TooManyRequests:
+      description: A limit was reached. Wait for Retry-After, then send the same request again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 8192a3b4-c5d6-4e78-9081-021324354657
+                status: '429'
+                code: quota.exceeded
+                title: A limit was reached
+                meta: { retry: safe }
+
+    InternalError:
+      description: An unhandled fault. The detail is generic by design.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: 92a3b4c5-d6e7-4f89-8192-132435465768
+                status: '500'
+                code: server.internal
+                title: Something went wrong on our side
+                detail: The request could not be completed. Quote the request identifier when reporting it.
+                meta: { retry: safe }
+
+    Unavailable:
+      description: This service, or a dependency it needs, is not ready. Nothing took effect.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: a3b4c5d6-e7f8-4091-9203-243546576879
+                status: '503'
+                code: server.unavailable
+                title: The service is not ready
+                meta: { retry: safe }

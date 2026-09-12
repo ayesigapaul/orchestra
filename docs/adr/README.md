@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.26.0
+version: 0.27.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -51,6 +51,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0022](adr-0022-tenant-user-management-owns-tenancy.md) | A Tenant User Management service owns Tenants, Persons and Principals | Superseded by 0024 | 2026-09-13 |
 | [0023](adr-0023-no-foreign-key-constraints.md) | References are identifiers; no table carries a foreign key constraint | Accepted | 2026-09-13 |
 | [0024](adr-0024-global-person-with-tenant-memberships.md) | One global Person per human, with a Membership per Tenant | Accepted | 2026-09-13 |
+| [0025](adr-0025-json-api-http-contract.md) | HTTP APIs speak JSON:API 1.1, and each is described in OpenAPI | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -90,11 +91,13 @@ flowchart TD
   A22 -.->|superseded by| A24["ADR-0024<br/>Global Person, Tenant Memberships"]
   A17 --> A24
   A23 --> A24
+  A6 --> A25["ADR-0025<br/>JSON:API and OpenAPI"]
+  A20 --> A25
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;
 ```
