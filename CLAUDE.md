@@ -126,8 +126,17 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   `CLAUDE.md`, `CONTRIBUTING.md` and the workflow identical.
 - **Git does not track empty directories.** A directory that exists locally will not exist in a CI
   checkout, so links into it break. Every such directory carries a `.gitkeep` or a real README.
-- **`globalThis.navigator` is getter-only on Node 22.** Assigning to it throws; use
-  `Object.defineProperty`.
+- **`globalThis.navigator` is getter-only on Node 22 and 24.** Assigning to it throws in strict
+  mode, which is every ES module; use `Object.defineProperty`.
+- **pnpm 11 stopped reading the `pnpm` field of `package.json`, silently.** Overrides left there
+  simply stop applying, so they live in the project's `pnpm-workspace.yaml`. Reaching pnpm 12 has
+  five more traps: pnpm 10 before 10.34.5 cannot switch to it and fails with `ENOEXEC` on a
+  placeholder binary; an install run through that switch never records pnpm in the lockfile's
+  `packageManagerDependencies`, so it passes on a laptop while `--frozen-lockfile` fails in CI and
+  Docker — run one install with pnpm 12 invoked directly; the floating `pnpm/action-setup@v6` tag
+  points behind v6.1.0, the first release that installs it; pnpm refuses any package published
+  less than a day ago, so the registry's latest can be a version it will not resolve yet; and
+  `pnpm self-update` run inside a project rewrites its `packageManager` as a side effect.
 - **`ui-template/` is Next.js 16**, which differs from most training data. Read
   `node_modules/next/dist/docs/` before writing code there.
 - **A repo-local `commit.gpgsign=false` beats the global setting, silently.** Signing is set up per
@@ -148,7 +157,8 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   default pull_request types, so retitling actually re-checks.
 - **A bare `#NN` in a commit body fails the build.** commitlint's parser treats `#` as an issue
   prefix, so `in #16` mid-paragraph is read as a footer and warns `footer-leading-blank` — and the
-  hygiene job sets `failOnWarnings: true`. Write `pull request 16`, and note that commitlint exits
+  hygiene job sets `failOnWarnings: true`. A wrapped line starting with `word:` is read as a
+  footer the same way. Write `pull request 16`, reword such a line, and note that commitlint exits
   **0** on warnings, so a local run that checks only the exit code will call it clean.
 - **Mintlify will not serve a page named README.** README.md is treated as a repository readme: a
   directory redirects to it and then 404s, which was a live 404 on the home page and all 14 section

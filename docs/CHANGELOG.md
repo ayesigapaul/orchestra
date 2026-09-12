@@ -1,9 +1,9 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.22.0
+version: 0.22.1
 status: Draft
-last_updated: 2026-09-12
+last_updated: 2026-09-13
 owners: [platform-architecture]
 ---
 
@@ -18,6 +18,24 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.22.1] — 2026-09-13
+
+The UI template reaches the pinned versions, and the two places where the latest stable release
+cannot yet be used on its own are written down rather than hidden.
+
+### Changed
+
+- `10-architecture/tech-stack.md` §1.1 — `ui-template/` now runs Next.js 16.3.5, React 19.3.0,
+  Node.js 24.21.0 and pnpm 12.4.1, so the notes saying it must be bumped are gone. Two rows now
+  record exceptions, each with the condition that ends it:
+  - TypeScript 7.0.2 ships no compiler API until 7.1, so the TypeScript 6 API is installed beside
+    it, as TypeScript's release notes direct. CI type-checks with 7; typescript-eslint and
+    `next build`'s own check run on 6.
+  - ESLint stays on 9.39.5, the latest 9.x release. `eslint-config-next` bundles
+    `eslint-plugin-react`, whose newest release still calls an API that ESLint 10 removed.
 
 ---
 
