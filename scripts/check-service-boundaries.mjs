@@ -58,11 +58,14 @@ for (const r of ROOTS) {
   }
 }
 
-// Python package names each service owns, so an import of another service's package is detectable.
+// Python package names each Python service owns, so an import of another service's package is
+// detectable. Only a service with a pyproject.toml counts: a TypeScript service's src/domain is a
+// folder rather than a Python package, and would otherwise claim the name "domain" for itself.
 const pyPackages = new Map();
 for (const u of units) {
   const src = join(u.dir, 'src');
-  if (existsSync(src)) for (const pkg of readdirSync(src)) if (statSync(join(src, pkg)).isDirectory()) pyPackages.set(pkg, u.name);
+  if (!existsSync(join(u.dir, 'pyproject.toml')) || !existsSync(src)) continue;
+  for (const pkg of readdirSync(src)) if (statSync(join(src, pkg)).isDirectory()) pyPackages.set(pkg, u.name);
 }
 
 for (const u of units) {

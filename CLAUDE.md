@@ -113,8 +113,9 @@ node scripts/build-docs-nav.mjs --check   # docs/docs.json matches the tree; dro
 npx --yes lychee --config lychee.toml .   # external links
 node scripts/check-service-boundaries.mjs # ADR-0020: no coupling between services
 
-# Services — each tested alone, with the pinned uv rather than the one installed
+# Services — each tested alone, from its own lockfile, with its own pinned toolchain
 uvx uv@0.12.13 --directory services/gateway run pytest
+(cd services/tenant-user-management && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test)
 infra/compose/smoke.sh                    # the local stack, end to end through the edge
 
 # Mermaid parse check needs its dependencies present

@@ -38,14 +38,31 @@ jobs:
         run: |
           curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.21.0"
+      # v6.1.0 is the first release that installs pnpm 12. Each TypeScript service also pins it in
+      # its own packageManager field, which pnpm honours inside that directory.
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          version: "12.4.1"
       # Each service installs from its own lockfile and is tested alone, as it will be deployed.
-      - name: Lint, format-check and test every service in isolation
+      - name: Lint, format-check and test every Python service in isolation
         run: |
           set -euo pipefail
           for dir in services/*/; do
             [ -f "${dir}pyproject.toml" ] || continue
             echo "::group::${dir}"
             (cd "$dir" && uv sync --locked && uv run ruff check && uv run ruff format --check && uv run pytest -q)
+            echo "::endgroup::"
+          done
+      - name: Type-check and test every TypeScript service in isolation
+        run: |
+          set -euo pipefail
+          for dir in services/*/; do
+            [ -f "${dir}package.json" ] || continue
+            echo "::group::${dir}"
+            (cd "$dir" && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test)
             echo "::endgroup::"
           done
 
