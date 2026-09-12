@@ -1,7 +1,7 @@
 ---
 title: Threat Model
 doc_id: DOC-055
-version: 0.7.1
+version: 0.8.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -219,6 +219,11 @@ as that ADR's decision.
 - Every tenant-scoped table MUST carry a non-nullable tenant identifier, row-level security MUST be
   enabled **and forced** so ownership does not exempt, and the application MUST connect as a role
   that is neither superuser nor table owner (C5).
+- The global Person is the one table of people without a tenant identifier
+  ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)). It MUST still have
+  row-level security enabled and forced, with a policy admitting a row only through the current
+  Tenant's Membership. It MUST be written only through the linking functions, never by the
+  application role, and its attributes MUST come only from the identity provider.
 - Tenant context MUST be set per transaction, MUST be safe under connection pooling, and MUST be
   tested against the pooler in use rather than only a direct connection.
 - CI MUST fail if a tenant-scoped table exists without row-level security enabled and forced. This

@@ -44,8 +44,9 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0019 | Run supervisor on PostgreSQL; Temporal is the named fallback | Accepted |
 | 0020 | Services share a repository, never code — boundaries enforced in CI | Accepted |
 | 0021 | PostgreSQL is the datastore; tenant context is set per transaction, through the pooler | Accepted |
-| 0022 | Tenant User Management owns Tenants, Workspaces, Persons and Principals; one Person per Tenant | Accepted |
+| 0022 | Tenant User Management owns Tenants, Persons and Principals; one Person per Tenant | Superseded by 0024 |
 | 0023 | No foreign key constraints; row-level security write policies refuse cross-tenant references | Accepted |
+| 0024 | One global Person per human, a Membership per Tenant; person attributes only from the identity provider | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -164,6 +165,11 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   hygiene job sets `failOnWarnings: true`. A wrapped line starting with `word:` is read as a
   footer the same way. Write `pull request 16`, reword such a line, and note that commitlint exits
   **0** on warnings, so a local run that checks only the exit code will call it clean.
+- **A pull request behind `main` cannot merge, and GitHub's fix unsigns it.** The ruleset requires an
+  up-to-date branch, so the merge is refused with "required status checks are expected". GitHub's
+  Update branch rebase then writes unsigned commits to the branch. That is survivable, because the
+  squash commit GitHub writes to `main` is signed by GitHub, but rebasing locally and pushing keeps
+  the branch itself verified.
 - **Mintlify will not serve a page named README.** README.md is treated as a repository readme: a
   directory redirects to it and then 404s, which was a live 404 on the home page and all 14 section
   indexes. Each directory therefore carries a generated `section-index.md` copy of its `README.md`,

@@ -1,7 +1,7 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.23.0
+version: 0.23.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -47,7 +47,7 @@ state — flow back. Neither is a synchronous dependency of the other, with two 
 durable Policy Decision write of section 5 may make one, depending on a mechanism ADR-0013 leaves
 open. Authentication does make one: the Gateway resolves every credential through Tenant User
 Management, a Control Plane container, and rejects the request when it cannot
-([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)).
+([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
 
 ## 2. Container diagram
 
@@ -91,7 +91,7 @@ Dotted edges rest on **Proposed** ADR-0007 and are not binding.
 | --- | --- | --- | --- | --- | --- |
 | Admin Console | Control | The Platform User's surface: authoring, approvals, audit and usage views | Nothing durable | Control Plane API only | Reach the datastore, the Runtime or a model surface directly |
 | Control Plane API | Control | Definition and Policy authoring and publish, Tool Catalog registration and capability grants, Connector enrolment (planned, ADR-0007), Model Binding configuration, approval resolution, audit and usage reads, and tenancy administration by calling Tenant User Management | Every tenant-scoped administrative record except those Tenant User Management owns | Datastore, Definition Compiler, Credential Custody, Tenant User Management | Execute a Run, hold a plaintext credential, or keep a copy of a Person's attributes |
-| Tenant User Management | Control | Owns Tenants, Workspaces, Persons and Principals, and resolves a presented credential to exactly one Principal and one Tenant for the Gateway ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)) | The tenant directory, exempt from row-level security and holding routing facts only; tenant profiles, Workspaces, Persons and Principals under forced row-level security, all in its own schema | Datastore, Keycloak | Resolve a credential to more than one Principal or Tenant, admit a caller it could not resolve, or hold a credential's secret |
+| Tenant User Management | Control | Owns Tenants, Workspaces, Persons and Principals, and resolves a presented credential to exactly one Principal and one Tenant for the Gateway ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) | The tenant directory, exempt from row-level security and holding routing facts only; tenant profiles, Workspaces, Memberships and Principals under forced row-level security, and global Persons each visible to a Tenant only through its own Membership, all in its own schema | Datastore, Keycloak | Resolve a credential to more than one Principal or Tenant, admit a caller it could not resolve, or hold a credential's secret |
 | Definition Compiler | Control | Validates a declarative Agent or Workflow definition, emits an execution graph carrying a Policy Enforcement Point at every Step boundary, and produces the diagnostics an author reads | Compiled graphs, each traceable to its source definition, version and Step identifiers | Nothing outbound; invoked by the Control Plane API | Accept customer code, or emit a graph in which an enforcement point can be suppressed — the compiler's side of [`policy-model.md`](../40-governance/policy-model.md) E2 |
 | Credential Custody | Control | Envelope encryption of BYOK model credentials and Tool origin credentials, per-tenant data keys, rotation | Ciphertext and key references | An external key management service | Return plaintext into a log, trace or backup ([ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md)) |
 | Metering | Control | Records the metered dimensions [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) fixes, as records carrying the properties it requires; most occurrences arise in the Data Plane, so this container is fed rather than self-observing | Meter records | Datastore | Serve as the audit trail, or bill model tokens — model usage is reported, never billed |
@@ -227,7 +227,7 @@ it to a Tenant before any tenant context exists, so a directory record identifie
 than belonging to one and cannot be filtered by the requester's context. That much follows from
 ADR-0011. It lives in Tenant User Management's own schema, and the Gateway and the Control Plane API
 call that service rather than reading the table
-([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)).
+([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
 
 ## 9. The language boundary
 
