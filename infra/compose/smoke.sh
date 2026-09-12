@@ -31,4 +31,27 @@ code=$(curl -s -o /dev/null -w '%{http_code}' -H "X-Userinfo: ${forged}" http://
 [ "$code" = "401" ] || fail "forged identity header: expected 401, got $code"
 echo "✓ an identity asserted in a header is not a credential"
 
+# ADR-0021: tenant context is set with SET LOCAL because the pool is in transaction mode. Each call
+# below is a separate client, and the probe pool holds a single server connection, so every client
+# is handed the same one — which is exactly the case isolation has to survive.
+fail_pool() { echo "✗ $1"; docker compose logs --tail 40 postgres pgbouncer; exit 1; }
+pool() {
+  docker compose exec -T postgres psql -X -q -t -A \
+    "postgresql://pooler_probe:pooler-probe-local-dev@pgbouncer:6432/orchestra_probe" -c "$1"
+}
+probe="SELECT coalesce(current_setting('app.tenant_id', true), '<never set>')"
+
+pool "BEGIN; SET LOCAL app.tenant_id = 'tenant-a'; COMMIT;" >/dev/null \
+  || fail_pool "could not reach PostgreSQL through PgBouncer"
+seen=$(pool "$probe") || fail_pool "could not query through PgBouncer"
+[ "$seen" != "tenant-a" ] || fail_pool "tenant context set with SET LOCAL reached the next client"
+echo "✓ tenant context set with SET LOCAL does not reach the next client through the pool"
+
+pool "SET app.tenant_id = 'session-state'" >/dev/null
+seen=$(pool "$probe")
+pool "RESET app.tenant_id" >/dev/null
+[ "$seen" = "session-state" ] \
+  || fail_pool "expected transaction pooling to hand a plain SET to the next client, got '$seen'"
+echo "✓ the pool is in transaction mode: a plain SET does reach the next client, which is why it is forbidden"
+
 echo "Local stack passes."
