@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.25.0
+version: 0.25.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,18 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.25.1] — 2026-09-13
+
+The first TypeScript service exists, so the stack table gains the libraries it pins.
+
+### Changed
+
+- `10-architecture/tech-stack.md` section 1.1 pins Hono 4.13.7 with `@hono/node-server` 2.1.1,
+  Zod 4.6.2, Pino 10.3.1 and Vitest 5.0.0 — the libraries `services/tenant-user-management` is built
+  on — and records that TypeScript services run on Node.js by type stripping, with no build step.
 
 ---
 

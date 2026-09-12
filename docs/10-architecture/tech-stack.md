@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.24.0
+version: 0.24.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -61,6 +61,10 @@ snapshot, and it goes stale on the next release.
 | Next.js | 16.3.5 | |
 | React | 19.3.0 | |
 | Tailwind CSS | 4.3.3 | |
+| Hono | 4.13.7, with `@hono/node-server` 2.1.1 | HTTP for TypeScript services ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)); they run on Node.js by type stripping, with no build step |
+| Zod | 4.6.2 | |
+| Pino | 10.3.1 | |
+| Vitest | 5.0.0 | |
 | FastAPI | 0.141.1 | |
 | uvicorn | 0.52.4 | |
 | Pydantic | 2.13.5 | |
