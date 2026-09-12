@@ -1,9 +1,9 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.7.0
+version: 0.7.1
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -20,10 +20,10 @@ disagree, the glossary wins and this document is the defect.
 what survives the deletion of what.
 
 **Out of scope.** Attributes beyond the identifiers that carry a relationship; keys; indexes;
-partitioning; and the datastore engine.
-[ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) constrains that engine to one that
-enforces row-level security itself and records PostgreSQL as the obvious candidate, but selects
-nothing. Nothing here may be read as a table layout.
+partitioning; and the datastore engine, which
+[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) decides as PostgreSQL within the
+constraint [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) sets. Nothing here may
+be read as a table layout.
 
 Orchestra is pre-implementation and pre-customer: no platform code exists and no schema has been
 written. Of the three **Proposed** ADRs one reaches this document —

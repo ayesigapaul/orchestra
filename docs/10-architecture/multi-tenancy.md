@@ -1,9 +1,9 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.8.0
+version: 0.9.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0007, ADR-0009, ADR-0011, ADR-0013]
 ---
@@ -21,9 +21,9 @@ reach, and what the promotion path forbids from the first commit.
 The rules here bind because ADR-0011 decided them and
 [`../40-governance/threat-model.md`](../40-governance/threat-model.md) section 8 restates them as
 controls; this document links rather than restating, so there is one copy to keep true. Orchestra is
-pre-implementation and pre-customer. No platform code exists, no schema has been written, and **no
-datastore has been selected** — ADR-0011 constrains the engine to one enforcing row-level security
-itself and names PostgreSQL only as the obvious candidate. Nothing below is a product choice.
+pre-customer, and no schema has been written. The datastore is PostgreSQL
+([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)), chosen against the capabilities this
+document states; those capabilities, not the product, remain the requirement.
 
 ## 1. What is scoped, and what is not a boundary
 
@@ -66,15 +66,16 @@ The load-bearing property is that a missing `WHERE tenant_id = ?` in application
 sufficient on its own to cross a boundary. That is ADR-0001's requirement, and it is the only reason
 to accept a shared schema at all.
 
-**The mechanism is written against ADR-0011's named candidate, not against a chosen product.** Read
-the four layers, and the vocabulary the rest of this document uses — forced policies, ownership
-as a privileged path, transaction-scoped context, pooler modes named transaction-level and
-statement-level — as the acceptance criteria for the engine decision section 10 carries. An engine
-satisfying ADR-0011 has to enforce row-level security itself, force it so ownership does not exempt,
-admit an application role that neither owns the tables nor holds an attribute bypassing the policy,
-and scope session context to a transaction. One that cannot express those capabilities is out of
-scope rather than an alternative this document accommodates; the spelling above is the candidate's,
-and the capabilities are the requirement.
+**The mechanism is written as capabilities, and the engine was chosen against them.** Read the four
+layers, and the vocabulary the rest of this document uses — forced policies, ownership as a
+privileged path, transaction-scoped context, pooler modes named transaction-level and
+statement-level — as the acceptance criteria
+[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) was written against when it chose
+PostgreSQL. An engine satisfying ADR-0011 has to enforce row-level security itself, force it so
+ownership does not exempt, admit an application role that neither owns the tables nor holds an
+attribute bypassing the policy, and scope session context to a transaction. ADR-0021 gives each
+capability its PostgreSQL spelling. The capabilities stay the requirement: a later change of engine
+is judged against this section, not against PostgreSQL's behaviour.
 
 ## 3. Tenant context under connection pooling
 
@@ -265,14 +266,14 @@ than of the requirement, and the enforcement path owns the entry if it does
   datastore contention, and is not a substitute.
 - **Ownership remains a bypass of the policy definition**, if not of the policy itself.
 - **Everything in section 8** rests on naming discipline and a registry rather than an engine.
-- **The engine is trusted by assumption.** If its row-level security implementation is wrong every
-  control here fails silently — the threat model lists it in that set, and no datastore is chosen.
+- **The engine is trusted by assumption.** If PostgreSQL's row-level security implementation is
+  wrong, every control here fails silently — the threat model lists it in that set. ADR-0021 treats
+  that as a revisit criterion, because no control in this document could mitigate it.
 
 ## 10. Open questions
 
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
-| The datastore engine, which ADR-0011 constrains to one enforcing row-level security and does not select | An ADR authored against sections 2 to 5, which state the capabilities any engine must provide, owned by platform-architecture with the pooler and operational model in view | **Yes** — costly to reverse; every control here depends on it |
 | Per-tenant deletion for erasure requests under a shared schema, against audit-retention obligations | ADR-0011's follow-on, with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) and legal input | **Yes** — it spans retention, the definition lifecycle and metering |
 | Whether per-tenant encryption keys extend beyond credentials to data at rest | Left open by ADR-0011; ADR-0002 covers only credentials | **Yes** — a storage and key-management commitment |
 | The complete inventory of stores outside the datastore; section 8 fixes the scoping rule and the registry, not the list | [`containers.md`](containers.md) and [`data-plane.md`](data-plane.md) as each store is introduced; the planned `connector.md` for the connector's own | No — the rule holds on any inventory |

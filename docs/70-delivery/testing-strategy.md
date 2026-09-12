@@ -1,9 +1,9 @@
 ---
 title: Testing Strategy
 doc_id: DOC-083
-version: 0.16.0
+version: 0.16.1
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0005, ADR-0006, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
 ---
@@ -88,5 +88,5 @@ forward ADR-0005's Python runtime and TypeScript control plane unchanged.
 | Whether model-behaviour evaluation is in scope, beyond testing the governance around an agent | A design partner, and whether buyers ask for it | No |
 | What the Agent Event Profile conformance suite must cover, and whether a third party can run it | [`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md) | No |
 | How a compiled-graph golden test survives a runtime upgrade that changes node naming | [`../50-workflows/workflow-dsl.md`](../50-workflows/workflow-dsl.md) with the compiler design | No |
-| Whether isolation tests can be made to fail loudly on a datastore that is not yet chosen | [`../10-architecture/multi-tenancy.md`](../10-architecture/multi-tenancy.md), after the engine decision | No |
+| How the isolation tests fail loudly on PostgreSQL rather than pass vacuously — a check that enumerates no table, or a policy that errors on a reset setting instead of filtering | Phase 1 implementation, against [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) and [`../10-architecture/multi-tenancy.md`](../10-architecture/multi-tenancy.md) section 5 | No |
 | Coverage targets and performance budgets | Nothing yet; deliberately unset | No |

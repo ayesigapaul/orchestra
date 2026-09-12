@@ -1,9 +1,9 @@
 ---
 title: Threat Model
 doc_id: DOC-055
-version: 0.7.0
+version: 0.7.1
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -232,8 +232,10 @@ as that ADR's decision.
 **Residual risk.** Row-level security covers the datastore and nothing else: not derived stores, and
 not a compromised application role, which by design reaches every tenant's rows subject to the
 context it sets. Operator aggregation for metering and support bypasses per-tenant scoping by
-construction (B6). No datastore is chosen — ADR-0011 constrains the engine to one that enforces
-row-level security and names PostgreSQL only as the obvious candidate.
+construction (B6). The engine is PostgreSQL
+([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)), chosen against the capabilities
+[`../10-architecture/multi-tenancy.md`](../10-architecture/multi-tenancy.md) requires, which gives
+every control above a concrete spelling.
 
 ## 9. T5 — Credential compromise
 
@@ -434,4 +436,3 @@ classification is the one repeated here.
 | Whether batching, standing approvals or automatic approval below a bound are ever permitted | This document's T8 analysis, which does not adopt them, then [`approval-workflows.md`](approval-workflows.md) section 10 and a policy-language decision | **ADR required** — a deliberate weakening of the primary control, on the same test as break-glass |
 | Whether a break-glass path exists at all | [`approval-workflows.md`](approval-workflows.md), on this document's T8 analysis | **ADR required** — a deliberate hole in the primary control |
 | Whether Connector local audit is exported and reconciled with the platform trail | [`audit-model.md`](audit-model.md), `connector.md` in [`../10-architecture/`](../10-architecture/) | Later document; void if ADR-0007 is rejected |
-| The datastore engine, on which every T4 control depends | [`../10-architecture/`](../10-architecture/), constrained by ADR-0011 | **ADR required** — costly to reverse |

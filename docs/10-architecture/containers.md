@@ -1,9 +1,9 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.22.0
+version: 0.22.1
 status: Draft
-last_updated: 2026-09-12
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -195,10 +195,11 @@ lacks a forced policy is the load-bearing control
 ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md));
 [`multi-tenancy.md`](multi-tenancy.md) specifies the mechanism.
 
-**No datastore engine has been chosen.** ADR-0011 constrains the choice to an engine that enforces
-row-level security itself and names PostgreSQL only as the obvious candidate. Nothing here assumes a
-product, and the two places the engine matters most — what satisfies ADR-0013's durable decision
-write, and the query shape audit reconstruction needs under ADR-0012 — are open for that reason.
+**The datastore engine is PostgreSQL**
+([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)), chosen against the capabilities
+[`multi-tenancy.md`](multi-tenancy.md) sets out. The two places the engine matters most — what
+satisfies ADR-0013's durable decision write, and the query shape audit reconstruction needs under
+ADR-0012 — are still open, but now against a known engine rather than a candidate.
 
 Any store outside that datastore must be tenant-scoped explicitly;
 [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T4 enumerates the classes,
@@ -276,7 +277,6 @@ before implementation. **Document** means a later document suffices.
 
 | Question | Needs | Decided by |
 | --- | --- | --- |
-| The datastore engine, which ADR-0011 constrains to one enforcing row-level security without selecting one | **ADR** | [`multi-tenancy.md`](multi-tenancy.md) section 10, where [`system-context.md`](system-context.md) section 6 already routes it and whose sections 2 to 5 state what an engine must provide. This view contributes constraints only. [`data-plane.md`](data-plane.md) section 11 also homes it. [`system-context.md`](system-context.md) sends it to this document and this document declines it: section 8 contributes the constraints — every T4 control in [`../40-governance/threat-model.md`](../40-governance/threat-model.md) depends on the answer, as do ADR-0013's durable decision write and ADR-0012's audit query shape — but the acceptance criteria an ADR would be written against are there, not here |
 | The shape and scope of the egress allow-list | **ADR** | One ADR spanning the Model Broker, Tool Invocation and the Connector, per [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T6. The posture is not open: T6 derives default-deny egress from its own analysis and binds it normatively, so this document treats it as settled and registers only the allow-list's shape — per tenant or platform-wide, by hostname or by address range, in the application or at an egress identity. Those three containers are the only outbound edges reaching a tenant-supplied destination, which is what this document contributes; `connector.md` cannot settle the shape alone while ADR-0007 is **Proposed** |
 | Where policy evaluation executes — in-process at each enforcement point, or a separate container | **ADR** if evaluation needs its own datastore access, otherwise Document | Blocked on the policy-language ADR and on whether a Policy may depend on aggregate state, both marked **ADR** in [`../40-governance/policy-model.md`](../40-governance/policy-model.md). Section 5 fixes that enforcement is in-process by construction and derives the constraints any answer must satisfy; the location is not settled here |
 | Which side of the language boundary the Definition Compiler sits on, and what artifact crosses it | **ADR** | [`data-plane.md`](data-plane.md) section 11, which carries the analysis of both candidates, with ADR-0005 behind it. This view names the container; it does not decide the side. It fixes where every point of contact with the substrate lives, which is the substitution argument the boundary exists to protect |
@@ -285,12 +285,12 @@ before implementation. **Document** means a later document suffices.
 | Which container writes the Audit Records that are not Policy Decisions, and where the write path ADR-0013 permits to degrade lives | Document | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) fixes the record classes and requires that a degraded period be visible; `reliability.md` in [`../60-operations/`](../60-operations/) owns how it is signalled. Section 3 names a container for the fail-closed path only and section 2 draws no edge for the rest, so the container is this view's to name once both land |
 | Which containers are separately deployable, and which share a process or a release | Document | `deployment-topologies.md`, planned in [`./README.md`](README.md). Nothing here is a service count |
 | The complete inventory of stores outside the row-level-secured datastore | Document | Accumulates as each document introduces a store; section 8 contributes the two this view introduces, and [`multi-tenancy.md`](multi-tenancy.md) owns the scoping rule the inventory is checked against. Whether ADR-0013's durable decision write adds one at all depends on a mechanism [`data-plane.md`](data-plane.md) holds open |
-| Where the tenant directory lives, given it must be readable before tenant context exists | Document | This document, which accepts the assignment [`multi-tenancy.md`](multi-tenancy.md) section 10 makes: where a record sits is a container question. It waits on the engine decision above, and on [`identity-and-access.md`](identity-and-access.md) for which container authenticates. Section 8 derives the constraint that the record cannot be filtered by the requester's tenant context; the placement does not follow from it |
+| Where the tenant directory lives, given it must be readable before tenant context exists | Document | This document, which accepts the assignment [`multi-tenancy.md`](multi-tenancy.md) section 10 makes: where a record sits is a container question. The engine is decided by [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md); it waits on [`identity-and-access.md`](identity-and-access.md) for which container authenticates. Section 8 derives the constraint that the record cannot be filtered by the requester's tenant context; the placement does not follow from it |
 | Whether the Gateway or the Control Plane API mints and validates Session Tokens, and what identity a Service Account presents | Document | [`identity-and-access.md`](identity-and-access.md) |
 | What the Gateway emits on the Run event stream, and how replay reaches a disconnected client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed**, whose validation step 2 is outstanding |
 | Whether the Model Broker's Quota Envelopes are declared, discovered from the surface, or both | Document | The quota design ADR-0006 calls for, with [`../60-operations/`](../60-operations/) |
 
-Three of these gate other work. The engine decision, taken in
-[`multi-tenancy.md`](multi-tenancy.md), gates every T4 control and the durable decision write's
-mechanism; the allow-list's shape gates two container boundaries and the connector; and evaluation
-location sits underneath the governance section's implementability.
+Two of these gate other work. The allow-list's shape gates two container boundaries and the
+connector, and evaluation location sits underneath the governance section's implementability. The
+engine decision that used to lead this list, and gated every T4 control, is now
+[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md).

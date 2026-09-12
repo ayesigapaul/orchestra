@@ -1,9 +1,9 @@
 ---
 title: Entity Lifecycle State Machines
 doc_id: DOC-032
-version: 0.16.1
+version: 0.16.2
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011]
 ---
@@ -28,9 +28,10 @@ Requirement keywords carry their [RFC 2119](https://www.rfc-editor.org/rfc/rfc21
 - Every state record, transition and emitted event MUST carry `tenant_id`. **MUST be audited** means
   an Audit Record is written, sufficient to reconstruct who did what, when, on what basis, and under
   which Policy.
-- Where this state lives is unsettled.
-  [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) requires a datastore that
-  enforces row-level security itself but selects none. No product is chosen.
+- This state lives in PostgreSQL, which
+  [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) makes the datastore under the
+  row-level security requirement of
+  [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md). Its layout there is unsettled.
 - Run state is **Orchestra's** governance vocabulary, not the runtime's. Durability, checkpointing,
   interrupts and the resume mechanism come from the runtime library
   ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)); noticing a waiting or crashed

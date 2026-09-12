@@ -1,9 +1,9 @@
 ---
 title: Audit Model
 doc_id: DOC-054
-version: 0.7.0
+version: 0.7.1
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -26,9 +26,9 @@ implementations MUST conform. Keywords carry their
 **In scope.** What an Audit Record is, what produces one, what each MUST contain, who it attributes
 to, what its immutability forbids elsewhere, what metering reconciliation demands, and where audit
 ends and telemetry begins. **Out of scope.** Field names, wire format, storage layout, query syntax,
-API shape. No datastore is chosen:
-[ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) constrains the engine to one
-enforcing row-level security itself and names PostgreSQL only as the obvious candidate. Orchestra is
+API shape. The datastore is PostgreSQL
+([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)), but its storage layout stays out of
+scope here. Orchestra is
 pre-implementation and pre-customer; no code exists and no contract has forced a retention term.
 [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) and
 [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) are **Proposed**, and
@@ -94,7 +94,8 @@ so a Policy version MUST be retained for at least as long as any record referenc
 record MUST NOT be reconstructed by parsing application logs, traces or metrics, and those artefacts
 MUST NOT be presented as the audit trail. A governed action MUST NOT be reported as having occurred
 under governance if its record was not durably written. The mechanism — a shared transaction with
-the state change, or a durable outbox — is constrained by the datastore decision. What happens when
+the state change, or a durable outbox — is constrained by the datastore, which
+[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) makes PostgreSQL. What happens when
 the audit store is unreachable is settled by
 [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md), which splits the write by record
 class rather than treating audit as one undifferentiated thing.
