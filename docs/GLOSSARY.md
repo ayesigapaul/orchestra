@@ -1,9 +1,9 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.7.0
+version: 0.8.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 ---
 
@@ -35,6 +35,12 @@ to Orchestra by the customer's backend via a scoped session token. **Not seat-bi
 [ADR-0009](adr/adr-0009-meter-first-defer-tiering.md).
 
 **Service Account** — a non-human Principal used for machine-to-machine calls into the Gateway.
+
+**Person** — a human known to one Tenant, and the single record of that human's attributes within it.
+A Platform User and an End User each refer to exactly one Person; a Service Account and a Connector
+refer to none. A Person is not a Principal and never acts: every action resolves to a Principal. The
+same human in two Tenants is two Persons
+([ADR-0022](adr/adr-0022-tenant-user-management-owns-tenancy.md)).
 
 **Session Token** — a short-lived, narrowly scoped credential minted by Orchestra at the
 request of the customer's backend and used by a client SDK. Never a tenant API key. Never present in

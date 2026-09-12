@@ -43,6 +43,7 @@
         "release",
         "services",
         "gateway",
+        "tenant-user-management",
         "supervisor",
         "runtime",
         "compiler",

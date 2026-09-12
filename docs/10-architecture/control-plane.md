@@ -1,7 +1,7 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.14.1
+version: 0.15.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -45,7 +45,7 @@ approver, auditor. End Users never reach it.
 ## 3. The surfaces, and the containers that serve them
 
 This is a view of what a Platform User works with, **not a C4 Level 3 decomposition**:
-[`containers.md`](containers.md) gives the Control Plane five containers, and the surfaces below cut
+[`containers.md`](containers.md) gives the Control Plane six containers, and the surfaces below cut
 across them rather than sitting inside any one. The mapping after the diagram is what makes each
 surface traceable to the containers above it.
 
@@ -68,7 +68,9 @@ flowchart TD
   DEF & POL -->|"publish freezes a version"| ST
   APR -->|"one decision, evidence unchanged"| ST
   AUD -->|"read — itself audited"| ST
-  CAT & TEN --> ST
+  CAT --> ST
+  TEN --> TUM["Tenant User Management"]
+  TUM --> ST
   CONN -.->|"planned — ADR-0007"| ST
   USE -->|"read"| ST
   CRED -->|"held by reference, never plaintext"| KMS["Envelope-encrypted custody<br/>per-tenant data keys"]
@@ -81,14 +83,15 @@ flowchart TD
 
 The dotted edge rests on **Proposed**
 [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) and is not binding.
-The Definition Compiler and Metering are Control Plane *containers* rather than surfaces; they are
-drawn because a surface's writes pass through them, and metered occurrences arise in the Data Plane
-but are recorded by a Control Plane container.
+The Definition Compiler, Metering and Tenant User Management are Control Plane *containers* rather
+than surfaces; they are drawn because a surface's writes pass through them, and metered occurrences
+arise in the Data Plane but are recorded by a Control Plane container.
 
 | Surface | Served by, per [`containers.md`](containers.md) section 3 |
 | --- | --- |
 | Agents and Workflows | Admin Console → Control Plane API → Definition Compiler at publish |
-| Policies, Approvals, Tenant and access | Admin Console → Control Plane API |
+| Policies and Approvals | Admin Console → Control Plane API |
+| Tenant and access | Admin Console → Control Plane API → Tenant User Management, which owns Tenants, Workspaces, Persons and Principals ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)) |
 | Audit | Admin Console → Control Plane API, reading the datastore |
 | Usage | Admin Console → Control Plane API, reading what Metering wrote |
 | Tool Catalog and Connectors | Admin Console → Control Plane API; the Connector fabric it enrols is a **planned** Data Plane container |

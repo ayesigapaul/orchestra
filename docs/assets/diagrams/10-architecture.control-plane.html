@@ -67,7 +67,9 @@ flowchart TD
   DEF &amp; POL --&gt;|"publish freezes a version"| ST
   APR --&gt;|"one decision, evidence unchanged"| ST
   AUD --&gt;|"read — itself audited"| ST
-  CAT &amp; TEN --&gt; ST
+  CAT --&gt; ST
+  TEN --&gt; TUM["Tenant User Management"]
+  TUM --&gt; ST
   CONN -.-&gt;|"planned — ADR-0007"| ST
   USE --&gt;|"read"| ST
   CRED --&gt;|"held by reference, never plaintext"| KMS["Envelope-encrypted custody&lt;br/&gt;per-tenant data keys"]
@@ -95,7 +97,9 @@ flowchart TD
   DEF &amp; POL --&gt;|"publish freezes a version"| ST
   APR --&gt;|"one decision, evidence unchanged"| ST
   AUD --&gt;|"read — itself audited"| ST
-  CAT &amp; TEN --&gt; ST
+  CAT --&gt; ST
+  TEN --&gt; TUM["Tenant User Management"]
+  TUM --&gt; ST
   CONN -.-&gt;|"planned — ADR-0007"| ST
   USE --&gt;|"read"| ST
   CRED --&gt;|"held by reference, never plaintext"| KMS["Envelope-encrypted custody&lt;br/&gt;per-tenant data keys"]

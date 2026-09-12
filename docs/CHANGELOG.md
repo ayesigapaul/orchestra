@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.23.0
+version: 0.24.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,36 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.24.0] — 2026-09-13
+
+Tenancy gets an owner. Tenants, Workspaces, Persons and Principals move out of the Control Plane API
+into a service of their own, and a human's attributes gain a single home.
+
+### Added
+
+- [ADR-0022](adr/adr-0022-tenant-user-management-owns-tenancy.md) — Tenant User Management owns
+  Tenants, Workspaces, Persons and Principals. The Gateway resolves every credential to one
+  Principal and one Tenant through it and rejects the request when it cannot; the Control Plane API
+  calls it to administer tenancy. The service is TypeScript on Hono, hexagonal inside, with its own
+  schema and roles.
+- **Person**, in `GLOSSARY.md` and `20-domain/domain-model.md` — the single record of a human's
+  attributes within one Tenant. Platform Users and End Users refer to one, Service Accounts and
+  Connectors to none, and the same human in two Tenants is two Persons.
+
+### Changed
+
+- `10-architecture/containers.md` gains the Tenant User Management container, takes Tenancy and
+  Principals from the Control Plane API, records authentication as a second synchronous dependency
+  between the planes, and answers where the tenant directory lives.
+- `10-architecture/control-plane.md` routes the Tenant and access surface through the new container.
+- `10-architecture/identity-and-access.md`, `multi-tenancy.md` and `tech-stack.md` follow the
+  decision, and the tenant-directory question leaves the registers of `multi-tenancy.md` and
+  `containers.md`.
+- `20-domain/domain-model.md` drops the datastore-engine row that ADR-0021 answered and the previous
+  release missed, and its cross-tenant person question now points at ADR-0022.
 
 ---
 

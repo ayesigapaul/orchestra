@@ -1,9 +1,9 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.8.0
+version: 0.9.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012]
 ---
@@ -71,6 +71,13 @@ such a record could not be read under a tenant predicate without a bypass — th
 [`multi-tenancy.md`](multi-tenancy.md) section 8 governs and nothing here needs; correlating one
 human across Tenants is the identity provider's job.
 
+**Within a Tenant, a human has one Person.**
+[ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md) makes the Person the single
+record of a human's attributes in a Tenant: a Platform User and an End User each refer to exactly
+one, and a Service Account and a Connector to none. A Person never authenticates and never acts, so
+nothing in the table above changes. It is where a name and an email live, so that no Principal and
+no other service keeps a copy.
+
 ## 3. Authentication, by subtype
 
 ```mermaid
@@ -130,9 +137,9 @@ written together.
 context, so a directory record identifies a Tenant rather than belonging to one — `containers.md`
 section 8 derives that much from ADR-0011. What follows here is only *who reads it*: whichever
 container authenticates, which the paragraph above fixes as the Gateway for every Data Plane caller
-and the Control Plane for the federated Platform User. Where the record lives — the same engine, a
-separate store, or the identity component — stays `containers.md`'s question with the datastore
-decision, and nothing here narrows it.
+and the Control Plane for the federated Platform User. The record lives in Tenant User Management,
+which both of them call to resolve a caller
+([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)).
 
 ## 4. Tenant and Workspace are scope, not isolation
 

@@ -1,7 +1,7 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.22.1
+version: 0.23.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -43,9 +43,11 @@ architecture today; no container below is designed for it.
 
 The planes couple in two directions and no more. Definitions and Policies flow into the Data Plane
 as compiled, versioned artifacts; facts — Policy Decisions, Audit Records, meter records, Run
-state — flow back. Neither is a synchronous dependency of the other, except where the durable
-Policy Decision write of section 5 makes one — and whether it does depends on a mechanism ADR-0013
-leaves open.
+state — flow back. Neither is a synchronous dependency of the other, with two exceptions. The
+durable Policy Decision write of section 5 may make one, depending on a mechanism ADR-0013 leaves
+open. Authentication does make one: the Gateway resolves every credential through Tenant User
+Management, a Control Plane container, and rejects the request when it cannot
+([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)).
 
 ## 2. Container diagram
 
@@ -58,6 +60,7 @@ flowchart TB
     CPAPI --> COMP["Definition Compiler"]
     CPAPI --> CRED["Credential Custody"]
     CPAPI --> MET["Metering"]
+    CPAPI --> TUM["Tenant User Management"]
   end
   subgraph DP["Data Plane"]
     GW["Gateway"] --> RT["Runtime"]
@@ -68,7 +71,9 @@ flowchart TB
     TOOL -.-> CONN["Connector fabric — planned, ADR-0007"]
   end
   COMP -->|"compiled graph, pinned version"| RT
+  GW -->|"resolves every credential; fails closed"| TUM
   CPAPI --> DS[("Tenant-scoped datastore")]
+  TUM --> DS
   PEV -->|"Policy Decisions; durable-write mechanism open"| DS
   MET --> DS
   DP -->|"metered occurrences"| MET
@@ -85,7 +90,8 @@ Dotted edges rest on **Proposed** ADR-0007 and are not binding.
 | Container | Plane | Responsibility | Holds | Calls | Must never |
 | --- | --- | --- | --- | --- | --- |
 | Admin Console | Control | The Platform User's surface: authoring, approvals, audit and usage views | Nothing durable | Control Plane API only | Reach the datastore, the Runtime or a model surface directly |
-| Control Plane API | Control | Tenancy and Principals, definition and Policy authoring and publish, Tool Catalog registration and capability grants, Connector enrolment (planned, ADR-0007), Model Binding configuration, approval resolution, audit and usage reads | Every tenant-scoped administrative record | Datastore, Definition Compiler, Credential Custody | Execute a Run, or hold a plaintext credential |
+| Control Plane API | Control | Definition and Policy authoring and publish, Tool Catalog registration and capability grants, Connector enrolment (planned, ADR-0007), Model Binding configuration, approval resolution, audit and usage reads, and tenancy administration by calling Tenant User Management | Every tenant-scoped administrative record except those Tenant User Management owns | Datastore, Definition Compiler, Credential Custody, Tenant User Management | Execute a Run, hold a plaintext credential, or keep a copy of a Person's attributes |
+| Tenant User Management | Control | Owns Tenants, Workspaces, Persons and Principals, and resolves a presented credential to exactly one Principal and one Tenant for the Gateway ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)) | The tenant directory, exempt from row-level security and holding routing facts only; tenant profiles, Workspaces, Persons and Principals under forced row-level security, all in its own schema | Datastore, Keycloak | Resolve a credential to more than one Principal or Tenant, admit a caller it could not resolve, or hold a credential's secret |
 | Definition Compiler | Control | Validates a declarative Agent or Workflow definition, emits an execution graph carrying a Policy Enforcement Point at every Step boundary, and produces the diagnostics an author reads | Compiled graphs, each traceable to its source definition, version and Step identifiers | Nothing outbound; invoked by the Control Plane API | Accept customer code, or emit a graph in which an enforcement point can be suppressed — the compiler's side of [`policy-model.md`](../40-governance/policy-model.md) E2 |
 | Credential Custody | Control | Envelope encryption of BYOK model credentials and Tool origin credentials, per-tenant data keys, rotation | Ciphertext and key references | An external key management service | Return plaintext into a log, trace or backup ([ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md)) |
 | Metering | Control | Records the metered dimensions [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) fixes, as records carrying the properties it requires; most occurrences arise in the Data Plane, so this container is fed rather than self-observing | Meter records | Datastore | Serve as the audit trail, or bill model tokens — model usage is reported, never billed |
@@ -219,7 +225,9 @@ replay design section 12 registers, which rests on **Proposed** ADR-0004.
 **The tenant directory is an ordering problem.** Whichever container authenticates a caller resolves
 it to a Tenant before any tenant context exists, so a directory record identifies a Tenant rather
 than belonging to one and cannot be filtered by the requester's context. That much follows from
-ADR-0011. Where it lives — the same engine, a separate store, or the identity component — does not.
+ADR-0011. It lives in Tenant User Management's own schema, and the Gateway and the Control Plane API
+call that service rather than reading the table
+([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)).
 
 ## 9. The language boundary
 
@@ -285,7 +293,6 @@ before implementation. **Document** means a later document suffices.
 | Which container writes the Audit Records that are not Policy Decisions, and where the write path ADR-0013 permits to degrade lives | Document | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) fixes the record classes and requires that a degraded period be visible; `reliability.md` in [`../60-operations/`](../60-operations/) owns how it is signalled. Section 3 names a container for the fail-closed path only and section 2 draws no edge for the rest, so the container is this view's to name once both land |
 | Which containers are separately deployable, and which share a process or a release | Document | `deployment-topologies.md`, planned in [`./README.md`](README.md). Nothing here is a service count |
 | The complete inventory of stores outside the row-level-secured datastore | Document | Accumulates as each document introduces a store; section 8 contributes the two this view introduces, and [`multi-tenancy.md`](multi-tenancy.md) owns the scoping rule the inventory is checked against. Whether ADR-0013's durable decision write adds one at all depends on a mechanism [`data-plane.md`](data-plane.md) holds open |
-| Where the tenant directory lives, given it must be readable before tenant context exists | Document | This document, which accepts the assignment [`multi-tenancy.md`](multi-tenancy.md) section 10 makes: where a record sits is a container question. The engine is decided by [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md); it waits on [`identity-and-access.md`](identity-and-access.md) for which container authenticates. Section 8 derives the constraint that the record cannot be filtered by the requester's tenant context; the placement does not follow from it |
 | Whether the Gateway or the Control Plane API mints and validates Session Tokens, and what identity a Service Account presents | Document | [`identity-and-access.md`](identity-and-access.md) |
 | What the Gateway emits on the Run event stream, and how replay reaches a disconnected client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed**, whose validation step 2 is outstanding |
 | Whether the Model Broker's Quota Envelopes are declared, discovered from the surface, or both | Document | The quota design ADR-0006 calls for, with [`../60-operations/`](../60-operations/) |
