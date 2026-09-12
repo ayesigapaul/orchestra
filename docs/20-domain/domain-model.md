@@ -1,7 +1,7 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.7.1
+version: 0.8.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -95,6 +95,7 @@ who approved, audit records who requested, and only then can seats be counted.
 | End User | Tenant, as a Principal | Disjoint subtype of Principal | Measurement — **never seat-billed** |
 | Service Account | Tenant, as a Principal | Disjoint subtype of Principal | Machine-to-machine attribution |
 | Connector | Tenant, as a Principal | Disjoint subtype of Principal | Reachability — see section 5 |
+| Person | Tenant | Tenant 1 : 0..* Person; a Person has at most one Platform User and at most one End User | A human's attributes, held once per Tenant |
 | Session Token | Principal | Principal 1 : 0..* Session Token | Short-lived client authority |
 
 **Workspace is optional and is not an isolation boundary.** An Agent, Workflow, Connector or Policy
@@ -112,10 +113,13 @@ population — and mispricing that distinction is the failure ADR-0009 exists to
 
 **A person administering two Tenants is two Principals**, by I1 and I2 together: a Principal is
 tenant-scoped, so no record spans Tenants to hold one person, and for metering that person is two
-Platform Users. Whether a cross-tenant person record exists behind the identity provider integration
-is **not decided** and belongs to the planned `identity-and-access.md` in
-[`../10-architecture/`](../10-architecture/), as does whether a Service Account authenticates by
-Session Token or by another credential type.
+Platform Users. The same holds for the human behind them: **one Person per Tenant is the single
+record of a human's attributes**
+([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)). A Platform User and an End
+User each refer to exactly one Person, a Person is never a Principal and never acts, and the same
+human in two Tenants is two Persons that nothing in Orchestra joins. Which credential class a Service
+Account authenticates with belongs to
+[`identity-and-access.md`](../10-architecture/identity-and-access.md).
 
 **Platform operator action has no Principal subtype.** Work Orchestra performs on its own behalf —
 scheduled maintenance, support access, migration tooling — is none of the four subtypes, yet I2
@@ -153,6 +157,9 @@ erDiagram
   PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
   PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
   PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
+  TENANT ||--o{ PERSON : "knows"
+  PERSON ||--o| PLATFORM_USER : "acts as"
+  PERSON ||--o| END_USER : "acts as"
   TENANT ||--o{ AGENT : "owns"
   TENANT ||--o{ WORKFLOW : "owns"
   WORKSPACE |o--o{ AGENT : "scopes"
@@ -384,10 +391,9 @@ that question should be settled early rather than left to implementation.
 | Open question | What would decide it | ADR required? |
 | --- | --- | --- |
 | Attributes, keys, indexes, partitioning | The schema work that follows a datastore decision | No |
-| The datastore engine | An architecture decision, constrained by ADR-0011 to one enforcing row-level security | **Yes** — ADR-0011 constrains the choice but does not make it |
 | What a Tool invocation in an Agent Run is called, and what its Policy Decision, Audit Record and meter record key on | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) section 11, with `audit-model.md` | No — but neither compensation nor metering can be applied retroactively |
 | How platform operator action is attributed under I2 | The audit and threat models in [`../40-governance/`](../40-governance/) | **Yes** — it changes the identity model and the audit contract |
-| Whether a cross-tenant person record exists, and how a Service Account authenticates | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | No |
+| Which credential class a Service Account authenticates with | [`identity-and-access.md`](../10-architecture/identity-and-access.md) | No |
 | Whether a Conversation may span Agents | A product decision, not yet taken | No |
 | Whether Quota Envelopes are declared or discovered | The quota design ADR-0006 calls for | No |
 | Whether a Policy version is scoped to a Tenant or to a Workspace | Left open by ADR-0012, which fixes the record model and not Policy scope | **Yes** — a scope question with the character of Policy composition |

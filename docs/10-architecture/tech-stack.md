@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.22.0
+version: 0.23.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -33,6 +33,7 @@ These are not open. They constrain everything below.
 | Apache APISIX is the edge in front of the Gateway, and is never the authorization boundary | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) |
 | The run supervisor is built on PostgreSQL, with Temporal as the named fallback | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
 | The datastore is PostgreSQL: row-level security forced on every tenant-scoped table, tenant context set per transaction, through a transaction-mode pooler | [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) |
+| Tenants, Workspaces, Persons and Principals belong to the Tenant User Management service, one Person per Tenant, and the Gateway resolves every credential through it | [ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 
@@ -148,9 +149,10 @@ co-located with the UI that uses it, and whether the administrative API is the s
 Gateway is registered open in
 [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 6.
 
-**Not NestJS, and not a separate Hono service, yet.** NestJS's structure is a tax below a certain team
-size, and a second service earns its keep only when the admin API outgrows the UI it serves. If it
-does, Hono is the light option that runs on the same runtimes.
+**Not NestJS.** Its structure is a tax below a certain team size. The administrative API stays in the
+UI's route handlers until a second service earns its keep, and one already has: Tenant User
+Management ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)) is a separate
+service on Hono, the light option that runs on the same runtimes, structured as ports and adapters.
 
 ## 6. Identity and credentials
 

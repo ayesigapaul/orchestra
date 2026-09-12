@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.9.0
+version: 0.9.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -190,9 +190,11 @@ all tenants share one connection. What that forbids, in practice:
 1. **Connection resolution is per request.** A tenant-to-connection resolution step exists from the
    first commit, even while it always returns the same connection. No module-level singleton
    connection, no ambient handle, no "the database" as a global. The tenant directory it reads is
-   the one store legitimately reachable without tenant context, and holds routing facts only. The
-   name is descriptive rather than a term of [`../GLOSSARY.md`](../GLOSSARY.md): it is a routing
-   lookup, and a later document is free to call it something else.
+   the one store legitimately reachable without tenant context, and holds routing facts only; Tenant
+   User Management owns it
+   ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)). The name is descriptive
+   rather than a term of [`../GLOSSARY.md`](../GLOSSARY.md): it is a routing lookup, and a later
+   document is free to call it something else.
 2. **No cross-tenant join, foreign key or transaction anywhere.** Each works today and cannot work
    after a move. Section 6's tenant-qualified keys make the foreign-key half structural rather
    than a convention.
@@ -282,5 +284,4 @@ than of the requirement, and the enforcement path owns the entry if it does
 | Whether a surface identifier is globally unique as well as tenant-qualified, and the identifier shape | Schema work after the datastore decision; constrained by [`../VERSIONING.md`](../VERSIONING.md) once an identifier appears in a public contract | No |
 | The promotion procedure itself — sequencing, verification and cutover | The planned `deployment-topologies.md` listed in [`./README.md`](README.md) | No — section 7 fixes the constraints, not the runbook |
 | Whether promotion is offered commercially, to whom, and on what terms | A design-partner conversation; ADR-0011 designs the path without committing to sell it | No |
-| Where the tenant directory lives, given it must be readable before tenant context exists | [`containers.md`](containers.md) with the datastore decision, and [`identity-and-access.md`](identity-and-access.md) for which container authenticates | No |
 | Whether Workspace-scoped visibility is enforced in application code, given it is not an isolation boundary | [`identity-and-access.md`](identity-and-access.md) | No |

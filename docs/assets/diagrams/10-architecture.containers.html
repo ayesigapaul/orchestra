@@ -57,6 +57,7 @@ flowchart TB
     CPAPI --&gt; COMP["Definition Compiler"]
     CPAPI --&gt; CRED["Credential Custody"]
     CPAPI --&gt; MET["Metering"]
+    CPAPI --&gt; TUM["Tenant User Management"]
   end
   subgraph DP["Data Plane"]
     GW["Gateway"] --&gt; RT["Runtime"]
@@ -67,7 +68,9 @@ flowchart TB
     TOOL -.-&gt; CONN["Connector fabric — planned, ADR-0007"]
   end
   COMP --&gt;|"compiled graph, pinned version"| RT
+  GW --&gt;|"resolves every credential; fails closed"| TUM
   CPAPI --&gt; DS[("Tenant-scoped datastore")]
+  TUM --&gt; DS
   PEV --&gt;|"Policy Decisions; durable-write mechanism open"| DS
   MET --&gt; DS
   DP --&gt;|"metered occurrences"| MET
@@ -84,6 +87,7 @@ flowchart TB
     CPAPI --&gt; COMP["Definition Compiler"]
     CPAPI --&gt; CRED["Credential Custody"]
     CPAPI --&gt; MET["Metering"]
+    CPAPI --&gt; TUM["Tenant User Management"]
   end
   subgraph DP["Data Plane"]
     GW["Gateway"] --&gt; RT["Runtime"]
@@ -94,7 +98,9 @@ flowchart TB
     TOOL -.-&gt; CONN["Connector fabric — planned, ADR-0007"]
   end
   COMP --&gt;|"compiled graph, pinned version"| RT
+  GW --&gt;|"resolves every credential; fails closed"| TUM
   CPAPI --&gt; DS[("Tenant-scoped datastore")]
+  TUM --&gt; DS
   PEV --&gt;|"Policy Decisions; durable-write mechanism open"| DS
   MET --&gt; DS
   DP --&gt;|"metered occurrences"| MET

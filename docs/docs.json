@@ -161,6 +161,7 @@
               "adr/adr-0019-postgres-run-supervisor",
               "adr/adr-0020-monorepo-with-enforced-service-boundaries",
               "adr/adr-0021-postgresql-is-the-datastore",
+              "adr/adr-0022-tenant-user-management-owns-tenancy",
               "adr/adr-template"
             ]
           },
@@ -558,6 +559,10 @@
     {
       "source": "/adr/adr-0021-postgresql-is-the-datastore.md",
       "destination": "/adr/adr-0021-postgresql-is-the-datastore"
+    },
+    {
+      "source": "/adr/adr-0022-tenant-user-management-owns-tenancy.md",
+      "destination": "/adr/adr-0022-tenant-user-management-owns-tenancy"
     },
     {
       "source": "/adr/adr-template.md",
