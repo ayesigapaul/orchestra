@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Generates docs/docs.json — the Mintlify site configuration — from the documentation tree, and
- * maintains the index.md aliases the site needs. Zero dependencies.
+ * maintains the section-index.md aliases the site needs. Zero dependencies.
  *
  * The filesystem is the source: a document added under docs/ appears in the published navigation
  * without anyone editing a config file. Hand-maintained navigation is how a docs site silently stops
@@ -13,11 +13,11 @@
  *   1. It will not serve a page named README — it treats README.md as a repository readme. It does
  *      redirect a directory to that README, which then 404s. That was the site's 404 on every
  *      section and on the home page. It does serve a page named index. So each directory holding a
- *      README.md gets a generated index.md copy beside it, and the navigation points there. The
+ *      README.md gets a generated section-index.md copy beside it, and the navigation points there. The
  *      README stays the file people edit; the copy is a build artifact, checked byte-for-byte in CI.
  *      A symlink was tried first and works under `mint dev` but NOT in Mintlify's cloud build, which
  *      does not follow them — verified against the deployed site. Every other script in scripts/
- *      skips index.md so the copy is never counted as a second document.
+ *      skips section-index.md so the copy is never counted as a second document.
  *
  *   2. It serves pages without the .md extension, so the ../section/page.md links that GitHub
  *      follows would 404. One redirect per page fixes that, including the README URLs, which point
@@ -54,7 +54,7 @@ const label = (d) => LABELS[d] ?? d.replace(/^\d+-/, '').replace(/-/g, ' ').repl
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir).sort()) {
     const p = join(dir, entry);
-    if (entry === 'index.md') continue; // a generated copy of README.md, not a document
+    if (entry === 'section-index.md') continue; // a generated copy of README.md, not a document
     if (statSync(p).isDirectory()) { if (!SKIP.has(entry)) walk(p, out); }
     else if (entry.endsWith('.md')) out.push(p);
   }
@@ -64,13 +64,13 @@ function walk(dir, out = []) {
 const problems = [];
 let created = 0;
 
-/** A directory's README.md needs an index.md copy beside it: Mintlify will not serve README. */
+/** A directory's README.md needs an section-index.md copy beside it: Mintlify will not serve README. */
 function ensureAlias(dir) {
   const readme = join(DOCS, dir, 'README.md');
-  const alias = join(DOCS, dir, 'index.md');
+  const alias = join(DOCS, dir, 'section-index.md');
   const want = readFileSync(readme, 'utf8');
   if (existsSync(alias) && readFileSync(alias, 'utf8') === want) return;
-  if (CHECK) { problems.push(`stale or missing: docs/${dir ? dir + '/' : ''}index.md (copy of README.md)`); return; }
+  if (CHECK) { problems.push(`stale or missing: docs/${dir ? dir + '/' : ''}section-index.md (copy of README.md)`); return; }
   writeFileSync(alias, want);
   created++;
 }
@@ -83,7 +83,7 @@ for (const file of walk(DOCS)) {
   const base = rel.replace(/\.md$/, '');
   const isReadme = base === 'README' || base.endsWith('/README');
   if (isReadme) ensureAlias(dir);
-  const nav = isReadme ? (dir ? `${dir}/index` : 'index') : base;
+  const nav = isReadme ? (dir ? `${dir}/section-index` : 'section-index') : base;
   if (!groups.has(dir)) groups.set(dir, []);
   groups.get(dir).push(nav);
   entries.push({ base, nav, isReadme, dir });
@@ -94,8 +94,8 @@ const ordered = [...groups.entries()]
   .map(([dir, pages]) => ({
     group: label(dir),
     pages: pages.sort((a, b) => {
-      const ia = a === 'index' || a.endsWith('/index');
-      const ib = b === 'index' || b.endsWith('/index');
+      const ia = a === 'section-index' || a.endsWith('/section-index');
+      const ib = b === 'section-index' || b.endsWith('/section-index');
       return ia === ib ? a.localeCompare(b) : ia ? -1 : 1;
     }),
   }));
@@ -103,9 +103,13 @@ const ordered = [...groups.entries()]
 const redirects = [];
 for (const e of entries.sort((a, b) => a.base.localeCompare(b.base))) {
   if (e.isReadme) {
-    const root = e.dir ? `/${e.dir}` : '/';
-    redirects.push({ source: `/${e.base}`, destination: root });
-    redirects.push({ source: `/${e.base}.md`, destination: root });
+    // Point the directory URL and both README URLs at the generated page. Mintlify redirects a
+    // directory to its README on its own and then cannot serve it, so these are explicit.
+    const target = `/${e.nav}`;
+    if (e.dir) redirects.push({ source: `/${e.dir}`, destination: target });
+    else redirects.push({ source: '/', destination: target });
+    redirects.push({ source: `/${e.base}`, destination: target });
+    redirects.push({ source: `/${e.base}.md`, destination: target });
   } else {
     redirects.push({ source: `/${e.nav}.md`, destination: `/${e.nav}` });
   }
