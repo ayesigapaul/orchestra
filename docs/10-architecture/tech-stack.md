@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -29,6 +29,8 @@ These are not open. They constrain everything below.
 | The datastore must enforce row-level security itself; isolation is never application-code-only | [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) |
 | The model layer is a credential and endpoint broker under BYOK, never a router | [ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md), [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) |
 | Front-end surfaces duplicate the Next.js template rather than sharing code | [`../../ui-template/README.md`](../../ui-template/README.md) |
+| Identity is Keycloak, self-hosted, with a Keycloak Organization per Tenant | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) |
+| Apache APISIX is the edge in front of the Gateway, and is never the authorization boundary | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) |
 
 ## 2. Data plane — Python
 
@@ -103,17 +105,18 @@ does, Hono is the light option that runs on the same runtimes.
 
 ## 6. Identity and credentials
 
-**Buy enterprise identity; do not build SAML and SCIM.** A managed broker —
-[WorkOS](https://workos.com/) or an equivalent — delivers a working enterprise connection in hours,
-against certificate rotation, metadata parsing and per-IdP quirks maintained forever in-house. Buy
-becomes correct at a handful of enterprise customers a year, which ADR-0001's segment assumes from
-the first deal. **Self-hosted identity is the exception:** where a contract requires it,
-[Keycloak](https://www.keycloak.org/) is the realistic answer.
+**[Keycloak](https://www.keycloak.org/), self-hosted, on the current release line** — 26.7.0 at the
+time of writing, which adds a native SCIM API in preview. Each Tenant maps to a Keycloak
+**Organization** within one realm, rather than a realm per customer, which keeps administration
+proportionate to the product instead of to the customer list.
+[ADR-0017](../adr/adr-0017-keycloak-for-identity.md) records the decision, what it costs — Orchestra
+now operates a security-critical stateful service, and SCIM is still preview — and the alternative
+it rejected, a managed broker priced per connection.
 
-The broker authenticates **Platform Users**. It does not issue Session Tokens for End Users — those
-are Orchestra's own, because the Gateway resolves every credential to exactly one Principal and one
-Tenant ([`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) G3 to G7), and
-`gateway-api.md` section 3 already registers the replayed-mint security question against them.
+**Keycloak is identity, and only identity.** It is not the authorization model: Policy is evaluated
+at the enforcement points [`../40-governance/policy-model.md`](../40-governance/policy-model.md) E1
+fixes, and a Keycloak role is at most an input to one. It does not hold BYOK model credentials
+either — that is key management, below.
 
 **BYOK credential custody: envelope encryption with a per-Tenant data key wrapped by a KMS key, and
 the Tenant bound into the encryption context.** The encryption context costs nothing, becomes an IAM
@@ -153,13 +156,32 @@ This is the least settled section here. [`deployment-topologies.md`](deployment-
 registers data residency as ADR-required, and a residency answer can force the cloud and the region
 layout before any of this is chosen.
 
-## 10. Open questions
+## 10. The edge
+
+**[Apache APISIX](https://apisix.apache.org/), self-hosted in front of the Gateway** — 3.18.0 at the
+time of writing. It terminates TLS, routes, rate-limits per Tenant, and verifies tokens against
+Keycloak with its `openid-connect` plugin, so perimeter authentication is configuration rather than
+application code. [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) records it.
+
+**Two things it must never do**, both following from records that already bind. It is not the
+authorization boundary — an edge plugin that allowed or denied a business action would be an
+unaudited Policy Decision ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)). And it
+does not set the Tenant, which G7 forbids any caller-settable input from doing.
+
+**Buffering is the footgun.** Proxies buffer by default, and a buffered Server-Sent Events stream
+arrives in bursts or not at all, which makes the ordering and gap-detection guarantees of
+[`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md) unobservable. Buffering is
+disabled explicitly on the event-stream route, and that belongs in a test rather than a runbook,
+because it fails silently and looks like latency.
+
+## 11. Open questions
 
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | The datastore engine, which section 3 recommends and no record selects | An architecture decision constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security | **Yes** |
 | Whether the run supervisor is built on Postgres or bought as Temporal | The M2 sizing in [`../70-delivery/milestones.md`](../70-delivery/milestones.md), which [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) requires before an MVP | **Yes** |
 | Which side of the Python-to-TypeScript boundary the compiler sits on, and what artifact crosses | [`data-plane.md`](data-plane.md), assigned by [`containers.md`](containers.md) section 12 | **Yes** — repeated |
-| The identity broker, and whether a self-hosted option must be supported from the start | A design partner's procurement requirements | No |
+| How a Keycloak identity resolves to a Principal, and what an Organization maps to when a Tenant has several Workspaces | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md)'s follow-on, with [`identity-and-access.md`](identity-and-access.md) | No |
+| How APISIX configuration is declared and versioned, so routes are reviewable | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md)'s follow-on | No |
 | The cloud and the deployment target, which data residency may decide first | [`deployment-topologies.md`](deployment-topologies.md) | **Yes** — repeated |
 | Whether the administrative API is the Gateway contract or its own | [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 6 | No — repeated |

@@ -1,9 +1,9 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.16.0
+version: 0.19.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-12
 owners: [platform-architecture]
 ---
 
@@ -43,6 +43,8 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0014](adr-0014-run-supervisor-is-orchestras.md) | The run supervisor is Orchestra's; the runtime is an execution substrate | Accepted | 2026-09-11 |
 | [0015](adr-0015-governed-action-positioning.md) | Differentiate on governed, accountable actions — not on connectivity | Accepted | 2026-09-11 |
 | [0016](adr-0016-compile-to-the-langgraph-library.md) | The compilation target is the LangGraph library, never its server | Accepted | 2026-09-11 |
+| [0017](adr-0017-keycloak-for-identity.md) | Keycloak is the identity provider, self-hosted | Accepted | 2026-09-12 |
+| [0018](adr-0018-apisix-at-the-edge.md) | Apache APISIX is the edge, in front of the Gateway | Accepted | 2026-09-12 |
 
 ## Decision dependency graph
 
@@ -67,11 +69,13 @@ flowchart TD
   A13 --> A15
   A5 -.->|superseded by| A16["ADR-0016<br/>The library, never the server"]
   A14 --> A16
+  A1 --> A17["ADR-0017<br/>Keycloak, self-hosted"]
+  A17 --> A18["ADR-0018<br/>APISIX at the edge"]
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8 superseded;
 ```

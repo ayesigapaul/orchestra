@@ -19,7 +19,7 @@
  * Usage: node scripts/build-diagrams.mjs           write the pages and remove orphans
  *        node scripts/build-diagrams.mjs --check   fail if a page is stale, missing or orphaned
  */
-import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, unlinkSync, mkdirSync, lstatSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 const ROOT = resolve(process.argv.find((a, i) => i > 1 && !a.startsWith('--')) ?? '.');
@@ -33,6 +33,10 @@ const CHECK = process.argv.includes('--check');
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir).sort()) {
     const p = join(dir, entry);
+      // index.md files are symlinks to a directory's README.md, so Mintlify can serve a section
+      // index — it refuses to serve a page named README. Following them would count every such
+      // document twice.
+    if (lstatSync(p).isSymbolicLink()) continue;
     if (statSync(p).isDirectory()) { if (!SKIP.has(entry)) walk(p, out); }
     else if (entry.endsWith('.md')) out.push(p);
   }

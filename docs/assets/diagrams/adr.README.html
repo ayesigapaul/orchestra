@@ -69,11 +69,13 @@ flowchart TD
   A13 --&gt; A15
   A5 -.-&gt;|superseded by| A16["ADR-0016&lt;br/&gt;The library, never the server"]
   A14 --&gt; A16
+  A1 --&gt; A17["ADR-0017&lt;br/&gt;Keycloak, self-hosted"]
+  A17 --&gt; A18["ADR-0018&lt;br/&gt;APISIX at the edge"]
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8 superseded;
 </pre></div>
@@ -97,11 +99,13 @@ flowchart TD
   A13 --&gt; A15
   A5 -.-&gt;|superseded by| A16["ADR-0016&lt;br/&gt;The library, never the server"]
   A14 --&gt; A16
+  A1 --&gt; A17["ADR-0017&lt;br/&gt;Keycloak, self-hosted"]
+  A17 --&gt; A18["ADR-0018&lt;br/&gt;APISIX at the edge"]
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8 superseded;</pre></details>
 </section>
