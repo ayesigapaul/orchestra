@@ -3,7 +3,7 @@
  * Parses every ```mermaid block in the repository with the real mermaid parser,
  * so a broken diagram fails CI rather than rendering as an error box on GitHub.
  */
-import { readFileSync, readdirSync, statSync, existsSync, lstatSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { JSDOM } from 'jsdom';
 
@@ -24,10 +24,10 @@ function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
-      // index.md files are symlinks to a directory's README.md, so Mintlify can serve a section
-      // index — it refuses to serve a page named README. Following them would count every such
-      // document twice.
-    if (lstatSync(p).isSymbolicLink()) continue;
+      // index.md is a generated copy of the directory's README.md, written by
+      // scripts/build-docs-nav.mjs because Mintlify will not serve a page named README and its
+      // cloud build does not follow symlinks. Reading it would count the document twice.
+      if (entry === 'index.md') continue;
     if (statSync(p).isDirectory()) { if (!SKIP.has(entry)) walk(p, out); }
     else if (entry.endsWith('.md')) out.push(p);
   }

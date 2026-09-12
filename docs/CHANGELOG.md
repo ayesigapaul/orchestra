@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.19.0
+version: 0.19.1
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -18,6 +18,22 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.19.1] — 2026-09-12
+
+A correction to the fix in 0.19.0, which worked locally and not in production.
+
+### Fixed
+
+- The section index aliases were **symlinks** to each `README.md`. Mintlify's local dev server
+  follows them and its cloud build does not, so the deployed site still returned 404 on the home page
+  and every section index while the local preview was green. They are now **generated copies**,
+  written and verified byte-for-byte by `scripts/build-docs-nav.mjs`, which is the same
+  build-artifact pattern the diagram pages already use. The README stays the file people edit.
+- The lesson is recorded in `CLAUDE.md`: verify docs-site behaviour against the deployed site rather
+  than the dev server, because the two do not agree.
 
 ---
 
