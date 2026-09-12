@@ -9,7 +9,8 @@ name: orchestra
 
 services:
   postgres:
-    image: postgres:18.6
+    build: ./postgres
+    image: orchestra-local/postgres:18.6
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
@@ -18,6 +19,20 @@ services:
       - pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  # Transaction-mode pooling in front of PostgreSQL (ADR-0021). No published port: services reach
+  # the pool on this network, as they will in production.
+  pgbouncer:
+    build: ./pgbouncer
+    image: orchestra-local/pgbouncer:1.25.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/6432"]
       interval: 3s
       timeout: 3s
       retries: 30
