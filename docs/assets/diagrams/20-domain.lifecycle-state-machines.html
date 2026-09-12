@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entity Lifecycle State Machines — diagrams</title>
+<style>
+:root { color-scheme: light dark; --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff;
+  --line: #e7e5e4; --link: #1d4ed8; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0c0a09; --fg: #f5f5f4; --muted: #a8a29e;
+  --card: #1c1917; --line: #292524; --link: #93c5fd; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+header, main, footer { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+header { padding-top: 32px; padding-bottom: 8px; }
+h1 { font-size: 26px; margin: 4px 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.crumbs, .meta, footer { color: var(--muted); font-size: 13px; margin: 0; }
+footer { padding-top: 8px; padding-bottom: 40px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.diagram { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; margin: 20px 0; }
+.frame { overflow-x: auto; }
+pre.mermaid { margin: 0; text-align: center; background: transparent; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre.src { overflow-x: auto; margin: 8px 0 0; padding: 12px; border-radius: 6px; background: var(--bg);
+  font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.offline { color: var(--muted); }
+.group h2 { margin: 28px 0 10px; }
+ul.docs { list-style: none; padding: 0; margin: 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; }
+ul.docs li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 16px;
+  border-top: 1px solid var(--line); }
+ul.docs li:first-child { border-top: 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+</head>
+<!-- Generated from docs/20-domain/lifecycle-state-machines.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
+<body>
+<header>
+  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../20-domain/lifecycle-state-machines.md">Source document</a></p>
+  <h1>Entity Lifecycle State Machines</h1>
+  <p class="meta">docs/20-domain/lifecycle-state-machines.md · 4 diagrams</p>
+</header>
+<main>
+<section class="diagram" id="diagram-1">
+  <h2>2. Run</h2>
+  <div class="frame"><pre class="mermaid">
+stateDiagram-v2
+  [*] --&gt; Pending: run submitted
+  Pending --&gt; Running: admission PEP returns allow
+  Pending --&gt; Denied: admission PEP returns deny
+  Pending --&gt; Suspended: admission PEP returns require_approval
+  Running --&gt; Suspended: step or tool PEP returns require_approval, or a wait step
+  Suspended --&gt; Running: gate resolved, execution resumes
+  Suspended --&gt; Failed: gate rejected or expired — terminal outcome undecided
+  Running --&gt; Compensating: failure after a side-effecting step
+  Compensating --&gt; Failed: compensation completed or exhausted
+  Running --&gt; Succeeded: final step completed
+  Running --&gt; Failed: unrecoverable error
+  Running --&gt; Cancelled: cancelled by a Principal
+  Suspended --&gt; Cancelled: cancelled by a Principal
+  Denied --&gt; [*]
+  Succeeded --&gt; [*]
+  Failed --&gt; [*]
+  Cancelled --&gt; [*]
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
+  [*] --&gt; Pending: run submitted
+  Pending --&gt; Running: admission PEP returns allow
+  Pending --&gt; Denied: admission PEP returns deny
+  Pending --&gt; Suspended: admission PEP returns require_approval
+  Running --&gt; Suspended: step or tool PEP returns require_approval, or a wait step
+  Suspended --&gt; Running: gate resolved, execution resumes
+  Suspended --&gt; Failed: gate rejected or expired — terminal outcome undecided
+  Running --&gt; Compensating: failure after a side-effecting step
+  Compensating --&gt; Failed: compensation completed or exhausted
+  Running --&gt; Succeeded: final step completed
+  Running --&gt; Failed: unrecoverable error
+  Running --&gt; Cancelled: cancelled by a Principal
+  Suspended --&gt; Cancelled: cancelled by a Principal
+  Denied --&gt; [*]
+  Succeeded --&gt; [*]
+  Failed --&gt; [*]
+  Cancelled --&gt; [*]</pre></details>
+</section>
+<section class="diagram" id="diagram-2">
+  <h2>3. Approval Request</h2>
+  <div class="frame"><pre class="mermaid">
+stateDiagram-v2
+  [*] --&gt; Pending: require_approval verdict raises the request
+  Pending --&gt; Approved: the Approval Chain requirement is satisfied
+  Pending --&gt; Rejected: a decisive rejection is recorded
+  Pending --&gt; Expired: a decision deadline passes undecided (provisional)
+  Pending --&gt; Withdrawn: the gated Run ended for another reason
+  Approved --&gt; [*]
+  Rejected --&gt; [*]
+  Expired --&gt; [*]
+  Withdrawn --&gt; [*]
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
+  [*] --&gt; Pending: require_approval verdict raises the request
+  Pending --&gt; Approved: the Approval Chain requirement is satisfied
+  Pending --&gt; Rejected: a decisive rejection is recorded
+  Pending --&gt; Expired: a decision deadline passes undecided (provisional)
+  Pending --&gt; Withdrawn: the gated Run ended for another reason
+  Approved --&gt; [*]
+  Rejected --&gt; [*]
+  Expired --&gt; [*]
+  Withdrawn --&gt; [*]</pre></details>
+</section>
+<section class="diagram" id="diagram-3">
+  <h2>4. Workflow version</h2>
+  <div class="frame"><pre class="mermaid">
+stateDiagram-v2
+  [*] --&gt; Draft: authoring begins
+  Draft --&gt; Published: publish — the version is frozen
+  Draft --&gt; [*]: discarded before publication
+  Published --&gt; Active: set as current for new runs
+  Active --&gt; Published: a newer version becomes current
+  Published --&gt; Retired: no new runs admitted
+  Retired --&gt; Archived: the last pinned run reached a terminal state
+  Archived --&gt; [*]: audit retention expires
+  note right of Retired
+    In-flight runs continue on
+    the version they pinned.
+  end note
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
+  [*] --&gt; Draft: authoring begins
+  Draft --&gt; Published: publish — the version is frozen
+  Draft --&gt; [*]: discarded before publication
+  Published --&gt; Active: set as current for new runs
+  Active --&gt; Published: a newer version becomes current
+  Published --&gt; Retired: no new runs admitted
+  Retired --&gt; Archived: the last pinned run reached a terminal state
+  Archived --&gt; [*]: audit retention expires
+  note right of Retired
+    In-flight runs continue on
+    the version they pinned.
+  end note</pre></details>
+</section>
+<section class="diagram" id="diagram-4">
+  <h2>5. Connector</h2>
+  <div class="frame"><pre class="mermaid">
+stateDiagram-v2
+  [*] --&gt; Enrolling: enrolment record created, credential issued
+  Enrolling --&gt; Healthy: first session established, version negotiated in window
+  Enrolling --&gt; Refused: negotiated version outside the supported window
+  Healthy --&gt; Degraded: a degradation signal is observed
+  Degraded --&gt; Healthy: the signal clears
+  Healthy --&gt; Offline: the outbound session is lost
+  Degraded --&gt; Offline: the outbound session is lost
+  Offline --&gt; Healthy: session re-established, version renegotiated in window
+  Offline --&gt; Refused: renegotiation falls outside the supported window
+  Refused --&gt; Healthy: an upgraded connector reconnects in window
+  Healthy --&gt; Revoked: enrolment revoked
+  Enrolling --&gt; Revoked: enrolment revoked
+  Degraded --&gt; Revoked: enrolment revoked
+  Offline --&gt; Revoked: enrolment revoked
+  Refused --&gt; Revoked: enrolment revoked
+  Revoked --&gt; [*]
+  note right of Revoked
+    Reachable from every
+    non-terminal state.
+  end note
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
+  [*] --&gt; Enrolling: enrolment record created, credential issued
+  Enrolling --&gt; Healthy: first session established, version negotiated in window
+  Enrolling --&gt; Refused: negotiated version outside the supported window
+  Healthy --&gt; Degraded: a degradation signal is observed
+  Degraded --&gt; Healthy: the signal clears
+  Healthy --&gt; Offline: the outbound session is lost
+  Degraded --&gt; Offline: the outbound session is lost
+  Offline --&gt; Healthy: session re-established, version renegotiated in window
+  Offline --&gt; Refused: renegotiation falls outside the supported window
+  Refused --&gt; Healthy: an upgraded connector reconnects in window
+  Healthy --&gt; Revoked: enrolment revoked
+  Enrolling --&gt; Revoked: enrolment revoked
+  Degraded --&gt; Revoked: enrolment revoked
+  Offline --&gt; Revoked: enrolment revoked
+  Refused --&gt; Revoked: enrolment revoked
+  Revoked --&gt; [*]
+  note right of Revoked
+    Reachable from every
+    non-terminal state.
+  end note</pre></details>
+</section>
+</main>
+<footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'strict' });
+  } else {
+    document.getElementById('offline').hidden = false;
+  }
+</script>
+</body>
+</html>

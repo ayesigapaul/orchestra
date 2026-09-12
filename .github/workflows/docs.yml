@@ -50,6 +50,14 @@ jobs:
       # working schema until a consumer breaks on a field it was promised it could ignore.
       - name: Validate the wire schemas against VERSIONING section 6
         run: node scripts/validate-schemas.mjs
+      # The HTML pages are generated from the inline Mermaid. A render that disagrees with the
+      # document it came from is worse than none, so a stale, missing or orphaned page fails.
+      - name: Check the HTML diagram pages match their Mermaid source
+        run: node scripts/build-diagrams.mjs --check
+      # docs.json drives the published Mintlify site. Generated from the tree, so a new document
+      # appears in the navigation without anyone remembering to edit a config file.
+      - name: Check the published navigation matches the documentation tree
+        run: node scripts/build-docs-nav.mjs --check
 
   mermaid:
     name: Mermaid diagrams render

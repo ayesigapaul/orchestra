@@ -1,7 +1,7 @@
 ---
 title: Workflows
 doc_id: DOC-060
-version: 0.16.1
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -27,6 +27,7 @@ approval may sit for days. W1 freezes a published version; R3 makes the contract
 | [`workflow-dsl.md`](workflow-dsl.md) | The definition language, what the compiler validates, and why compilation is the governance mechanism |
 | [`step-types.md`](step-types.md) | The eight step types, what each declares, and what a Policy Enforcement Point sees at its boundary |
 | [`execution-semantics.md`](execution-semantics.md) | Version pinning, idempotency, compensation, cancellation and the failure taxonomy |
+| [`examples/`](examples/) | Three processes walked through as governed Runs — invoice payment, purchase approval and a shipment exception — each with a trace of every enforcement point |
 
 ## What ADR-0008 reduced, and what ADR-0014 put back
 
@@ -49,7 +50,7 @@ cyclic graph is rejected** until an ADR admits one: not checking would not be ne
 decide the question permissively and W1 would then freeze every definition written under it.
 Admitting cycles later is MINOR; withdrawing them is MAJOR.
 
-> **Status.** Examples under [`examples/`](examples/) are not yet written.
+> **Status.** Three worked examples are written under [`examples/`](examples/).
 > [`../30-protocol/schemas/workflow-definition.v1.schema.json`](../30-protocol/schemas/workflow-definition.v1.schema.json)
 > now fixes the document shape `workflow-dsl.md` section 2 specifies — and fixes only that. It
 > deliberately does not make the language checkable: L9 puts that authority in the compiler rather

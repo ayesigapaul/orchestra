@@ -1,7 +1,7 @@
 ---
 title: Workflow Definition Language
 doc_id: DOC-061
-version: 0.16.1
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -199,6 +199,9 @@ notation and the choice of YAML as the concrete syntax, registered with the type
 declared on the `agent`, `condition` and `approval` Steps, whose meaning on a type that reaches no
 Tool is itself open in section 11. A list of exceptions has to be recounted every time the example
 changes; the rule that the table is the specification does not.
+
+[`examples/purchase-approval.md`](examples/purchase-approval.md) walks this definition through as a
+Run, enforcement point by enforcement point.
 
 **No threshold appears in `approve`, and none may.** That a gate belongs here is the Step's own
 declaration and not Policy's to override — `step-types.md` owns that rule and states it. What the

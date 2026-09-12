@@ -1,0 +1,471 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Orchestra",
+  "colors": {
+    "primary": "#1f6f43",
+    "light": "#4ade80",
+    "dark": "#0d3b24"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Start here",
+            "pages": [
+              "README",
+              "CHANGELOG",
+              "GLOSSARY",
+              "VERSIONING"
+            ]
+          },
+          {
+            "group": "Overview",
+            "pages": [
+              "00-overview/README",
+              "00-overview/personas",
+              "00-overview/product-thesis",
+              "00-overview/roadmap",
+              "00-overview/scope-and-non-goals",
+              "00-overview/vision"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "10-architecture/README",
+              "10-architecture/connector",
+              "10-architecture/containers",
+              "10-architecture/control-plane",
+              "10-architecture/data-plane",
+              "10-architecture/deployment-topologies",
+              "10-architecture/identity-and-access",
+              "10-architecture/multi-tenancy",
+              "10-architecture/system-context",
+              "10-architecture/tech-stack"
+            ]
+          },
+          {
+            "group": "Domain model",
+            "pages": [
+              "20-domain/README",
+              "20-domain/domain-model",
+              "20-domain/lifecycle-state-machines"
+            ]
+          },
+          {
+            "group": "Protocol",
+            "pages": [
+              "30-protocol/README",
+              "30-protocol/event-protocol",
+              "30-protocol/gateway-api",
+              "30-protocol/ui-protocol"
+            ]
+          },
+          {
+            "group": "Protocol/schemas",
+            "pages": [
+              "30-protocol/schemas/README"
+            ]
+          },
+          {
+            "group": "Governance",
+            "pages": [
+              "40-governance/README",
+              "40-governance/approval-workflows",
+              "40-governance/audit-model",
+              "40-governance/policy-model",
+              "40-governance/threat-model",
+              "40-governance/tool-authorization"
+            ]
+          },
+          {
+            "group": "Workflows",
+            "pages": [
+              "50-workflows/README",
+              "50-workflows/execution-semantics",
+              "50-workflows/step-types",
+              "50-workflows/workflow-dsl"
+            ]
+          },
+          {
+            "group": "Workflows/examples",
+            "pages": [
+              "50-workflows/examples/README",
+              "50-workflows/examples/invoice-payment",
+              "50-workflows/examples/purchase-approval",
+              "50-workflows/examples/shipment-exception"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "60-operations/README",
+              "60-operations/observability",
+              "60-operations/quotas-and-metering",
+              "60-operations/reliability"
+            ]
+          },
+          {
+            "group": "Delivery",
+            "pages": [
+              "70-delivery/README",
+              "70-delivery/compliance-roadmap",
+              "70-delivery/milestones",
+              "70-delivery/mvp-definition",
+              "70-delivery/testing-strategy"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "80-reference/README",
+              "80-reference/a2ui-evaluation",
+              "80-reference/ag-ui-evaluation",
+              "80-reference/langgraph-evaluation",
+              "80-reference/mcp-evaluation",
+              "80-reference/prior-art-survey"
+            ]
+          },
+          {
+            "group": "Decisions (ADR)",
+            "pages": [
+              "adr/README",
+              "adr/adr-0001-product-shape-multi-tenant-saas",
+              "adr/adr-0002-enterprise-segment-and-byok",
+              "adr/adr-0003-governance-layer-positioning",
+              "adr/adr-0004-adopt-ag-ui-event-protocol",
+              "adr/adr-0005-langgraph-as-compilation-target",
+              "adr/adr-0006-model-layer-as-credential-broker",
+              "adr/adr-0007-outbound-connector-for-enterprise-reachability",
+              "adr/adr-0008-declarative-workflow-definitions",
+              "adr/adr-0009-meter-first-defer-tiering",
+              "adr/adr-0010-a2ui-genui-interchange",
+              "adr/adr-0011-tenant-isolation-shared-schema-rls",
+              "adr/adr-0012-policy-decisions-are-audit-records",
+              "adr/adr-0013-fail-closed-policy-decision-writes",
+              "adr/adr-0014-run-supervisor-is-orchestras",
+              "adr/adr-0015-governed-action-positioning",
+              "adr/adr-0016-compile-to-the-langgraph-library",
+              "adr/adr-template"
+            ]
+          },
+          {
+            "group": "Proposals (RFC)",
+            "pages": [
+              "rfc/README"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "redirects": [
+    {
+      "source": "/README.md",
+      "destination": "/README"
+    },
+    {
+      "source": "/CHANGELOG.md",
+      "destination": "/CHANGELOG"
+    },
+    {
+      "source": "/GLOSSARY.md",
+      "destination": "/GLOSSARY"
+    },
+    {
+      "source": "/VERSIONING.md",
+      "destination": "/VERSIONING"
+    },
+    {
+      "source": "/00-overview/README.md",
+      "destination": "/00-overview/README"
+    },
+    {
+      "source": "/00-overview/personas.md",
+      "destination": "/00-overview/personas"
+    },
+    {
+      "source": "/00-overview/product-thesis.md",
+      "destination": "/00-overview/product-thesis"
+    },
+    {
+      "source": "/00-overview/roadmap.md",
+      "destination": "/00-overview/roadmap"
+    },
+    {
+      "source": "/00-overview/scope-and-non-goals.md",
+      "destination": "/00-overview/scope-and-non-goals"
+    },
+    {
+      "source": "/00-overview/vision.md",
+      "destination": "/00-overview/vision"
+    },
+    {
+      "source": "/10-architecture/README.md",
+      "destination": "/10-architecture/README"
+    },
+    {
+      "source": "/10-architecture/connector.md",
+      "destination": "/10-architecture/connector"
+    },
+    {
+      "source": "/10-architecture/containers.md",
+      "destination": "/10-architecture/containers"
+    },
+    {
+      "source": "/10-architecture/control-plane.md",
+      "destination": "/10-architecture/control-plane"
+    },
+    {
+      "source": "/10-architecture/data-plane.md",
+      "destination": "/10-architecture/data-plane"
+    },
+    {
+      "source": "/10-architecture/deployment-topologies.md",
+      "destination": "/10-architecture/deployment-topologies"
+    },
+    {
+      "source": "/10-architecture/identity-and-access.md",
+      "destination": "/10-architecture/identity-and-access"
+    },
+    {
+      "source": "/10-architecture/multi-tenancy.md",
+      "destination": "/10-architecture/multi-tenancy"
+    },
+    {
+      "source": "/10-architecture/system-context.md",
+      "destination": "/10-architecture/system-context"
+    },
+    {
+      "source": "/10-architecture/tech-stack.md",
+      "destination": "/10-architecture/tech-stack"
+    },
+    {
+      "source": "/20-domain/README.md",
+      "destination": "/20-domain/README"
+    },
+    {
+      "source": "/20-domain/domain-model.md",
+      "destination": "/20-domain/domain-model"
+    },
+    {
+      "source": "/20-domain/lifecycle-state-machines.md",
+      "destination": "/20-domain/lifecycle-state-machines"
+    },
+    {
+      "source": "/30-protocol/README.md",
+      "destination": "/30-protocol/README"
+    },
+    {
+      "source": "/30-protocol/event-protocol.md",
+      "destination": "/30-protocol/event-protocol"
+    },
+    {
+      "source": "/30-protocol/gateway-api.md",
+      "destination": "/30-protocol/gateway-api"
+    },
+    {
+      "source": "/30-protocol/ui-protocol.md",
+      "destination": "/30-protocol/ui-protocol"
+    },
+    {
+      "source": "/30-protocol/schemas/README.md",
+      "destination": "/30-protocol/schemas/README"
+    },
+    {
+      "source": "/40-governance/README.md",
+      "destination": "/40-governance/README"
+    },
+    {
+      "source": "/40-governance/approval-workflows.md",
+      "destination": "/40-governance/approval-workflows"
+    },
+    {
+      "source": "/40-governance/audit-model.md",
+      "destination": "/40-governance/audit-model"
+    },
+    {
+      "source": "/40-governance/policy-model.md",
+      "destination": "/40-governance/policy-model"
+    },
+    {
+      "source": "/40-governance/threat-model.md",
+      "destination": "/40-governance/threat-model"
+    },
+    {
+      "source": "/40-governance/tool-authorization.md",
+      "destination": "/40-governance/tool-authorization"
+    },
+    {
+      "source": "/50-workflows/README.md",
+      "destination": "/50-workflows/README"
+    },
+    {
+      "source": "/50-workflows/execution-semantics.md",
+      "destination": "/50-workflows/execution-semantics"
+    },
+    {
+      "source": "/50-workflows/step-types.md",
+      "destination": "/50-workflows/step-types"
+    },
+    {
+      "source": "/50-workflows/workflow-dsl.md",
+      "destination": "/50-workflows/workflow-dsl"
+    },
+    {
+      "source": "/50-workflows/examples/README.md",
+      "destination": "/50-workflows/examples/README"
+    },
+    {
+      "source": "/50-workflows/examples/invoice-payment.md",
+      "destination": "/50-workflows/examples/invoice-payment"
+    },
+    {
+      "source": "/50-workflows/examples/purchase-approval.md",
+      "destination": "/50-workflows/examples/purchase-approval"
+    },
+    {
+      "source": "/50-workflows/examples/shipment-exception.md",
+      "destination": "/50-workflows/examples/shipment-exception"
+    },
+    {
+      "source": "/60-operations/README.md",
+      "destination": "/60-operations/README"
+    },
+    {
+      "source": "/60-operations/observability.md",
+      "destination": "/60-operations/observability"
+    },
+    {
+      "source": "/60-operations/quotas-and-metering.md",
+      "destination": "/60-operations/quotas-and-metering"
+    },
+    {
+      "source": "/60-operations/reliability.md",
+      "destination": "/60-operations/reliability"
+    },
+    {
+      "source": "/70-delivery/README.md",
+      "destination": "/70-delivery/README"
+    },
+    {
+      "source": "/70-delivery/compliance-roadmap.md",
+      "destination": "/70-delivery/compliance-roadmap"
+    },
+    {
+      "source": "/70-delivery/milestones.md",
+      "destination": "/70-delivery/milestones"
+    },
+    {
+      "source": "/70-delivery/mvp-definition.md",
+      "destination": "/70-delivery/mvp-definition"
+    },
+    {
+      "source": "/70-delivery/testing-strategy.md",
+      "destination": "/70-delivery/testing-strategy"
+    },
+    {
+      "source": "/80-reference/README.md",
+      "destination": "/80-reference/README"
+    },
+    {
+      "source": "/80-reference/a2ui-evaluation.md",
+      "destination": "/80-reference/a2ui-evaluation"
+    },
+    {
+      "source": "/80-reference/ag-ui-evaluation.md",
+      "destination": "/80-reference/ag-ui-evaluation"
+    },
+    {
+      "source": "/80-reference/langgraph-evaluation.md",
+      "destination": "/80-reference/langgraph-evaluation"
+    },
+    {
+      "source": "/80-reference/mcp-evaluation.md",
+      "destination": "/80-reference/mcp-evaluation"
+    },
+    {
+      "source": "/80-reference/prior-art-survey.md",
+      "destination": "/80-reference/prior-art-survey"
+    },
+    {
+      "source": "/adr/README.md",
+      "destination": "/adr/README"
+    },
+    {
+      "source": "/adr/adr-0001-product-shape-multi-tenant-saas.md",
+      "destination": "/adr/adr-0001-product-shape-multi-tenant-saas"
+    },
+    {
+      "source": "/adr/adr-0002-enterprise-segment-and-byok.md",
+      "destination": "/adr/adr-0002-enterprise-segment-and-byok"
+    },
+    {
+      "source": "/adr/adr-0003-governance-layer-positioning.md",
+      "destination": "/adr/adr-0003-governance-layer-positioning"
+    },
+    {
+      "source": "/adr/adr-0004-adopt-ag-ui-event-protocol.md",
+      "destination": "/adr/adr-0004-adopt-ag-ui-event-protocol"
+    },
+    {
+      "source": "/adr/adr-0005-langgraph-as-compilation-target.md",
+      "destination": "/adr/adr-0005-langgraph-as-compilation-target"
+    },
+    {
+      "source": "/adr/adr-0006-model-layer-as-credential-broker.md",
+      "destination": "/adr/adr-0006-model-layer-as-credential-broker"
+    },
+    {
+      "source": "/adr/adr-0007-outbound-connector-for-enterprise-reachability.md",
+      "destination": "/adr/adr-0007-outbound-connector-for-enterprise-reachability"
+    },
+    {
+      "source": "/adr/adr-0008-declarative-workflow-definitions.md",
+      "destination": "/adr/adr-0008-declarative-workflow-definitions"
+    },
+    {
+      "source": "/adr/adr-0009-meter-first-defer-tiering.md",
+      "destination": "/adr/adr-0009-meter-first-defer-tiering"
+    },
+    {
+      "source": "/adr/adr-0010-a2ui-genui-interchange.md",
+      "destination": "/adr/adr-0010-a2ui-genui-interchange"
+    },
+    {
+      "source": "/adr/adr-0011-tenant-isolation-shared-schema-rls.md",
+      "destination": "/adr/adr-0011-tenant-isolation-shared-schema-rls"
+    },
+    {
+      "source": "/adr/adr-0012-policy-decisions-are-audit-records.md",
+      "destination": "/adr/adr-0012-policy-decisions-are-audit-records"
+    },
+    {
+      "source": "/adr/adr-0013-fail-closed-policy-decision-writes.md",
+      "destination": "/adr/adr-0013-fail-closed-policy-decision-writes"
+    },
+    {
+      "source": "/adr/adr-0014-run-supervisor-is-orchestras.md",
+      "destination": "/adr/adr-0014-run-supervisor-is-orchestras"
+    },
+    {
+      "source": "/adr/adr-0015-governed-action-positioning.md",
+      "destination": "/adr/adr-0015-governed-action-positioning"
+    },
+    {
+      "source": "/adr/adr-0016-compile-to-the-langgraph-library.md",
+      "destination": "/adr/adr-0016-compile-to-the-langgraph-library"
+    },
+    {
+      "source": "/adr/adr-template.md",
+      "destination": "/adr/adr-template"
+    },
+    {
+      "source": "/rfc/README.md",
+      "destination": "/rfc/README"
+    }
+  ]
+}

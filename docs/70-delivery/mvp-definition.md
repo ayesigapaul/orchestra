@@ -1,7 +1,7 @@
 ---
 title: MVP Definition
 doc_id: DOC-081
-version: 0.14.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -135,5 +135,5 @@ system that governs and one that appears to.
 | The supervisor's size, and whether it threatens the positioning | [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)'s first follow-on, before this document becomes a plan | **Yes** |
 | Whether the Control Plane later splits into several surfaces | This document, once a second audience exists; section 6 answers it for the slice only | No |
 | Whether BYOK means spend control or data non-egress | Design-partner validation, per ADR-0002 and ADR-0007 | **Yes** |
-| What a demonstrable governed action looks like to a buyer, as distinct from what it is technically | A design partner; ADR-0015 names undemonstrability as a revisit criterion | No |
+| What a demonstrable governed action looks like to a buyer, as distinct from what it is technically | A design partner; ADR-0015 names undemonstrability as a revisit criterion. [`../50-workflows/examples/invoice-payment.md`](../50-workflows/examples/invoice-payment.md) is the candidate | No |
 | Whether the slice needs a second Model Binding to be credible | A design partner | No |

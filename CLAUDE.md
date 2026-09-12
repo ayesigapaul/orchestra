@@ -71,7 +71,14 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   signed commits, and no bypass for anyone — including the repository owner.
 - **Documents** — YAML front matter is mandatory and CI-validated. Conventions in
   [`docs/README.md`](docs/README.md) section 3.
+- **Published docs** — Mintlify serves `docs/` from `docs/docs.json`, which
+  `scripts/build-docs-nav.mjs` generates: navigation from the tree and titles, plus one redirect per
+  page mapping its `.md` URL onto the extensionless one. That redirect is what lets the documents
+  keep GitHub-correct `../section/page.md` links; without it the site had 550 broken links.
 - **Diagrams** — inline Mermaid, so they version and diff with the prose. CI parses every one.
+  Mintlify renders these fences as diagrams on the published site.
+  Browsable HTML renders in `docs/assets/diagrams/` are generated from them by
+  `scripts/build-diagrams.mjs`; re-run it after changing a diagram, because CI fails on a stale page.
 
 ## Commands
 
@@ -81,6 +88,8 @@ npx --yes markdownlint-cli2@0.23.2        # style — version must match .github
 node scripts/validate-docs.mjs            # front matter, ADR index, doc ids, internal links
 node scripts/open-questions.mjs --check   # every register defers to a document that exists
 node scripts/validate-schemas.mjs         # wire schemas, against VERSIONING.md §6
+node scripts/build-diagrams.mjs --check   # HTML diagram pages match the Mermaid; drop --check to rebuild
+node scripts/build-docs-nav.mjs --check   # docs/docs.json matches the tree; drop --check to rebuild
 npx --yes lychee --config lychee.toml .   # external links
 
 # Mermaid parse check needs its dependencies present
