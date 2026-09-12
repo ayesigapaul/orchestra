@@ -34,7 +34,7 @@ export function resolvePrincipal(deps: { directory: TenantDirectory; principals:
     if (entry === undefined) return rejected('unknown-organization');
     if (entry.status !== 'active') return rejected('tenant-not-active');
 
-    const principal = await deps.principals.findPlatformUserBySubject(entry.tenantId, claims.subject);
+    const principal = await deps.principals.findPlatformUserByVerifiedSubject(entry.tenantId, claims.subject);
     if (principal === undefined) return rejected('unknown-principal');
     if (principal.tenantId !== entry.tenantId) return rejected('tenant-mismatch');
 

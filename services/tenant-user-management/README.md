@@ -1,8 +1,9 @@
 # Tenant User Management
 
-Owns Tenants, Workspaces, Persons and Principals, and resolves a verified credential to exactly one
-Principal and one Tenant for the Gateway
-([ADR-0022](../../docs/adr/adr-0022-tenant-user-management-owns-tenancy.md)).
+Owns Tenants, Workspaces, Persons, Memberships and Principals, and resolves a verified credential to
+exactly one Principal and one Tenant for the Gateway
+([ADR-0024](../../docs/adr/adr-0024-global-person-with-tenant-memberships.md), which carries the
+service decision of ADR-0022 forward).
 
 ## Structure — ports and adapters
 
@@ -19,11 +20,19 @@ imported from another service.
 
 ## Rules this code holds to
 
-- **One Person per Tenant is the single source of a human's attributes.** A Platform User or an End
-  User is built from its Person, so it takes the Person's Tenant by construction.
+- **One global Person per human, with a Membership per Tenant.** A Tenant sees a Person only through
+  its own Membership. Only a subject the identity provider verified joins Memberships across Tenants;
+  an End User vouched for by a customer's backend stays in the Tenant that asserted it.
+- **A Person's name and email come only from the identity provider.** The function that records them
+  accepts a verified Person and nothing else, so setting them from a Tenant's assertion does not
+  compile.
+- **Principals are built from a Membership and its Person**, never from bare identifiers, so they
+  take the Membership's Tenant by construction. A Platform User needs a verified Person.
+- **No way to attach a Person by identifier.** The `PersonLinker` port creates or reuses a Person and
+  gives one Tenant a Membership, mirroring the database functions ADR-0024 specifies.
 - **No foreign key constraints** ([ADR-0023](../../docs/adr/adr-0023-no-foreign-key-constraints.md)).
-  References are identifiers; a cross-tenant reference is refused by the domain and, once the
-  PostgreSQL adapter lands, by each table's write policy.
+  References are identifiers; mismatched references are refused by the domain and, once the
+  PostgreSQL adapter lands, by the database.
 - **Resolution fails closed.** Anything short of one Principal and one Tenant is a rejection, and a
   rejection's reason is for logs, never for the caller.
 - **No endpoint before its contract.** Only `/healthz` is served until the resolution contract is
@@ -43,5 +52,5 @@ pnpm start          # PORT defaults to 8080
 
 ## Not yet here
 
-The PostgreSQL adapter, its schema, roles and forced row-level security; the resolution contract and
-endpoint; and the Keycloak adapter.
+The PostgreSQL adapter, with its schema, roles, forced row-level security and linking functions; the
+identity-sync path; the resolution contract and endpoint; and the Keycloak adapter.
