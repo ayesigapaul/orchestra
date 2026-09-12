@@ -1,9 +1,9 @@
 ---
 title: Data Plane
 doc_id: DOC-024
-version: 0.16.1
+version: 0.16.2
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -36,9 +36,8 @@ always the informative one.
 No threshold, duration, retry count, quota or capacity appears here, and none governing this path is
 decided anywhere in this repository. The connector support window in
 [`../VERSIONING.md`](../VERSIONING.md) section 9 is the exception worth knowing about: it is
-decided, and it governs connector version skew rather than execution. No datastore is selected
-either: ADR-0011 constrains the engine to one enforcing row-level security and leaves the choice
-open.
+decided, and it governs connector version skew rather than execution. The datastore is decided
+as well: PostgreSQL, by [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md).
 
 ## 2. Components
 
@@ -342,7 +341,7 @@ before implementation. **Document** means a later document suffices.
 | Question | ADR required? | Decided by |
 | --- | --- | --- |
 | The shape and scope of the egress allow-list, the default-deny posture itself being settled | **ADR** | One ADR across the Model Broker, Tool Invocation and `connector.md`; [`threat-model.md`](../40-governance/threat-model.md) section 10 is normative and fixes the posture, leaving only the shape, and ADR-0007 is **Proposed**, so the connector's share cannot close alone |
-| Which mechanism satisfies the durable Policy Decision write — a shared transaction, a durable outbox or a node-local append — and, where it replicates, what lag to the audit store is tolerable | **ADR** | The datastore decision ADR-0011 constrains but does not make and ADR-0013 leaves open explicitly; [`multi-tenancy.md`](multi-tenancy.md) section 10 carries that decision, and this row is the enforcement path's share of it |
+| Which mechanism satisfies the durable Policy Decision write — a shared transaction, a durable outbox or a node-local append — and, where it replicates, what lag to the audit store is tolerable | **ADR** | Answered against PostgreSQL, which [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) makes the datastore and which makes a shared transaction available; ADR-0013 leaves the mechanism open explicitly, and this row is the enforcement path's share of it |
 | Where policy evaluation executes — in process at each enforcement point, or a separate component | **ADR** if evaluation needs its own datastore access, otherwise Document | Blocked on whether a Policy may depend on aggregate state, marked **ADR** in [`policy-model.md`](../40-governance/policy-model.md) section 9. Section 5 derives the constraints any answer must satisfy; [`containers.md`](containers.md) section 12 carries the same row |
 | Which side of the Python-to-TypeScript boundary the Definition Compiler sits on, and what artifact crosses into this plane | **ADR** | Assigned here by [`containers.md`](containers.md) section 12, whose section 9 names the two candidates: TypeScript emitting a runtime-neutral artifact, or Python beside the Runtime. Each cuts the other way against ADR-0005's substitution argument — a runtime-neutral artifact keeps every point of contact with the runtime on the far side of the seam but has to be expressive enough to compile without runtime types, while a compiler beside the Runtime may emit natively and makes substitution a compiler rewrite. What blocks a choice is that the versioned internal contract ADR-0005 requires is unwritten ([`containers.md`](containers.md) section 9), so neither placement has anything to be judged against yet, and section 2 defers to this row for that reason |
 | What a `deny` outside admission does to a Run in flight, which this plane must implement and the Run state machine has no transition for | **ADR** | Already registered by [`policy-model.md`](../40-governance/policy-model.md) section 9 and [`tool-authorization.md`](../40-governance/tool-authorization.md) section 10; not this document's to take |

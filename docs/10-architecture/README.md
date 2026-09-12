@@ -1,9 +1,9 @@
 ---
 title: Architecture
 doc_id: DOC-020
-version: 0.12.0
+version: 0.12.1
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-13
 owners: [platform-architecture]
 ---
 
@@ -63,5 +63,6 @@ plane. Treating it as a step toward a customer-deployed one would make the BYOK 
 half-answered, and that question sits upstream of the connector, the topology and a good deal of the
 roadmap.
 
-> **Status.** No datastore engine is chosen anywhere in this section; ADR-0011 constrains it to one
-> enforcing row-level security and selects none.
+> **Status.** The datastore engine is PostgreSQL, chosen by
+> [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) against the capabilities
+> [`multi-tenancy.md`](multi-tenancy.md) requires.

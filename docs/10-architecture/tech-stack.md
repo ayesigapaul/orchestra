@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.21.1
+version: 0.22.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -32,6 +32,7 @@ These are not open. They constrain everything below.
 | Identity is Keycloak, self-hosted, with a Keycloak Organization per Tenant | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) |
 | Apache APISIX is the edge in front of the Gateway, and is never the authorization boundary | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) |
 | The run supervisor is built on PostgreSQL, with Temporal as the named fallback | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
+| The datastore is PostgreSQL: row-level security forced on every tenant-scoped table, tenant context set per transaction, through a transaction-mode pooler | [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 
@@ -98,10 +99,11 @@ by framework overhead. Ecosystem breadth and the number of engineers who already
 ## 3. Datastore — PostgreSQL
 
 **PostgreSQL, with `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` on every tenant-scoped
-table.** ADR-0011 fixes the model and selects no engine; Postgres is the recommendation because RLS
-is a first-class server feature there and the same instance can carry the LangGraph checkpointer,
-the supervisor's queue and the audit store. **This needs an ADR** — the engine is load-bearing for
-isolation, the supervisor and the checkpointer at once.
+table.** ADR-0011 fixes the model and selects no engine;
+[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) selects PostgreSQL, because RLS is a
+first-class server feature there and the same instance can carry the LangGraph checkpointer, the
+supervisor's queue and the audit store. The engine is load-bearing for isolation, the supervisor
+and the checkpointer at once, and ADR-0021 gives the exact spellings the implementation must use.
 
 **The pooling rule is not optional.** Under a transaction-mode pooler such as PgBouncer, a server
 connection returns to the pool at COMMIT carrying whatever session state was left on it, so a tenant
@@ -225,7 +227,6 @@ because it fails silently and looks like latency.
 
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
-| The datastore engine, which section 3 recommends and no record selects | An architecture decision constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security | **Yes** |
 | How large the PostgreSQL supervisor is to build, now that the substrate is fixed | The M2 sizing in [`../70-delivery/milestones.md`](../70-delivery/milestones.md), which [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) requires before an MVP | No — the substrate is decided by [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
 | The lease duration, renewal interval and wake-up poll interval | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md)'s follow-on; no interval is decided anywhere | No |
 | Which side of the Python-to-TypeScript boundary the compiler sits on, and what artifact crosses | [`data-plane.md`](data-plane.md), assigned by [`containers.md`](containers.md) section 12 | **Yes** — repeated |

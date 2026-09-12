@@ -1,9 +1,9 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.14.0
+version: 0.14.1
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -337,9 +337,9 @@ doing so consumes a seat is registered in
 Control Plane records are tenant-scoped like every other record
 ([`../20-domain/domain-model.md`](../20-domain/domain-model.md) I1), and isolation is enforced by
 forced row-level security in the datastore rather than by this surface's queries
-([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)). **No datastore is chosen**:
-ADR-0011 constrains the engine to one that enforces row-level security itself and names PostgreSQL
-only as the obvious candidate. A Workspace scopes administration and visibility, never isolation
+([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)), in a datastore that is
+PostgreSQL ([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)). A Workspace scopes
+administration and visibility, never isolation
 ([`policy-model.md`](../40-governance/policy-model.md) P2); the context mechanism, the CI control
 and the promotion path to a dedicated database are [`multi-tenancy.md`](multi-tenancy.md)'s, and who
 may do what within a Tenant is [`identity-and-access.md`](identity-and-access.md)'s.

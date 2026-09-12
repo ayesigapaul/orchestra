@@ -160,6 +160,7 @@
               "adr/adr-0018-apisix-at-the-edge",
               "adr/adr-0019-postgres-run-supervisor",
               "adr/adr-0020-monorepo-with-enforced-service-boundaries",
+              "adr/adr-0021-postgresql-is-the-datastore",
               "adr/adr-template"
             ]
           },
@@ -553,6 +554,10 @@
     {
       "source": "/adr/adr-0020-monorepo-with-enforced-service-boundaries.md",
       "destination": "/adr/adr-0020-monorepo-with-enforced-service-boundaries"
+    },
+    {
+      "source": "/adr/adr-0021-postgresql-is-the-datastore.md",
+      "destination": "/adr/adr-0021-postgresql-is-the-datastore"
     },
     {
       "source": "/adr/adr-template.md",

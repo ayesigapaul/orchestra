@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.22.1
+version: 0.23.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,36 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.23.0] — 2026-09-13
+
+The datastore is decided. ADR-0011 constrained the engine and chose none, and three later ADRs were
+built on PostgreSQL regardless. This release records the choice against the capabilities
+`multi-tenancy.md` requires, and corrects every document that still called it open.
+
+### Added
+
+- [ADR-0021](adr/adr-0021-postgresql-is-the-datastore.md) — PostgreSQL is the datastore. It gives
+  each capability in `10-architecture/multi-tenancy.md` sections 2 to 5 its PostgreSQL spelling:
+  forced row-level security, an application role created `NOBYPASSRLS` that owns nothing,
+  `SET LOCAL` inside an explicit transaction, and policies that normalise an unset or reset setting
+  with `NULLIF` so it matches no row. Each spelling was checked against PostgreSQL 18.6, including
+  the cast failure a policy without `NULLIF` hits on a reused connection.
+
+### Changed
+
+- The engine question leaves the open-question registers of `10-architecture/multi-tenancy.md`,
+  `containers.md`, `system-context.md`, `tech-stack.md` and `40-governance/threat-model.md`, and
+  `tech-stack.md` section 1 lists the decision.
+- Statements that no datastore was chosen are corrected in `10-architecture/README.md`,
+  `containers.md`, `control-plane.md`, `data-plane.md`, `system-context.md`, `multi-tenancy.md`,
+  `tech-stack.md`, `20-domain/domain-model.md`, `20-domain/lifecycle-state-machines.md`,
+  `40-governance/threat-model.md` and `40-governance/audit-model.md`. The durable-write question in
+  `data-plane.md` stays open, now against a known engine.
+- `70-delivery/testing-strategy.md` — the register's isolation-test question moves from a datastore
+  not yet chosen to how those tests fail loudly on PostgreSQL rather than pass vacuously.
 
 ---
 

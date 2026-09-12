@@ -1,9 +1,9 @@
 ---
 title: System Context
 doc_id: DOC-021
-version: 0.8.0
+version: 0.8.1
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0011]
 ---
@@ -197,12 +197,10 @@ registered in section 7 and cannot be drawn yet: the channel an approver is reac
 forwarding. Both would be tenant-configured, so the scope grows as they are settled. Three is where
 the count stands, not a bound the ADR can rely on.
 
-**The datastore engine** (same register). Not a Level 1 concern: no datastore appears on this
-diagram, because it is inside the Orchestra box. ADR-0011 constrains it to an engine that enforces
-row-level security itself and selects none. The criteria an engine has to meet are
-[`multi-tenancy.md`](multi-tenancy.md) sections 2 to 5, and that document's register is where the
-decision sits; [`containers.md`](containers.md) names the container and the constraints and
-explicitly does not take it.
+**The datastore engine**, now decided. Not a Level 1 concern: no datastore appears on this
+diagram, because it is inside the Orchestra box. It is PostgreSQL, chosen by
+[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) against the criteria
+[`multi-tenancy.md`](multi-tenancy.md) sections 2 to 5 state.
 
 **Where policy evaluation executes**
 ([`../40-governance/policy-model.md`](../40-governance/policy-model.md)). Also not Level 1 — a
@@ -225,5 +223,4 @@ prose. Where another document owns a question, its classification is repeated ra
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand; forwarding would add a standing outbound edge and an availability obligation | [`../40-governance/audit-model.md`](../40-governance/audit-model.md); a design-partner conversation, per its register | **ADR required** — that register's classification |
 | How platform-operator action on R8 is attributed, given that invariant I2 admits no unattributed action and no Principal subtype covers it | [`../40-governance/audit-model.md`](../40-governance/audit-model.md), with [`../40-governance/threat-model.md`](../40-governance/threat-model.md) | **ADR required** — that register's classification; it changes the identity model |
 | Whether the tenant identity provider on R2 also authenticates Service Accounts, or a separate credential type does | [`identity-and-access.md`](identity-and-access.md) | Later document |
-| The datastore engine, which this view deliberately does not surface | [`multi-tenancy.md`](multi-tenancy.md) section 10, against the criteria its sections 2 to 5 state; constrained by ADR-0011 | **ADR required** — that register's classification; costly to reverse |
 | Where policy evaluation executes — in process at each enforcement point, or as a separate component | [`data-plane.md`](data-plane.md) and [`containers.md`](containers.md) | Later document; an ADR if it constrains the datastore |
