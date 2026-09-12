@@ -12,8 +12,9 @@ definition and metering.
 
 > Deterministic where determinism matters. Agentic where judgment matters. Governed at every step.
 
-**Status: pre-implementation and pre-customer.** The repository is a specification set. No platform
-code exists yet. `ui-template/` is a front-end starting point, not a running product.
+**Status: Phase 0 of implementation, pre-customer.** The specification set is complete, and
+platform code begins in `services/` under the boundaries of ADR-0020. `ui-template/` is a front-end
+starting point, not a running product.
 
 ## Decisions already made — do not relitigate
 
@@ -41,6 +42,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0017 | Keycloak is the identity provider, self-hosted | Accepted |
 | 0018 | Apache APISIX is the edge, in front of the Gateway | Accepted |
 | 0019 | Run supervisor on PostgreSQL; Temporal is the named fallback | Accepted |
+| 0020 | Services share a repository, never code — boundaries enforced in CI | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -64,6 +66,13 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
    to reverse, and say plainly when something is unvalidated.
 
 ## Repository conventions
+
+- **Services** — each backend service under `services/`, and each front end under `apps/`, is an
+  independent project: its own manifest, lockfile, Dockerfile and tests, built from its own
+  directory. No workspaces, no path dependencies, no importing another service's code, and no
+  reading another service's tables — services talk over the network through versioned contracts.
+  [ADR-0020](docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md);
+  `scripts/check-service-boundaries.mjs` enforces it in CI, with no exemption mechanism.
 
 - **Versions** — every technology runs its **latest stable release, pinned exactly**; where a project
   has an LTS line, latest LTS. No floors, no ranges, no pre-releases. The pinned table is
@@ -99,6 +108,11 @@ node scripts/validate-schemas.mjs         # wire schemas, against VERSIONING.md 
 node scripts/build-diagrams.mjs --check   # HTML diagram pages match the Mermaid; drop --check to rebuild
 node scripts/build-docs-nav.mjs --check   # docs/docs.json matches the tree; drop --check to rebuild
 npx --yes lychee --config lychee.toml .   # external links
+node scripts/check-service-boundaries.mjs # ADR-0020: no coupling between services
+
+# Services — each tested alone, with the pinned uv rather than the one installed
+uvx uv@0.12.13 --directory services/gateway run pytest
+infra/compose/smoke.sh                    # the local stack, end to end through the edge
 
 # Mermaid parse check needs its dependencies present
 npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.mjs
@@ -145,6 +159,11 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   production — a symlink, which `mint dev` follows and the cloud build does not, and a file named
   `index.md`, which the cloud build would not serve beside a README. **Verify docs-site behaviour
   against the deployed site, not the dev server.**
+- **A bind mount can arrive empty, silently.** When Docker runs in a VM (Colima, Docker Desktop),
+  only host paths the VM mounts are visible to containers; any other path appears as an empty
+  directory with no error. The local stack therefore bakes its configuration into images rather than
+  mounting it, and tools such as actionlint are fed files on stdin. If a container reports a missing
+  file that exists on the host, check the VM's mounts before debugging the tool.
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.

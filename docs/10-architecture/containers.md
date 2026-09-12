@@ -1,9 +1,9 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.16.1
+version: 0.22.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-12
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -91,6 +91,7 @@ Dotted edges rest on **Proposed** ADR-0007 and are not binding.
 | Metering | Control | Records the metered dimensions [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) fixes, as records carrying the properties it requires; most occurrences arise in the Data Plane, so this container is fed rather than self-observing | Meter records | Datastore | Serve as the audit trail, or bill model tokens — model usage is reported, never billed |
 | Gateway | Data | The public HTTP and event-stream boundary; authenticates the calling Principal, admits Runs, streams Agent Events | No durable state of its own | Policy evaluation at admission, Runtime | Expose a runtime, model-provider or tool-protocol type, or admit a Run before its admission decision is durable ([`policy-model.md`](../40-governance/policy-model.md) D3) |
 | Runtime | Data | Executes compiled graphs on an orchestration substrate that supplies durability, checkpointing, interrupts and resume — Orchestra builds none of those. Run supervision is a separate concern and is Orchestra's ([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md), superseding [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md)). The container is the adapter around that substrate, not the substrate | Run state and Checkpoints, which are the runtime's rather than Orchestra's | Policy evaluation, Model Broker, Tool Invocation | Appear in any public contract, or expose a Checkpoint as an addressable object |
+| Run Supervisor | Data | Run lifecycle, leasing work to workers and reclaiming a lease when one disappears, per-Tenant concurrency, scheduling and wake-up, job-level retry and drain ([ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)), built on PostgreSQL ([ADR-0019](../adr/adr-0019-postgres-run-supervisor.md)) | Run intent, leases and scheduled wake-ups, in its own schema ([ADR-0020](../adr/adr-0020-monorepo-with-enforced-service-boundaries.md) rule B4) | The Runtime, to invoke a compiled graph | Retry a Step Execution — that retry is not the supervisor's to own |
 | Policy evaluation | Data | **Location undecided.** Produces exactly one verdict per enforcement point and writes the Policy Decision | Policy Decisions, which are Audit Records | The datastore, and whatever carries a Policy Decision across a crash ahead of the gated action — [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) leaves that mechanism open | Be optional at any enforcement point, or be read as a settled deployment boundary — see section 5 |
 | Model Broker | Data | Resolves a Model Binding to a Deployment Surface, endpoint and credential reference; schedules within the Quota Envelope; normalises invocation and streaming; attempts declared fallbacks in order | No credential material of its own | Credential Custody, tenant-configured model deployment surfaces | Choose a model the definition did not name, or fall back outside the declared order |
 | Tool Invocation | Data | Invokes a registered Tool over its origin's transport and returns the result as untrusted content | Nothing durable | MCP Servers, native adapters, and the Connector fabric if ADR-0007 binds | Invoke a Tool no enforcement point cleared, or let the transport change the Tool's identity |

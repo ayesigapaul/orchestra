@@ -1,0 +1,61 @@
+name: Services
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: services-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.12.13"
+
+jobs:
+  boundaries:
+    name: Service boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24.21.0"
+      # ADR-0020: services share a repository, never code.
+      - name: Check no service is coupled to another
+        run: node scripts/check-service-boundaries.mjs
+
+  test:
+    name: Services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install the pinned uv
+        run: |
+          curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      # Each service installs from its own lockfile and is tested alone, as it will be deployed.
+      - name: Lint, format-check and test every service in isolation
+        run: |
+          set -euo pipefail
+          for dir in services/*/; do
+            [ -f "${dir}pyproject.toml" ] || continue
+            echo "::group::${dir}"
+            (cd "$dir" && uv sync --locked && uv run ruff check && uv run ruff format --check && uv run pytest -q)
+            echo "::endgroup::"
+          done
+
+  stack:
+    name: Local stack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Bring up the stack and prove the path end to end
+        run: infra/compose/smoke.sh
+      - name: Tear down
+        if: always()
+        run: docker compose -f infra/compose/docker-compose.yml down -v

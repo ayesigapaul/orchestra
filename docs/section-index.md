@@ -1,7 +1,7 @@
 ---
 title: Orchestra Documentation
 doc_id: DOC-000
-version: 0.21.0
+version: 0.22.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -121,8 +121,9 @@ implying consensus.
 
 ## 4. Status of this documentation set
 
-This set is at **v0.21.0** and is **pre-implementation**. It supersedes the single-file v0.1 vision
-brief, retained at [`archive/vision-v0.1-2026-09-08.md`](archive/vision-v0.1-2026-09-08.md).
+This set is at **v0.22.0**, and implementation has begun — **Phase 0**, the foundation. It
+supersedes the single-file v0.1 vision brief, retained at
+[`archive/vision-v0.1-2026-09-08.md`](archive/vision-v0.1-2026-09-08.md).
 
 Substantive changes from v0.1, each recorded as an ADR:
 

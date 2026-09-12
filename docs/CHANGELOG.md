@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.21.0
+version: 0.22.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -18,6 +18,30 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.22.0] — 2026-09-12
+
+Implementation begins. Phase 0 lays the foundation, with the boundary that keeps a monorepo
+extractable into services recorded before the first service exists.
+
+### Added
+
+- [ADR-0020](adr/adr-0020-monorepo-with-enforced-service-boundaries.md) — services share a
+  repository, never code. Each service is an independent project with its own manifest, lockfile,
+  Dockerfile and tests; no workspace spans services, no dependency leaves a service's directory, no
+  service imports another's code, and no service reads another's tables — each owns its own schema
+  inside the one logical datastore ADR-0011 fixes. A shared library is extracted only after
+  duplication has caused a defect, and then consumed by pinned version, never by path.
+- `scripts/check-service-boundaries.mjs`, run in CI, enforces the mechanical half of those rules and
+  also fails on the Elastic-2.0 LangGraph server packages ADR-0016 excludes — the licence assertion
+  ADR-0014 asked for.
+- The Gateway's first code, the local stack and the CI that runs them. The Gateway verifies bearer
+  credentials against Keycloak itself; a test forges the edge's identity header and proves it is
+  ignored, which is ADR-0018's prohibition made executable.
+- `10-architecture/containers.md` — the Run Supervisor gains the container row ADR-0014 and ADR-0019
+  implied and nothing had written.
 
 ---
 

@@ -1,0 +1,6 @@
+# The image needs the manifest, the lockfile and src. Nothing local comes along.
+.venv
+__pycache__
+.pytest_cache
+.ruff_cache
+tests
