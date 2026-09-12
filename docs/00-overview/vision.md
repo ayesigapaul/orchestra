@@ -1,7 +1,7 @@
 ---
 title: Vision
 doc_id: DOC-011
-version: 0.16.0
+version: 0.16.1
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -300,20 +300,20 @@ schema, the validating compiler and the versioning. That decision was taken in
 forward unchanged by [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md).
 
 **Orchestra builds the run supervisor; the runtime is an execution substrate.** Durability,
-checkpointing, interrupts and resume come from the runtime and Orchestra does not build them.
-Run supervision is Orchestra's, as a first-class subsystem: run lifecycle, queueing, leasing work to
-workers and reclaiming a lease when one disappears, per-Tenant concurrency and admission under the
-Quota Envelope, scheduling and wake-up, job-level retry distinct from Step Execution retry, and
-draining a worker during deployment. The reason is architectural before it is legal — durability
-at the graph level does not give you durable service-level run orchestration; a checkpoint says a
-graph
-reached state X and says nothing about who owns the run, who retries it or what a Tenant's quota
-permits — and it is reinforced by licence, since the obvious off-the-shelf implementation of that
-layer is licensed Elastic-2.0, which forbids exactly the hosted product shape ADR-0001 fixes
-([`langgraph-evaluation.md`](../80-reference/langgraph-evaluation.md)). This is the third expansion
-of MVP scope, it is distributed-systems work of the kind where subtle bugs are most expensive, and
-ADR-0014 deliberately leaves its size unresolved rather than guessing. *Run supervisor* is
-ADR-0014's term and is not yet in [`GLOSSARY.md`](../GLOSSARY.md).
+checkpointing, interrupts and the resume mechanism come from the runtime's MIT library — never its
+server ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)) — and Orchestra does not
+build them. Run supervision is Orchestra's, as a first-class subsystem: run lifecycle, queueing,
+leasing work to workers and reclaiming a lease when one disappears, per-Tenant concurrency and
+admission under the Quota Envelope, scheduling and wake-up, job-level retry distinct from Step
+Execution retry, and draining a worker during deployment. The reason is architectural before it is
+legal — durability at the graph level does not give you durable service-level run orchestration; a
+checkpoint says a graph reached state X and says nothing about who owns the run, who retries it or
+what a Tenant's quota permits — and it is reinforced by licence, since the obvious off-the-shelf
+implementation of that layer is licensed Elastic-2.0, which forbids exactly the hosted product shape
+ADR-0001 fixes ([`langgraph-evaluation.md`](../80-reference/langgraph-evaluation.md)). This is the
+third expansion of MVP scope, it is distributed-systems work of the kind where subtle bugs are most
+expensive, and ADR-0014 deliberately leaves its size unresolved rather than guessing. *Run
+supervisor* is ADR-0014's term and is not yet in [`GLOSSARY.md`](../GLOSSARY.md).
 
 **Policy enforcement is structural, not conventional.** The compiler emits a Policy Enforcement
 Point at every Step boundary, before every Tool invocation and at Run admission, so policy cannot be

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Context — diagrams</title>
+<style>
+:root { color-scheme: light dark; --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff;
+  --line: #e7e5e4; --link: #1d4ed8; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0c0a09; --fg: #f5f5f4; --muted: #a8a29e;
+  --card: #1c1917; --line: #292524; --link: #93c5fd; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+header, main, footer { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+header { padding-top: 32px; padding-bottom: 8px; }
+h1 { font-size: 26px; margin: 4px 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.crumbs, .meta, footer { color: var(--muted); font-size: 13px; margin: 0; }
+footer { padding-top: 8px; padding-bottom: 40px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.diagram { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; margin: 20px 0; }
+.frame { overflow-x: auto; }
+pre.mermaid { margin: 0; text-align: center; background: transparent; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre.src { overflow-x: auto; margin: 8px 0 0; padding: 12px; border-radius: 6px; background: var(--bg);
+  font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.offline { color: var(--muted); }
+.group h2 { margin: 28px 0 10px; }
+ul.docs { list-style: none; padding: 0; margin: 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; }
+ul.docs li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 16px;
+  border-top: 1px solid var(--line); }
+ul.docs li:first-child { border-top: 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+</head>
+<!-- Generated from docs/10-architecture/system-context.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
+<body>
+<header>
+  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../10-architecture/system-context.md">Source document</a></p>
+  <h1>System Context</h1>
+  <p class="meta">docs/10-architecture/system-context.md · 1 diagram</p>
+</header>
+<main>
+<section class="diagram" id="diagram-1">
+  <h2>2. The context diagram</h2>
+  <div class="frame"><pre class="mermaid">
+flowchart TB
+  OPS["Orchestra platform operator&lt;br/&gt;support, migration, aggregation"]
+
+  subgraph CUSTOMER["Customer's estate — operated by the customer"]
+    PU["Platform User&lt;br/&gt;administrator, approver, auditor, developer"]
+    EU["End User&lt;br/&gt;may never know Orchestra exists"]
+    APP["The customer's own application"]
+    BE["The customer's backend&lt;br/&gt;a Service Account to Orchestra"]
+    IDP["The tenant's identity provider"]
+    subgraph NETWORK["Customer network — no inbound rule for Orchestra"]
+      CONN["Connector&lt;br/&gt;PLANNED, ADR-0007 Proposed"]
+      SYS["Business systems&lt;br/&gt;ERP, WMS, core banking"]
+      MSI["Internal deployment surface&lt;br/&gt;gateway or self-hosted, if the tenant runs one"]
+    end
+  end
+
+  ORCH["ORCHESTRA&lt;br/&gt;multi-tenant governance and connectivity layer&lt;br/&gt;Control Plane and Data Plane"]
+
+  subgraph THIRD["Reached over the public internet — a third party's, or the customer's own"]
+    MS["Model deployment surfaces&lt;br/&gt;vendor API, BYOK credential"]
+    MCP["Publicly reachable tool origins&lt;br/&gt;customer- or third-party-operated"]
+  end
+
+  PU --&gt;|R1 administer, approve, audit| ORCH
+  IDP --&gt;|R2 authenticate Platform Users| ORCH
+  EU --&gt; APP
+  APP --&gt; BE
+  BE --&gt;|R3 mint a Session Token| ORCH
+  APP --&gt;|R4 Session Token; Run input and event stream| ORCH
+  ORCH --&gt;|R5 invoke, BYOK credential attached| MS
+  ORCH -.-&gt;|R5' same relationship, internal destination — reachability undecided| MSI
+  ORCH --&gt;|R6 invoke a Tool directly| MCP
+  CONN --&gt;|R7 outbound session, PLANNED| ORCH
+  CONN &lt;--&gt; SYS
+  OPS --&gt;|R8 operate| ORCH
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">flowchart TB
+  OPS["Orchestra platform operator&lt;br/&gt;support, migration, aggregation"]
+
+  subgraph CUSTOMER["Customer's estate — operated by the customer"]
+    PU["Platform User&lt;br/&gt;administrator, approver, auditor, developer"]
+    EU["End User&lt;br/&gt;may never know Orchestra exists"]
+    APP["The customer's own application"]
+    BE["The customer's backend&lt;br/&gt;a Service Account to Orchestra"]
+    IDP["The tenant's identity provider"]
+    subgraph NETWORK["Customer network — no inbound rule for Orchestra"]
+      CONN["Connector&lt;br/&gt;PLANNED, ADR-0007 Proposed"]
+      SYS["Business systems&lt;br/&gt;ERP, WMS, core banking"]
+      MSI["Internal deployment surface&lt;br/&gt;gateway or self-hosted, if the tenant runs one"]
+    end
+  end
+
+  ORCH["ORCHESTRA&lt;br/&gt;multi-tenant governance and connectivity layer&lt;br/&gt;Control Plane and Data Plane"]
+
+  subgraph THIRD["Reached over the public internet — a third party's, or the customer's own"]
+    MS["Model deployment surfaces&lt;br/&gt;vendor API, BYOK credential"]
+    MCP["Publicly reachable tool origins&lt;br/&gt;customer- or third-party-operated"]
+  end
+
+  PU --&gt;|R1 administer, approve, audit| ORCH
+  IDP --&gt;|R2 authenticate Platform Users| ORCH
+  EU --&gt; APP
+  APP --&gt; BE
+  BE --&gt;|R3 mint a Session Token| ORCH
+  APP --&gt;|R4 Session Token; Run input and event stream| ORCH
+  ORCH --&gt;|R5 invoke, BYOK credential attached| MS
+  ORCH -.-&gt;|R5' same relationship, internal destination — reachability undecided| MSI
+  ORCH --&gt;|R6 invoke a Tool directly| MCP
+  CONN --&gt;|R7 outbound session, PLANNED| ORCH
+  CONN &lt;--&gt; SYS
+  OPS --&gt;|R8 operate| ORCH</pre></details>
+</section>
+</main>
+<footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'strict' });
+  } else {
+    document.getElementById('offline').hidden = false;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Domain Model — diagrams</title>
+<style>
+:root { color-scheme: light dark; --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff;
+  --line: #e7e5e4; --link: #1d4ed8; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0c0a09; --fg: #f5f5f4; --muted: #a8a29e;
+  --card: #1c1917; --line: #292524; --link: #93c5fd; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+header, main, footer { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+header { padding-top: 32px; padding-bottom: 8px; }
+h1 { font-size: 26px; margin: 4px 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.crumbs, .meta, footer { color: var(--muted); font-size: 13px; margin: 0; }
+footer { padding-top: 8px; padding-bottom: 40px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.diagram { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; margin: 20px 0; }
+.frame { overflow-x: auto; }
+pre.mermaid { margin: 0; text-align: center; background: transparent; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre.src { overflow-x: auto; margin: 8px 0 0; padding: 12px; border-radius: 6px; background: var(--bg);
+  font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.offline { color: var(--muted); }
+.group h2 { margin: 28px 0 10px; }
+ul.docs { list-style: none; padding: 0; margin: 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; }
+ul.docs li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 16px;
+  border-top: 1px solid var(--line); }
+ul.docs li:first-child { border-top: 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+</head>
+<!-- Generated from docs/20-domain/domain-model.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
+<body>
+<header>
+  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../20-domain/domain-model.md">Source document</a></p>
+  <h1>Domain Model</h1>
+  <p class="meta">docs/20-domain/domain-model.md · 2 diagrams</p>
+</header>
+<main>
+<section class="diagram" id="diagram-1">
+  <h2>4. Execution</h2>
+  <div class="frame"><pre class="mermaid">
+erDiagram
+  TENANT ||--o{ WORKSPACE : "subdivides into"
+  TENANT ||--|{ PRINCIPAL : "scopes"
+  PRINCIPAL ||--o| PLATFORM_USER : "is exactly one of"
+  PRINCIPAL ||--o| END_USER : "is exactly one of"
+  PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
+  PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
+  PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
+  TENANT ||--o{ AGENT : "owns"
+  TENANT ||--o{ WORKFLOW : "owns"
+  WORKSPACE |o--o{ AGENT : "scopes"
+  WORKSPACE |o--o{ WORKFLOW : "scopes"
+  AGENT ||--|{ AGENT_VERSION : "publishes"
+  WORKFLOW ||--|{ WORKFLOW_VERSION : "publishes"
+  WORKFLOW_VERSION ||--|{ STEP : "declares"
+  AGENT_VERSION |o--o{ RUN : "pinned by"
+  WORKFLOW_VERSION |o--o{ RUN : "pinned by"
+  RUN ||--o{ STEP_EXECUTION : "contains"
+  STEP ||--o{ STEP_EXECUTION : "instantiated as"
+  CONVERSATION |o--o{ RUN : "spans"
+  END_USER ||--o{ CONVERSATION : "holds"
+  AGENT ||--o{ CONVERSATION : "answers in"
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">erDiagram
+  TENANT ||--o{ WORKSPACE : "subdivides into"
+  TENANT ||--|{ PRINCIPAL : "scopes"
+  PRINCIPAL ||--o| PLATFORM_USER : "is exactly one of"
+  PRINCIPAL ||--o| END_USER : "is exactly one of"
+  PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
+  PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
+  PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
+  TENANT ||--o{ AGENT : "owns"
+  TENANT ||--o{ WORKFLOW : "owns"
+  WORKSPACE |o--o{ AGENT : "scopes"
+  WORKSPACE |o--o{ WORKFLOW : "scopes"
+  AGENT ||--|{ AGENT_VERSION : "publishes"
+  WORKFLOW ||--|{ WORKFLOW_VERSION : "publishes"
+  WORKFLOW_VERSION ||--|{ STEP : "declares"
+  AGENT_VERSION |o--o{ RUN : "pinned by"
+  WORKFLOW_VERSION |o--o{ RUN : "pinned by"
+  RUN ||--o{ STEP_EXECUTION : "contains"
+  STEP ||--o{ STEP_EXECUTION : "instantiated as"
+  CONVERSATION |o--o{ RUN : "spans"
+  END_USER ||--o{ CONVERSATION : "holds"
+  AGENT ||--o{ CONVERSATION : "answers in"</pre></details>
+</section>
+<section class="diagram" id="diagram-2">
+  <h2>6. Governance</h2>
+  <div class="frame"><pre class="mermaid">
+erDiagram
+  TENANT ||--|| TOOL_CATALOG : "has one"
+  TOOL_CATALOG ||--o{ TOOL : "registers"
+  MCP_SERVER |o--o{ TOOL : "exposes"
+  CONNECTOR |o--o{ MCP_SERVER : "makes reachable"
+  TENANT ||--o{ CONNECTOR : "enrols"
+  AGENT_VERSION }o--o{ TOOL : "is permitted to call"
+  STEP }o--o| TOOL : "invokes"
+  TENANT ||--o{ POLICY : "authors"
+  POLICY ||--|{ POLICY_VERSION : "publishes"
+  POLICY_VERSION |o--o{ POLICY_DECISION : "referenced by"
+  POLICY_VERSION }o--o{ RUN : "pinned at admission by"
+  AUDIT_RECORD ||--o| POLICY_DECISION : "is exactly one class of"
+  RUN ||--|{ POLICY_DECISION : "evaluated by"
+  STEP_EXECUTION |o--o{ POLICY_DECISION : "gated by"
+  POLICY_DECISION ||--o| APPROVAL_REQUEST : "raises"
+  APPROVAL_REQUEST ||--|| EVIDENCE_SET : "carries"
+  APPROVAL_REQUEST ||--|| APPROVAL_CHAIN : "routed by"
+  APPROVAL_CHAIN }o--|{ PRINCIPAL : "requires decisions from"
+  TENANT ||--o{ MODEL_BINDING : "configures"
+  MODEL_BINDING ||--|| QUOTA_ENVELOPE : "constrained by"
+  AGENT_VERSION }o--|{ MODEL_BINDING : "selects, in order"
+  AUDIT_RECORD }o--|| PRINCIPAL : "attributed to"
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">erDiagram
+  TENANT ||--|| TOOL_CATALOG : "has one"
+  TOOL_CATALOG ||--o{ TOOL : "registers"
+  MCP_SERVER |o--o{ TOOL : "exposes"
+  CONNECTOR |o--o{ MCP_SERVER : "makes reachable"
+  TENANT ||--o{ CONNECTOR : "enrols"
+  AGENT_VERSION }o--o{ TOOL : "is permitted to call"
+  STEP }o--o| TOOL : "invokes"
+  TENANT ||--o{ POLICY : "authors"
+  POLICY ||--|{ POLICY_VERSION : "publishes"
+  POLICY_VERSION |o--o{ POLICY_DECISION : "referenced by"
+  POLICY_VERSION }o--o{ RUN : "pinned at admission by"
+  AUDIT_RECORD ||--o| POLICY_DECISION : "is exactly one class of"
+  RUN ||--|{ POLICY_DECISION : "evaluated by"
+  STEP_EXECUTION |o--o{ POLICY_DECISION : "gated by"
+  POLICY_DECISION ||--o| APPROVAL_REQUEST : "raises"
+  APPROVAL_REQUEST ||--|| EVIDENCE_SET : "carries"
+  APPROVAL_REQUEST ||--|| APPROVAL_CHAIN : "routed by"
+  APPROVAL_CHAIN }o--|{ PRINCIPAL : "requires decisions from"
+  TENANT ||--o{ MODEL_BINDING : "configures"
+  MODEL_BINDING ||--|| QUOTA_ENVELOPE : "constrained by"
+  AGENT_VERSION }o--|{ MODEL_BINDING : "selects, in order"
+  AUDIT_RECORD }o--|| PRINCIPAL : "attributed to"</pre></details>
+</section>
+</main>
+<footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'strict' });
+  } else {
+    document.getElementById('offline').hidden = false;
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+---
+title: Technology Stack
+doc_id: DOC-016
+version: 0.18.0
+status: Draft
+last_updated: 2026-09-12
+owners: [platform-architecture]
+depends_on: [ADR-0001, ADR-0002, ADR-0006, ADR-0011, ADR-0014, ADR-0016]
+---
+
+# Technology Stack
+
+What to build on, why, and what would change it. **A recommendation here is not a decision.** Where
+a choice is costly to reverse or spans components, the row says an ADR is required and the choice
+does not bind until one exists ([`../adr/README.md`](../adr/README.md)).
+
+Each entry states the alternative that was seriously considered, because a recommendation with no
+rejected alternative has not been thought about.
+
+## 1. What is already decided
+
+These are not open. They constrain everything below.
+
+| Constraint | Record |
+| --- | --- |
+| Runtime is Python; the control plane and protocol tooling are TypeScript | [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md), carried from ADR-0005 |
+| Definitions compile onto the **MIT LangGraph library**; its Elastic-2.0 server tier is out of bounds | [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md) |
+| Orchestra builds the run supervisor — lifecycle, leasing, concurrency, scheduling, job retry, drain | [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) |
+| The datastore must enforce row-level security itself; isolation is never application-code-only | [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) |
+| The model layer is a credential and endpoint broker under BYOK, never a router | [ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md), [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) |
+| Front-end surfaces duplicate the Next.js template rather than sharing code | [`../../ui-template/README.md`](../../ui-template/README.md) |
+
+## 2. Data plane — Python
+
+**Language and tooling: Python 3.12+, with [uv](https://docs.astral.sh/uv/) for packaging, ruff for
+lint and format, and pytest.** uv consolidates pip, pip-tools, virtualenv and version management into
+one Rust binary with a cross-platform `uv.lock`, and is stable and widely used in production. The
+alternative is Poetry, whose lockfile is platform-agnostic where uv's is resolved across markers; for
+a service deployed to one target that difference does not pay for the slower toolchain.
+
+**HTTP and streaming: [FastAPI](https://fastapi.tiangolo.com/).** The Gateway is the Data Plane's only
+ingress and terminates the Run event stream over SSE
+([`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md),
+[`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md)).
+[Litestar](https://litestar.dev/) benchmarks faster on serialization, and that is the wrong axis here:
+the latency this platform owns is dominated by two durable writes per Step — the fail-closed Policy
+Decision ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)) and the checkpoint — not
+by framework overhead. Ecosystem breadth and the number of engineers who already know it win.
+
+**Compilation target: the MIT LangGraph packages only** — `langgraph`, `langgraph-checkpoint` and
+`langgraph-checkpoint-postgres`. Nothing may depend on `langgraph-api` or `langgraph-runtime-inmem`
+(Elastic-2.0). ADR-0014 requires a licence assertion over the dependency tree in CI, not review.
+
+## 3. Datastore — PostgreSQL
+
+**PostgreSQL, with `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY` on every tenant-scoped
+table.** ADR-0011 fixes the model and selects no engine; Postgres is the recommendation because RLS
+is a first-class server feature there and the same instance can carry the LangGraph checkpointer,
+the supervisor's queue and the audit store. **This needs an ADR** — the engine is load-bearing for
+isolation, the supervisor and the checkpointer at once.
+
+**The pooling rule is not optional.** Under a transaction-mode pooler such as PgBouncer, a server
+connection returns to the pool at COMMIT carrying whatever session state was left on it, so a tenant
+set with `SET` leaks into the next request that borrows that connection. Tenant context MUST be set
+with `SET LOCAL` inside an explicit transaction, which expires exactly when the connection is
+returned. [`../70-delivery/testing-strategy.md`](../70-delivery/testing-strategy.md) already names
+this as a guarantee that fails silently, and it is why the isolation test runs through the pooler
+rather than a direct connection.
+
+**Testing it: real Postgres, two tenants, in CI.** Testcontainers for an ephemeral instance, and
+[pgTAP](https://pgtap.org/) or an equivalent for policy-level assertions. A single-tenant test passes
+under broken isolation, so the test is two tenants or it is not a test.
+
+## 4. The run supervisor
+
+**Start on PostgreSQL: `SELECT ... FOR UPDATE SKIP LOCKED` for the queue, a lease column with an
+expiry for worker liveness, and a scheduled wake-up table.** Workers pull without a broker, and the
+enqueue commits in the same transaction as the state change it follows, which is what makes
+exactly-once handoff possible at all.
+
+**The alternative is [Temporal](https://temporal.io/).** It is materially better at three things:
+patching in-flight executions, visibility queries across many runs, and throughput under high
+concurrency, where Postgres lock contention and autovacuum pressure on a hot history table become
+real. It costs several services plus a persistence store and a visibility store to operate.
+
+**This is exactly what M2 has to answer.** [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)
+leaves the supervisor's size open and
+[`../70-delivery/milestones.md`](../70-delivery/milestones.md) makes sizing it the gate before an MVP
+is committed to. If sizing shows the supervisor is a substantial distributed runtime, that is the
+signal to buy Temporal rather than build — and ADR-0015 notes it would also threaten the positioning.
+
+## 5. Control plane — TypeScript
+
+**Next.js 16 with React 19, Tailwind 4 and shadcn, duplicated per surface**, which the template
+already fixes. Its route handlers are the control plane's own API: the administrative surface is
+co-located with the UI that uses it, and whether the administrative API is the same contract as the
+Gateway is registered open in
+[`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 6.
+
+**Not NestJS, and not a separate Hono service, yet.** NestJS's structure is a tax below a certain team
+size, and a second service earns its keep only when the admin API outgrows the UI it serves. If it
+does, Hono is the light option that runs on the same runtimes.
+
+## 6. Identity and credentials
+
+**Buy enterprise identity; do not build SAML and SCIM.** A managed broker —
+[WorkOS](https://workos.com/) or an equivalent — delivers a working enterprise connection in hours,
+against certificate rotation, metadata parsing and per-IdP quirks maintained forever in-house. Buy
+becomes correct at a handful of enterprise customers a year, which ADR-0001's segment assumes from
+the first deal. **Self-hosted identity is the exception:** where a contract requires it,
+[Keycloak](https://www.keycloak.org/) is the realistic answer.
+
+The broker authenticates **Platform Users**. It does not issue Session Tokens for End Users — those
+are Orchestra's own, because the Gateway resolves every credential to exactly one Principal and one
+Tenant ([`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) G3 to G7), and
+`gateway-api.md` section 3 already registers the replayed-mint security question against them.
+
+**BYOK credential custody: envelope encryption with a per-Tenant data key wrapped by a KMS key, and
+the Tenant bound into the encryption context.** The encryption context costs nothing, becomes an IAM
+condition and an audit dimension, and omitting it is the common avoidable mistake. Cache unwrapped
+data keys with a bounded lifetime — per-tenant encryption otherwise generates KMS call volume
+proportional to traffic. ADR-0002 rates credential compromise **existential** and requires provably
+no plaintext in logs, traces or backups.
+
+## 7. Observability — and what it is not
+
+**OpenTelemetry**, which [graduated in the CNCF in May 2026](https://opentelemetry.io/) and whose
+traces and metrics APIs are stable across the SDKs; logs are less uniform and should be treated as the
+least settled leg. Export OTLP and keep the backend replaceable.
+
+**Telemetry is not the audit trail, and the distinction is normative.**
+[`../40-governance/audit-model.md`](../40-governance/audit-model.md) A6 forbids reconstructing an
+Audit Record from logs, traces or metrics, and forbids presenting them as the trail. Sampling, the
+technique that makes telemetry affordable, is precisely what a control cannot tolerate.
+
+## 8. Model access
+
+Customers bring their own keys, so the broker holds credentials and endpoints for whichever providers
+a Tenant uses; it does not choose between them ([ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md)).
+Use each provider's official SDK at the edge, behind the broker, so no provider type reaches a public
+contract (CLAUDE.md working rule 2). For Anthropic that is the `anthropic` Python SDK; current models
+are `claude-opus-5`, `claude-sonnet-5` and `claude-haiku-4-5`.
+
+## 9. Deployment
+
+**Containers on ECS Fargate, with Terraform.** For a small team below roughly fifteen services, ECS
+is operable by generalists, has no per-cluster control-plane charge, and reaches production faster
+than EKS. **Kubernetes is the deliberate alternative** and the right one once a platform team exists
+or the service count grows; the migration is measured in weeks per environment, which is a real but
+bounded cost — worth paying later rather than paying for a platform team now.
+
+This is the least settled section here. [`deployment-topologies.md`](deployment-topologies.md)
+registers data residency as ADR-required, and a residency answer can force the cloud and the region
+layout before any of this is chosen.
+
+## 10. Open questions
+
+| Question | Decided by | ADR required? |
+| --- | --- | --- |
+| The datastore engine, which section 3 recommends and no record selects | An architecture decision constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security | **Yes** |
+| Whether the run supervisor is built on Postgres or bought as Temporal | The M2 sizing in [`../70-delivery/milestones.md`](../70-delivery/milestones.md), which [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) requires before an MVP | **Yes** |
+| Which side of the Python-to-TypeScript boundary the compiler sits on, and what artifact crosses | [`data-plane.md`](data-plane.md), assigned by [`containers.md`](containers.md) section 12 | **Yes** — repeated |
+| The identity broker, and whether a self-hosted option must be supported from the start | A design partner's procurement requirements | No |
+| The cloud and the deployment target, which data residency may decide first | [`deployment-topologies.md`](deployment-topologies.md) | **Yes** — repeated |
+| Whether the administrative API is the Gateway contract or its own | [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 6 | No — repeated |

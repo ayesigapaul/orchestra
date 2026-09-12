@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AG-UI Evaluation — diagrams</title>
+<style>
+:root { color-scheme: light dark; --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff;
+  --line: #e7e5e4; --link: #1d4ed8; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0c0a09; --fg: #f5f5f4; --muted: #a8a29e;
+  --card: #1c1917; --line: #292524; --link: #93c5fd; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+header, main, footer { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+header { padding-top: 32px; padding-bottom: 8px; }
+h1 { font-size: 26px; margin: 4px 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.crumbs, .meta, footer { color: var(--muted); font-size: 13px; margin: 0; }
+footer { padding-top: 8px; padding-bottom: 40px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.diagram { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; margin: 20px 0; }
+.frame { overflow-x: auto; }
+pre.mermaid { margin: 0; text-align: center; background: transparent; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre.src { overflow-x: auto; margin: 8px 0 0; padding: 12px; border-radius: 6px; background: var(--bg);
+  font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.offline { color: var(--muted); }
+.group h2 { margin: 28px 0 10px; }
+ul.docs { list-style: none; padding: 0; margin: 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; }
+ul.docs li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 16px;
+  border-top: 1px solid var(--line); }
+ul.docs li:first-child { border-top: 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+</head>
+<!-- Generated from docs/80-reference/ag-ui-evaluation.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
+<body>
+<header>
+  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../80-reference/ag-ui-evaluation.md">Source document</a></p>
+  <h1>AG-UI Evaluation</h1>
+  <p class="meta">docs/80-reference/ag-ui-evaluation.md · 1 diagram</p>
+</header>
+<main>
+<section class="diagram" id="diagram-1">
+  <h2>2. What was checked, and how far it can be trusted</h2>
+  <div class="frame"><pre class="mermaid">
+flowchart LR
+  SPEC["AG-UI draft specification"]
+  SPEC --&gt; S1["Supplies: 31 event types, 8 families"]
+  SPEC --&gt; S2["Supplies: state snapshot and JSON Patch delta"]
+  SPEC --&gt; S3["Supplies: metadata, open by key, never stripped"]
+  SPEC -.-&gt; N1["Absent: sequence number and event id"]
+  SPEC -.-&gt; N2["Absent: replay and resumption"]
+  SPEC -.-&gt; N3["Absent: tenant and credential model"]
+  S3 --&gt; ORCH["Orchestra builds on top"]
+  N1 --&gt; ORCH
+  N2 --&gt; ORCH
+  N3 --&gt; ORCH
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">flowchart LR
+  SPEC["AG-UI draft specification"]
+  SPEC --&gt; S1["Supplies: 31 event types, 8 families"]
+  SPEC --&gt; S2["Supplies: state snapshot and JSON Patch delta"]
+  SPEC --&gt; S3["Supplies: metadata, open by key, never stripped"]
+  SPEC -.-&gt; N1["Absent: sequence number and event id"]
+  SPEC -.-&gt; N2["Absent: replay and resumption"]
+  SPEC -.-&gt; N3["Absent: tenant and credential model"]
+  S3 --&gt; ORCH["Orchestra builds on top"]
+  N1 --&gt; ORCH
+  N2 --&gt; ORCH
+  N3 --&gt; ORCH</pre></details>
+</section>
+</main>
+<footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'strict' });
+  } else {
+    document.getElementById('offline').hidden = false;
+  }
+</script>
+</body>
+</html>

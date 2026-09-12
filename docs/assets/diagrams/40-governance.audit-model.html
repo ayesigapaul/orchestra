@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit Model — diagrams</title>
+<style>
+:root { color-scheme: light dark; --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff;
+  --line: #e7e5e4; --link: #1d4ed8; }
+@media (prefers-color-scheme: dark) { :root { --bg: #0c0a09; --fg: #f5f5f4; --muted: #a8a29e;
+  --card: #1c1917; --line: #292524; --link: #93c5fd; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+header, main, footer { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+header { padding-top: 32px; padding-bottom: 8px; }
+h1 { font-size: 26px; margin: 4px 0; }
+h2 { font-size: 17px; margin: 0 0 12px; }
+.crumbs, .meta, footer { color: var(--muted); font-size: 13px; margin: 0; }
+footer { padding-top: 8px; padding-bottom: 40px; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.diagram { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 20px; margin: 20px 0; }
+.frame { overflow-x: auto; }
+pre.mermaid { margin: 0; text-align: center; background: transparent; }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+pre.src { overflow-x: auto; margin: 8px 0 0; padding: 12px; border-radius: 6px; background: var(--bg);
+  font: 12.5px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.offline { color: var(--muted); }
+.group h2 { margin: 28px 0 10px; }
+ul.docs { list-style: none; padding: 0; margin: 0; background: var(--card);
+  border: 1px solid var(--line); border-radius: 10px; }
+ul.docs li { display: flex; justify-content: space-between; gap: 16px; padding: 10px 16px;
+  border-top: 1px solid var(--line); }
+ul.docs li:first-child { border-top: 0; }
+.count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+</style>
+</head>
+<!-- Generated from docs/40-governance/audit-model.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
+<body>
+<header>
+  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../40-governance/audit-model.md">Source document</a></p>
+  <h1>Audit Model</h1>
+  <p class="meta">docs/40-governance/audit-model.md · 1 diagram</p>
+</header>
+<main>
+<section class="diagram" id="diagram-1">
+  <h2>2. The eight properties of an Audit Record</h2>
+  <div class="frame"><pre class="mermaid">
+flowchart TD
+  subgraph SRC["Governed acts — each MUST produce an Audit Record"]
+    APR["Approval raise, each decision, chain amendment, resolution"]
+    RUN["Run and Step Execution transitions"]
+    ADM["Administrative acts&lt;br/&gt;publish, retire, grant, revoke, enrol"]
+    ACC["Credential and audit access; Platform User authentication"]
+  end
+  SRC --&gt; AR["Audit Record&lt;br/&gt;append-only, immutable, tenant-scoped&lt;br/&gt;exactly one Principal"]
+  PEP["Policy Decision at a PEP&lt;br/&gt;allow, deny, require_approval"]
+  PEP -. "is a class of Audit Record — ADR-0012&lt;br/&gt;durable before the gated action — ADR-0013" .-&gt; AR
+  PEP --&gt;|"references by version, never embeds the rule"| PV["Policy version&lt;br/&gt;immutable; retained while any record names it"]
+  AR --&gt;|"a correction appends, never edits"| AR
+  AR --&gt; QRY["Control Plane audit surface&lt;br/&gt;a read is itself audited&lt;br/&gt;the compiled artifact is not returned"]
+  AR --&gt; REC["Meter reconciliation, by shared identifier"]
+  AR --&gt; EXP["Tenant export — required, undesigned"]
+  TEL["Telemetry — metrics, traces, logs&lt;br/&gt;no Principal, no Policy basis"]
+  TEL -. "boundary undecided for Connector health" .-&gt; AR
+</pre></div>
+  <details><summary>Mermaid source</summary><pre class="src">flowchart TD
+  subgraph SRC["Governed acts — each MUST produce an Audit Record"]
+    APR["Approval raise, each decision, chain amendment, resolution"]
+    RUN["Run and Step Execution transitions"]
+    ADM["Administrative acts&lt;br/&gt;publish, retire, grant, revoke, enrol"]
+    ACC["Credential and audit access; Platform User authentication"]
+  end
+  SRC --&gt; AR["Audit Record&lt;br/&gt;append-only, immutable, tenant-scoped&lt;br/&gt;exactly one Principal"]
+  PEP["Policy Decision at a PEP&lt;br/&gt;allow, deny, require_approval"]
+  PEP -. "is a class of Audit Record — ADR-0012&lt;br/&gt;durable before the gated action — ADR-0013" .-&gt; AR
+  PEP --&gt;|"references by version, never embeds the rule"| PV["Policy version&lt;br/&gt;immutable; retained while any record names it"]
+  AR --&gt;|"a correction appends, never edits"| AR
+  AR --&gt; QRY["Control Plane audit surface&lt;br/&gt;a read is itself audited&lt;br/&gt;the compiled artifact is not returned"]
+  AR --&gt; REC["Meter reconciliation, by shared identifier"]
+  AR --&gt; EXP["Tenant export — required, undesigned"]
+  TEL["Telemetry — metrics, traces, logs&lt;br/&gt;no Principal, no Policy basis"]
+  TEL -. "boundary undecided for Connector health" .-&gt; AR</pre></details>
+</section>
+</main>
+<footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+<script>
+  if (window.mermaid) {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.mermaid.initialize({ startOnLoad: true, theme: dark ? 'dark' : 'default', securityLevel: 'strict' });
+  } else {
+    document.getElementById('offline').hidden = false;
+  }
+</script>
+</body>
+</html>
