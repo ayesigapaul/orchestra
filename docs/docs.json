@@ -163,6 +163,7 @@
               "adr/adr-0021-postgresql-is-the-datastore",
               "adr/adr-0022-tenant-user-management-owns-tenancy",
               "adr/adr-0023-no-foreign-key-constraints",
+              "adr/adr-0024-global-person-with-tenant-memberships",
               "adr/adr-template"
             ]
           },
@@ -568,6 +569,10 @@
     {
       "source": "/adr/adr-0023-no-foreign-key-constraints.md",
       "destination": "/adr/adr-0023-no-foreign-key-constraints"
+    },
+    {
+      "source": "/adr/adr-0024-global-person-with-tenant-memberships.md",
+      "destination": "/adr/adr-0024-global-person-with-tenant-memberships"
     },
     {
       "source": "/adr/adr-template.md",

@@ -1,7 +1,7 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.8.0
+version: 0.9.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -35,8 +35,10 @@ entity and its reachability edge depend. That dependency is marked where it occu
 These are normative. Every entity and relationship below is subject to them.
 
 **I1 — Tenant scoping is universal.** Every persisted record, every emitted event and every log line
-MUST carry a tenant identifier. No entity here is exempt. Isolation is enforced by row-level security
-in the datastore, not by application code
+MUST carry a tenant identifier, with one exception: a Person is global, and a Tenant sees it only
+through its own Membership, under the same forced row-level security
+([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)). Isolation is enforced by
+row-level security in the datastore, not by application code
 ([ADR-0001](../adr/adr-0001-product-shape-multi-tenant-saas.md),
 [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)): a missing tenant predicate in
 application code MUST NOT be sufficient on its own to cross a tenant boundary. Tenant ownership is
@@ -95,7 +97,8 @@ who approved, audit records who requested, and only then can seats be counted.
 | End User | Tenant, as a Principal | Disjoint subtype of Principal | Measurement — **never seat-billed** |
 | Service Account | Tenant, as a Principal | Disjoint subtype of Principal | Machine-to-machine attribution |
 | Connector | Tenant, as a Principal | Disjoint subtype of Principal | Reachability — see section 5 |
-| Person | Tenant | Tenant 1 : 0..* Person; a Person has at most one Platform User and at most one End User | A human's attributes, held once per Tenant |
+| Person | None — global, and visible to a Tenant only through a Membership | One per human | A human's attributes, held once across every Tenant |
+| Membership | Tenant | Person 1 : 0..* Membership; a Membership has at most one Platform User and at most one End User | A Person's place in one Tenant |
 | Session Token | Principal | Principal 1 : 0..* Session Token | Short-lived client authority |
 
 **Workspace is optional and is not an isolation boundary.** An Agent, Workflow, Connector or Policy
@@ -111,14 +114,14 @@ attributable in the same audit trail as a human approval, with no second attribu
 orders of magnitude — tens to hundreds of administrators against a potentially very large embedded
 population — and mispricing that distinction is the failure ADR-0009 exists to prevent.
 
-**A person administering two Tenants is two Principals**, by I1 and I2 together: a Principal is
-tenant-scoped, so no record spans Tenants to hold one person, and for metering that person is two
-Platform Users. The same holds for the human behind them: **one Person per Tenant is the single
-record of a human's attributes**
-([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)). A Platform User and an End
-User each refer to exactly one Person, a Person is never a Principal and never acts, and the same
-human in two Tenants is two Persons that nothing in Orchestra joins. Which credential class a Service
-Account authenticates with belongs to
+**A person administering two Tenants is two Principals, and one Person.** A Principal is
+tenant-scoped, so for metering that person is still two Platform Users. The human behind them is
+recorded once: **a Person is global, and each Tenant holds a Membership for it**
+([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)). A Platform User and an End
+User each belong to exactly one Membership, a Person never acts, and a Tenant sees a Person only
+through its own Membership. Only a subject the identity provider verified joins Memberships across
+Tenants; an End User vouched for by a customer's backend is a Person known to that Tenant alone.
+Which credential class a Service Account authenticates with belongs to
 [`identity-and-access.md`](../10-architecture/identity-and-access.md).
 
 **Platform operator action has no Principal subtype.** Work Orchestra performs on its own behalf —
@@ -157,9 +160,10 @@ erDiagram
   PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
   PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
   PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
-  TENANT ||--o{ PERSON : "knows"
-  PERSON ||--o| PLATFORM_USER : "acts as"
-  PERSON ||--o| END_USER : "acts as"
+  PERSON ||--o{ MEMBERSHIP : "belongs through"
+  TENANT ||--o{ MEMBERSHIP : "holds"
+  MEMBERSHIP ||--o| PLATFORM_USER : "acts as"
+  MEMBERSHIP ||--o| END_USER : "acts as"
   TENANT ||--o{ AGENT : "owns"
   TENANT ||--o{ WORKFLOW : "owns"
   WORKSPACE |o--o{ AGENT : "scopes"

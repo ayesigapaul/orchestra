@@ -81,13 +81,16 @@ flowchart TD
   A21 --&gt; A22
   A20 --&gt; A23["ADR-0023&lt;br/&gt;No foreign key constraints"]
   A21 --&gt; A23
+  A22 -.-&gt;|superseded by| A24["ADR-0024&lt;br/&gt;Global Person, Tenant Memberships"]
+  A17 --&gt; A24
+  A23 --&gt; A24
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A22,A23 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24 accepted;
   class A4,A7,A10 proposed;
-  class A3,A5,A8 superseded;
+  class A3,A5,A8,A22 superseded;
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">flowchart TD
   A1["ADR-0001&lt;br/&gt;Multi-tenant SaaS"] --&gt; A2["ADR-0002&lt;br/&gt;Enterprise + BYOK"]
@@ -121,13 +124,16 @@ flowchart TD
   A21 --&gt; A22
   A20 --&gt; A23["ADR-0023&lt;br/&gt;No foreign key constraints"]
   A21 --&gt; A23
+  A22 -.-&gt;|superseded by| A24["ADR-0024&lt;br/&gt;Global Person, Tenant Memberships"]
+  A17 --&gt; A24
+  A23 --&gt; A24
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A22,A23 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24 accepted;
   class A4,A7,A10 proposed;
-  class A3,A5,A8 superseded;</pre></details>
+  class A3,A5,A8,A22 superseded;</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

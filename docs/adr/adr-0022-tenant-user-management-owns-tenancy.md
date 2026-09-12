@@ -1,13 +1,13 @@
 ---
 title: "ADR-0022: A Tenant User Management service owns Tenants, Persons and Principals"
 adr_id: ADR-0022
-status: Accepted
+status: Superseded
 date: 2026-09-13
 deciders: [product-owner, platform-architecture]
 consulted: []
 informed: []
 supersedes: []
-superseded_by: []
+superseded_by: [ADR-0024]
 tags: [tenancy, identity, architecture, services]
 depends_on: [ADR-0011, ADR-0016, ADR-0017, ADR-0020, ADR-0021]
 ---
@@ -16,7 +16,12 @@ depends_on: [ADR-0011, ADR-0016, ADR-0017, ADR-0020, ADR-0021]
 
 ## Status
 
-Accepted.
+**Superseded by [ADR-0024](adr-0024-global-person-with-tenant-memberships.md).**
+
+The service decision below — that Tenant User Management owns Tenants, Workspaces, Persons and
+Principals, resolves credentials for the Gateway and fails closed — is carried forward unchanged.
+What ADR-0024 replaces is the person model: one Person per Tenant becomes one global Person per human,
+with a Membership per Tenant. The text below is retained unedited.
 
 ## Context
 

@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -62,21 +62,19 @@ and auditor are one subtype ([`../00-overview/personas.md`](../00-overview/perso
 | Service Account | A machine caller into the Gateway, typically the customer's backend | Undecided; see section 3 | Not counted under ADR-0009 as written, which counts Principals authenticating to the Control Plane; whether that omission was intended is registered in `personas.md` section 5 |
 | Connector | Customer-deployed software proxying Tool traffic inward | Enrolment identity, provisional under **Proposed** [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) | No |
 
-**A person administering two Tenants is two Principals, and no record joins them.** Domain model
-section 11 routes here whether a cross-tenant person record exists behind the identity-provider
-integration. It does not: invariant I1 puts a tenant identifier on every record and
-[ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) filters by it in the engine, so
-such a record could not be read under a tenant predicate without a bypass — the argument
-`audit-model.md` makes as its rule A1. It would have to live outside that datastore, which
-[`multi-tenancy.md`](multi-tenancy.md) section 8 governs and nothing here needs; correlating one
-human across Tenants is the identity provider's job.
+**A person administering two Tenants is two Principals, and one Person.**
+[ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) reverses this document's
+earlier position that no record joins them. A global Person does, and it stays under forced
+row-level security without a tenant identifier: its policy admits a row only while the current
+Tenant holds a Membership for it, so each Tenant sees the Person through its own Membership and
+learns nothing of the others. The Principals are unchanged — still tenant-scoped, still two, and
+still what every action resolves to.
 
-**Within a Tenant, a human has one Person.**
-[ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md) makes the Person the single
-record of a human's attributes in a Tenant: a Platform User and an End User each refer to exactly
-one, and a Service Account and a Connector to none. A Person never authenticates and never acts, so
-nothing in the table above changes. It is where a name and an email live, so that no Principal and
-no other service keeps a copy.
+**What joins, and what does not.** Only a subject the identity provider verified links Memberships
+in different Tenants to one Person, and a Person's name and email come only from the identity
+provider. An End User a customer's backend vouches for is a Person known to that Tenant alone. A
+Service Account and a Connector have no Person, and no Principal and no other service keeps a copy
+of a person's attributes.
 
 ## 3. Authentication, by subtype
 
@@ -139,7 +137,7 @@ section 8 derives that much from ADR-0011. What follows here is only *who reads 
 container authenticates, which the paragraph above fixes as the Gateway for every Data Plane caller
 and the Control Plane for the federated Platform User. The record lives in Tenant User Management,
 which both of them call to resolve a caller
-([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)).
+([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
 
 ## 4. Tenant and Workspace are scope, not isolation
 

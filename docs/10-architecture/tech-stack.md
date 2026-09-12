@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.24.1
+version: 0.25.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -33,7 +33,7 @@ These are not open. They constrain everything below.
 | Apache APISIX is the edge in front of the Gateway, and is never the authorization boundary | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) |
 | The run supervisor is built on PostgreSQL, with Temporal as the named fallback | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
 | The datastore is PostgreSQL: row-level security forced on every tenant-scoped table, tenant context set per transaction, through a transaction-mode pooler | [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) |
-| Tenants, Workspaces, Persons and Principals belong to the Tenant User Management service, one Person per Tenant, and the Gateway resolves every credential through it | [ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md) |
+| Tenants, Workspaces, Persons and Principals belong to the Tenant User Management service, and the Gateway resolves every credential through it; a Person is global, with a Membership per Tenant | [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) |
 | No table carries a foreign key constraint; a reference is an identifier, and a row-level security write policy refuses a reference to another Tenant's row | [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
@@ -61,7 +61,7 @@ snapshot, and it goes stale on the next release.
 | Next.js | 16.3.5 | |
 | React | 19.3.0 | |
 | Tailwind CSS | 4.3.3 | |
-| Hono | 4.13.7, with `@hono/node-server` 2.1.1 | HTTP for TypeScript services ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)); they run on Node.js by type stripping, with no build step |
+| Hono | 4.13.7, with `@hono/node-server` 2.1.1 | HTTP for TypeScript services ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)); they run on Node.js by type stripping, with no build step |
 | Zod | 4.6.2 | |
 | Pino | 10.3.1 | |
 | Vitest | 5.0.0 | |
@@ -156,7 +156,7 @@ Gateway is registered open in
 
 **Not NestJS.** Its structure is a tax below a certain team size. The administrative API stays in the
 UI's route handlers until a second service earns its keep, and one already has: Tenant User
-Management ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)) is a separate
+Management ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) is a separate
 service on Hono, the light option that runs on the same runtimes, structured as ports and adapters.
 
 ## 6. Identity and credentials

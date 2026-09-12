@@ -1,7 +1,7 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.15.0
+version: 0.15.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -91,7 +91,7 @@ arise in the Data Plane but are recorded by a Control Plane container.
 | --- | --- |
 | Agents and Workflows | Admin Console → Control Plane API → Definition Compiler at publish |
 | Policies and Approvals | Admin Console → Control Plane API |
-| Tenant and access | Admin Console → Control Plane API → Tenant User Management, which owns Tenants, Workspaces, Persons and Principals ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)) |
+| Tenant and access | Admin Console → Control Plane API → Tenant User Management, which owns Tenants, Workspaces, Persons and Principals ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) |
 | Audit | Admin Console → Control Plane API, reading the datastore |
 | Usage | Admin Console → Control Plane API, reading what Metering wrote |
 | Tool Catalog and Connectors | Admin Console → Control Plane API; the Connector fabric it enrols is a **planned** Data Plane container |

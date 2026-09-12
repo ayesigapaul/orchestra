@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.25.1
+version: 0.26.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,34 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.26.0] — 2026-09-13
+
+A person is recorded once. ADR-0024 replaces one Person per Tenant with one global Person per human
+and a Membership per Tenant, and keeps every isolation property in the database.
+
+### Added
+
+- [ADR-0024](adr/adr-0024-global-person-with-tenant-memberships.md), superseding ADR-0022 — a
+  global Person under forced row-level security whose policy admits a row only through the current
+  Tenant's Membership, written only through linking functions, with name and email taken only from
+  the identity provider. End Users vouched for by a customer's backend stay known to one Tenant.
+  Every property was checked on PostgreSQL 18.6, including the flaw that shaped the design: its
+  first version let one Tenant's asserted name become what another Tenant saw.
+- **Membership**, in `GLOSSARY.md` and the domain model.
+
+### Changed
+
+- ADR-0022 is marked superseded; its service decision carries forward in ADR-0024.
+- `GLOSSARY.md`, `20-domain/domain-model.md`, whose invariant I1 gains its one exception, and
+  `10-architecture/identity-and-access.md` section 2 describe the global Person.
+- `40-governance/threat-model.md` T4 and `10-architecture/multi-tenancy.md` sections 4, 5 and 7 add
+  the Person table's controls, the linking role as a privileged path, and the Person store's place
+  in the promotion path.
+- References to ADR-0022 in `containers.md`, `control-plane.md`, `multi-tenancy.md` and
+  `tech-stack.md` now point at ADR-0024.
 
 ---
 

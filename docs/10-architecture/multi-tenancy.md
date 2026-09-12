@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -104,13 +104,15 @@ that test is deployment-shaped, and belongs with the container owning the pool
 
 ## 4. Roles and the privileged paths
 
-Three role classes, separated because one of them can turn the mechanism off.
+Five role classes, separated because two of them can turn the mechanism off.
 
 | Role | Used by | Relationship to row-level security |
 | --- | --- | --- |
 | Application role | Gateway, Runtime, Policy Enforcement Points | Subject to it; sets context per transaction |
 | Migration/owner role | Schema migration only | Owns tables; forced policy still applies, but it can alter policy |
 | Operator role | Support, metering aggregation, incident response | Deliberately cross-tenant; boundary B6 of [`../40-governance/threat-model.md`](../40-governance/threat-model.md) |
+| Linking role | The functions that create Persons and Memberships, and nothing else ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) | Bypasses it by design; cannot log in and owns only those functions, so each function is as security-critical as a policy |
+| Identity-sync role | Recording a Person's name and email from the identity provider | Subject to it; may execute only the function that records Person attributes, which runs as the linking role |
 
 Forcing row-level security removes the ordinary owner exemption, but ownership still carries the
 right to change the policy. Ownership is therefore a privileged path in its own right, not a solved
@@ -133,7 +135,7 @@ ADR-0011 makes the build the control rather than a reviewer's memory, which requ
 know which tables are tenant-scoped.
 
 **Derived from invariant I1, the exempt set is the maintained list, not the scoped set.** I1
-puts a tenant identifier on every persisted record and exempts no entity, so the check treats every
+puts a tenant identifier on every persisted record except a Person, so the check treats every
 table as tenant-scoped by default and requires an explicit, reviewed exemption entry for any that is
 not. A list of what is scoped would omit the new table, which is precisely the failure the check
 exists to catch; a list of what is exempt cannot, because a new table is scoped by omission.
@@ -153,6 +155,13 @@ Two more follow from [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md). 
 any `FOREIGN KEY` constraint in a service schema, and on a reference column whose table's write
 policy carries no existence clause for it, because a policy that forgets one admits a cross-tenant
 identifier without complaint.
+
+Three more follow from [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md). The
+Person table is not an exemption: the check passes it only with row-level security enabled and
+forced, a policy that admits a row through the current Tenant's Membership, and no insert or update
+privilege for the application role. The linking role is the one role allowed a bypass attribute,
+and only while it cannot log in and owns nothing but the linking functions. And a reference column
+in a table the application role cannot write is checked by those functions, not by a write policy.
 
 ## 6. Cross-tenant references — why filtering is not forbidding
 
@@ -201,9 +210,12 @@ all tenants share one connection. What that forbids, in practice:
    connection, no ambient handle, no "the database" as a global. The tenant directory it reads is
    the one store legitimately reachable without tenant context, and holds routing facts only; Tenant
    User Management owns it
-   ([ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md)). The name is descriptive
+   ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)). The name is descriptive
    rather than a term of [`../GLOSSARY.md`](../GLOSSARY.md): it is a routing lookup, and a later
-   document is free to call it something else.
+   document is free to call it something else. The Person store is the other global one: a
+   promoted Tenant keeps its Memberships and still reads Persons from the shared store, because a
+   Person belongs to no single Tenant
+   ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
 2. **No cross-tenant join, foreign key or transaction anywhere.** Each works today and cannot work
    after a move. There is no foreign key constraint at all
    ([ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md)), and the section 6 write policies
