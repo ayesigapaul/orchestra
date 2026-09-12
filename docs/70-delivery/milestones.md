@@ -1,7 +1,7 @@
 ---
 title: Milestones
 doc_id: DOC-082
-version: 0.17.0
+version: 0.20.0
 status: Draft
 last_updated: 2026-09-11
 owners: [platform-architecture]
@@ -54,7 +54,10 @@ partner, and `60-operations/runbooks/` waits for something to operate.
 **Entry:** M1.
 **Exit:** a written answer to whether the run supervisor is glue around an executor or a substantial
 distributed runtime, with the responsibilities of
-[ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) enumerated against it.
+[ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) enumerated against it. The substrate is
+no longer part of this question — [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) fixes it as
+PostgreSQL, with Temporal as the named fallback — so what remains is the effort, estimated against a
+known target.
 
 This milestone exists alone rather than folded into M3 because its outcome changes the plan, and in
 one direction it changes the positioning: ADR-0015 notes that a platform mostly building a

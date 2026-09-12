@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.19.2
+version: 0.20.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -18,6 +18,31 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.20.0] — 2026-09-12
+
+The run supervisor's substrate decided, which was half of the question gating an MVP.
+
+### Added
+
+- [ADR-0019](adr/adr-0019-postgres-run-supervisor.md) — the run supervisor is built on PostgreSQL,
+  with Temporal as the named fallback and its triggers recorded in advance. The reason is
+  correctness before cost: with the queue in the same database as the state, the record of what
+  happened and the work that follows from it commit in one transaction, where any separate
+  orchestrator would make that a two-system write. Temporal is better at patching executions in
+  flight, at visibility queries across many Runs, and at throughput under concurrency — none of
+  which this platform has measured, and buying it now would put a vendor on the execution path of
+  every Run, on top of the two stateful services adopted the same week.
+- What keeps the fallback affordable is stated as a requirement rather than an aspiration: nothing
+  above the supervisor may depend on the queue being a table.
+
+### Changed
+
+- `10-architecture/tech-stack.md` section 4 and `70-delivery/milestones.md` M2 — the substrate is no
+  longer an open question. **M2 still stands**: ADR-0019 fixes what it is built on, not how large it
+  is, and that estimate is still the gate before an MVP is committed to.
 
 ---
 

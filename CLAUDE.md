@@ -40,6 +40,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0016 | The compilation target is the LangGraph library, never its server | Accepted |
 | 0017 | Keycloak is the identity provider, self-hosted | Accepted |
 | 0018 | Apache APISIX is the edge, in front of the Gateway | Accepted |
+| 0019 | Run supervisor on PostgreSQL; Temporal is the named fallback | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

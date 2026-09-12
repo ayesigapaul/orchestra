@@ -151,6 +151,7 @@
               "adr/adr-0016-compile-to-the-langgraph-library",
               "adr/adr-0017-keycloak-for-identity",
               "adr/adr-0018-apisix-at-the-edge",
+              "adr/adr-0019-postgres-run-supervisor",
               "adr/adr-template"
             ]
           },
@@ -536,6 +537,10 @@
     {
       "source": "/adr/adr-0018-apisix-at-the-edge.md",
       "destination": "/adr/adr-0018-apisix-at-the-edge"
+    },
+    {
+      "source": "/adr/adr-0019-postgres-run-supervisor.md",
+      "destination": "/adr/adr-0019-postgres-run-supervisor"
     },
     {
       "source": "/adr/adr-template.md",
