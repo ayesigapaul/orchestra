@@ -1,9 +1,9 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.21.0
+version: 0.21.1
 status: Draft
-last_updated: 2026-09-12
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0006, ADR-0011, ADR-0014, ADR-0016]
 ---
@@ -52,10 +52,11 @@ snapshot, and it goes stale on the next release.
 | Python | 3.14.7 | 3.15 is at release candidate; not used until it is final |
 | PostgreSQL | 18.6 | 19 is in beta; not used until it is final |
 | Node.js | 24.21.0 | Active LTS. 26.8.2 is newer but not LTS until 2026-10-28, when it becomes the pin |
-| TypeScript | 7.0.2 | The first stable release on the native compiler |
+| TypeScript | 7.0.2 | The first stable release on the native compiler, and the `tsc` that type-checks in CI. It has no compiler API until 7.1, so its release notes direct installing the TypeScript 6 API beside it as `typescript` (`@typescript/typescript6` 6.0.2, which carries TypeScript 6.0.3). typescript-eslint and `next build`'s own check still run on that |
+| ESLint | 9.39.5 | 10.10.0 is newer, but `eslint-config-next` 16.3.5 bundles `eslint-plugin-react` 7.37.5, whose latest release calls `context.getFilename`, which ESLint 10 removed. Moves to 10 when that plugin supports it |
 | pnpm | 12.4.1 | |
-| Next.js | 16.3.5 | `ui-template/` is on 16.3.4 and must be bumped |
-| React | 19.3.0 | `ui-template/` is on 19.2.4 and must be bumped |
+| Next.js | 16.3.5 | |
+| React | 19.3.0 | |
 | Tailwind CSS | 4.3.3 | |
 | FastAPI | 0.141.1 | |
 | uvicorn | 0.52.4 | |

@@ -4,3 +4,12 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   msw: false
+
+# Floors for transitive dependencies with published advisories. They live here, not in
+# package.json: pnpm 11 stopped reading the "pnpm" field there, silently.
+overrides:
+  fast-uri: ^3.1.6
+  js-yaml: ^4.3.2
+  postcss: ^8.5.28
+  qs: ^6.16.0
+  sharp: ^0.35.4

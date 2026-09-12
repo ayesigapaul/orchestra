@@ -27,12 +27,14 @@ jobs:
       # defaults.run.working-directory applies to run steps only, so this action still
       # resolves package_json_file from the workspace root and must be told where to look.
       # It reads the pinned packageManager from there, keeping one source of truth.
-      - uses: pnpm/action-setup@v4
+      # v6.1.0 is the first release that installs pnpm 12, and the floating v6 tag still
+      # points behind it, so the exact release is pinned.
+      - uses: pnpm/action-setup@v6.1.0
         with:
           package_json_file: ui-template/control-plane/package.json
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "24.21.0"
           cache: pnpm
           cache-dependency-path: ui-template/control-plane/pnpm-lock.yaml
       - name: Install

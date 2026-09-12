@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # Build for linux/arm64 only — the k3s node is Apple Silicon (see CLAUDE.md §1).
-FROM node:22-alpine AS base
-RUN apk add --no-cache libc6-compat && npm i -g pnpm@10.33.0
+FROM node:24.21.0-alpine AS base
+# Keep in step with packageManager in package.json.
+RUN apk add --no-cache libc6-compat && npm i -g pnpm@12.4.1
 WORKDIR /app
 
 FROM base AS deps
