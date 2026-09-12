@@ -1,0 +1,40 @@
+[project]
+name = "orchestra-gateway"
+version = "0.1.0"
+description = "Orchestra Gateway: the Data Plane's only ingress."
+requires-python = ">=3.14,<3.15"
+# Exact pins: every dependency runs its latest stable release, pinned (tech-stack.md section 1.1).
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "pyjwt==2.14.0",
+    "cryptography==50.0.1",
+    "httpx==0.28.1",
+    "pydantic-settings==2.15.0",
+]
+
+[dependency-groups]
+dev = ["ruff==0.16.7", "pytest==9.1.1"]
+
+[tool.uv]
+# This service is an application, not a library: nothing installs it, so it has no build backend.
+package = false
+required-version = "==0.12.13"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["orchestra_gateway"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

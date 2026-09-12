@@ -1,0 +1,19 @@
+routes:
+  - id: gateway
+    uri: /*
+    plugins:
+      openid-connect:
+        client_id: apisix
+        client_secret: apisix-local-dev
+        discovery: http://keycloak:8080/realms/orchestra/.well-known/openid-configuration
+        bearer_only: true
+        use_jwks: true
+        realm: orchestra
+        # The Gateway verifies the credential itself and never reads identity from the edge
+        # (ADR-0018), so the edge does not offer it one.
+        set_userinfo_header: false
+    upstream:
+      type: roundrobin
+      nodes:
+        "gateway:8000": 1
+#END

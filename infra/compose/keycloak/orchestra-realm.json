@@ -1,0 +1,57 @@
+{
+  "realm": "orchestra",
+  "enabled": true,
+  "sslRequired": "none",
+  "clients": [
+    {
+      "clientId": "orchestra-gateway",
+      "name": "Orchestra Gateway (resource server)",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    },
+    {
+      "clientId": "orchestra-cli",
+      "name": "Local development command line",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "audience: orchestra-gateway",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "orchestra-gateway",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "apisix",
+      "name": "APISIX edge",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "apisix-local-dev",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "dev",
+      "enabled": true,
+      "email": "dev@orchestra.localhost",
+      "emailVerified": true,
+      "firstName": "Local",
+      "lastName": "Developer",
+      "credentials": [{ "type": "password", "value": "dev-local-only", "temporary": false }]
+    }
+  ]
+}

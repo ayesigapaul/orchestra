@@ -1,0 +1,6 @@
+# Standalone mode: routes come from apisix.yaml in this repository, not from etcd, so every route
+# is versioned and reviewed like code (ADR-0018 follow-on).
+deployment:
+  role: data_plane
+  role_data_plane:
+    config_provider: yaml
