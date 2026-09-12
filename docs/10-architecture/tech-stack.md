@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.20.0
+version: 0.21.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -33,9 +33,49 @@ These are not open. They constrain everything below.
 | Apache APISIX is the edge in front of the Gateway, and is never the authorization boundary | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md) |
 | The run supervisor is built on PostgreSQL, with Temporal as the named fallback | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
 
+### 1.1 Versions — latest stable, pinned exactly
+
+**Every technology runs its latest stable release, pinned to an exact version.** Not a floor like
+"3.12+", and not a floating range: a floor lets two environments disagree silently, and a range lets
+a dependency update change behaviour nobody reviewed. Upgrades are deliberate commits.
+
+Where a project publishes a long-term-support line, **latest stable means latest LTS** — the
+projects themselves mark non-LTS "current" lines as not for production. Node.js is the one affected
+today. Pre-releases, betas and release candidates are never used.
+
+Versions below were read from the registries — endoflife.date, PyPI, npm and GitHub releases — on
+2026-09-12, not from memory. Re-check them the same way before relying on this table; it is a
+snapshot, and it goes stale on the next release.
+
+| Technology | Pinned | Channel note |
+| --- | --- | --- |
+| Python | 3.14.7 | 3.15 is at release candidate; not used until it is final |
+| PostgreSQL | 18.6 | 19 is in beta; not used until it is final |
+| Node.js | 24.21.0 | Active LTS. 26.8.2 is newer but not LTS until 2026-10-28, when it becomes the pin |
+| TypeScript | 7.0.2 | The first stable release on the native compiler |
+| pnpm | 12.4.1 | |
+| Next.js | 16.3.5 | `ui-template/` is on 16.3.4 and must be bumped |
+| React | 19.3.0 | `ui-template/` is on 19.2.4 and must be bumped |
+| Tailwind CSS | 4.3.3 | |
+| FastAPI | 0.141.1 | |
+| uvicorn | 0.52.4 | |
+| Pydantic | 2.13.5 | |
+| uv | 0.12.13 | |
+| ruff | 0.16.7 | |
+| pytest | 9.1.1 | |
+| LangGraph | `langgraph` 1.2.11, `langgraph-checkpoint` 4.2.0, `langgraph-checkpoint-postgres` 3.1.2 | MIT packages only ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)) |
+| psycopg | 3.3.5 | |
+| Keycloak | 26.7.3 | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) recorded 26.7.0, current on its date |
+| Apache APISIX | 3.18.0 | |
+| PgBouncer | 1.25.2 | |
+| OpenTelemetry | Python SDK 1.44.0, Node SDK 0.222.0, Collector 0.160.0 | |
+| Terraform | 1.16.2 | |
+| Testcontainers (Python) | 4.15.0 | |
+| Anthropic SDK | Python 1.5.0, TypeScript 0.125.0 | At the broker's edge only |
+
 ## 2. Data plane — Python
 
-**Language and tooling: Python 3.12+, with [uv](https://docs.astral.sh/uv/) for packaging, ruff for
+**Language and tooling: Python 3.14, with [uv](https://docs.astral.sh/uv/) for packaging, ruff for
 lint and format, and pytest.** uv consolidates pip, pip-tools, virtualenv and version management into
 one Rust binary with a cross-platform `uv.lock`, and is stable and widely used in production. The
 alternative is Poetry, whose lockfile is platform-agnostic where uv's is resolved across markers; for
@@ -112,9 +152,9 @@ does, Hono is the light option that runs on the same runtimes.
 ## 6. Identity and credentials
 
 **[Keycloak](https://www.keycloak.org/), self-hosted, on the current release line** — 26.7.0 at the
-time of writing, which adds a native SCIM API in preview. Each Tenant maps to a Keycloak
-**Organization** within one realm, rather than a realm per customer, which keeps administration
-proportionate to the product instead of to the customer list.
+time of writing (26.7.3 is the pinned version), which adds a native SCIM API in preview. Each Tenant
+maps to a Keycloak **Organization** within one realm, rather than a realm per customer, which keeps
+administration proportionate to the product instead of to the customer list.
 [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) records the decision, what it costs — Orchestra
 now operates a security-critical stateful service, and SCIM is still preview — and the alternative
 it rejected, a managed broker priced per connection.

@@ -119,7 +119,18 @@ const config = {
   $schema: 'https://mintlify.com/docs.json',
   theme: 'mint',
   name: 'Orchestra',
-  colors: { primary: '#1f6f43', light: '#4ade80', dark: '#0d3b24' },
+  // Site description for SEO and AI indexing. Kept here rather than in the Mintlify dashboard:
+  // dashboard edits commit to docs.json, which this script regenerates, so they would be lost.
+  description:
+    'Orchestra is the governance layer for enterprise AI agents. Every consequential action is ' +
+    'checked against policy, approved by a person where required, and recorded as durable evidence.',
+  colors: { primary: '#10218b', light: '#7b8bf4', dark: '#081149' },
+  logo: {
+    light: '/assets/logo/orchestra-lockup-light.svg',
+    dark: '/assets/logo/orchestra-lockup-dark.svg',
+    href: '/',
+  },
+  favicon: '/assets/logo/favicon.svg',
   navigation: { tabs: [{ tab: 'Documentation', groups: ordered }] },
   redirects,
 };
