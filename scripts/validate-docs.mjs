@@ -33,10 +33,10 @@ function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
-      // index.md is a generated copy of the directory's README.md, written by
+      // section-index.md is a generated copy of the directory's README.md, written by
       // scripts/build-docs-nav.mjs because Mintlify will not serve a page named README and its
       // cloud build does not follow symlinks. Reading it would count the document twice.
-      if (entry === 'index.md') continue;
+      if (entry === 'section-index.md') continue;
     if (statSync(p).isDirectory()) {
       if (!SKIP_DIRS.has(entry)) walk(p, out);
     } else if (entry.endsWith('.md')) {

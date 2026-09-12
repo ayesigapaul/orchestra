@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.19.1
+version: 0.19.2
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -18,6 +18,21 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.19.2] — 2026-09-12
+
+The published site fixed for real, after two attempts that passed locally and failed in production.
+
+### Fixed
+
+- Section indexes are generated as `section-index.md`, with explicit redirects from the directory URL
+  and both README URLs. The two earlier attempts both worked under `mint dev` and 404ed on the
+  deployed site: a symlink, which the local server follows and the cloud build does not, and a file
+  named `index.md`, which the cloud build would not serve in a directory that also holds a README.
+  The name now collides with nothing, and the redirects no longer depend on Mintlify's own directory
+  behaviour, which was fighting ours and producing a redirect loop on the home page.
 
 ---
 

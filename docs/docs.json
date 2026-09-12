@@ -15,7 +15,7 @@
           {
             "group": "Start here",
             "pages": [
-              "index",
+              "section-index",
               "CHANGELOG",
               "GLOSSARY",
               "VERSIONING"
@@ -24,7 +24,7 @@
           {
             "group": "Overview",
             "pages": [
-              "00-overview/index",
+              "00-overview/section-index",
               "00-overview/personas",
               "00-overview/product-thesis",
               "00-overview/roadmap",
@@ -35,7 +35,7 @@
           {
             "group": "Architecture",
             "pages": [
-              "10-architecture/index",
+              "10-architecture/section-index",
               "10-architecture/connector",
               "10-architecture/containers",
               "10-architecture/control-plane",
@@ -50,7 +50,7 @@
           {
             "group": "Domain model",
             "pages": [
-              "20-domain/index",
+              "20-domain/section-index",
               "20-domain/domain-model",
               "20-domain/lifecycle-state-machines"
             ]
@@ -58,7 +58,7 @@
           {
             "group": "Protocol",
             "pages": [
-              "30-protocol/index",
+              "30-protocol/section-index",
               "30-protocol/event-protocol",
               "30-protocol/gateway-api",
               "30-protocol/ui-protocol"
@@ -67,13 +67,13 @@
           {
             "group": "Protocol/schemas",
             "pages": [
-              "30-protocol/schemas/index"
+              "30-protocol/schemas/section-index"
             ]
           },
           {
             "group": "Governance",
             "pages": [
-              "40-governance/index",
+              "40-governance/section-index",
               "40-governance/approval-workflows",
               "40-governance/audit-model",
               "40-governance/policy-model",
@@ -84,7 +84,7 @@
           {
             "group": "Workflows",
             "pages": [
-              "50-workflows/index",
+              "50-workflows/section-index",
               "50-workflows/execution-semantics",
               "50-workflows/step-types",
               "50-workflows/workflow-dsl"
@@ -93,7 +93,7 @@
           {
             "group": "Workflows/examples",
             "pages": [
-              "50-workflows/examples/index",
+              "50-workflows/examples/section-index",
               "50-workflows/examples/invoice-payment",
               "50-workflows/examples/purchase-approval",
               "50-workflows/examples/shipment-exception"
@@ -102,7 +102,7 @@
           {
             "group": "Operations",
             "pages": [
-              "60-operations/index",
+              "60-operations/section-index",
               "60-operations/observability",
               "60-operations/quotas-and-metering",
               "60-operations/reliability"
@@ -111,7 +111,7 @@
           {
             "group": "Delivery",
             "pages": [
-              "70-delivery/index",
+              "70-delivery/section-index",
               "70-delivery/compliance-roadmap",
               "70-delivery/milestones",
               "70-delivery/mvp-definition",
@@ -121,7 +121,7 @@
           {
             "group": "Reference",
             "pages": [
-              "80-reference/index",
+              "80-reference/section-index",
               "80-reference/a2ui-evaluation",
               "80-reference/ag-ui-evaluation",
               "80-reference/langgraph-evaluation",
@@ -132,7 +132,7 @@
           {
             "group": "Decisions (ADR)",
             "pages": [
-              "adr/index",
+              "adr/section-index",
               "adr/adr-0001-product-shape-multi-tenant-saas",
               "adr/adr-0002-enterprise-segment-and-byok",
               "adr/adr-0003-governance-layer-positioning",
@@ -157,7 +157,7 @@
           {
             "group": "Proposals (RFC)",
             "pages": [
-              "rfc/index"
+              "rfc/section-index"
             ]
           }
         ]
@@ -174,12 +174,16 @@
       "destination": "/00-overview/product-thesis"
     },
     {
+      "source": "/00-overview",
+      "destination": "/00-overview/section-index"
+    },
+    {
       "source": "/00-overview/README",
-      "destination": "/00-overview"
+      "destination": "/00-overview/section-index"
     },
     {
       "source": "/00-overview/README.md",
-      "destination": "/00-overview"
+      "destination": "/00-overview/section-index"
     },
     {
       "source": "/00-overview/roadmap.md",
@@ -222,12 +226,16 @@
       "destination": "/10-architecture/multi-tenancy"
     },
     {
+      "source": "/10-architecture",
+      "destination": "/10-architecture/section-index"
+    },
+    {
       "source": "/10-architecture/README",
-      "destination": "/10-architecture"
+      "destination": "/10-architecture/section-index"
     },
     {
       "source": "/10-architecture/README.md",
-      "destination": "/10-architecture"
+      "destination": "/10-architecture/section-index"
     },
     {
       "source": "/10-architecture/system-context.md",
@@ -246,12 +254,16 @@
       "destination": "/20-domain/lifecycle-state-machines"
     },
     {
+      "source": "/20-domain",
+      "destination": "/20-domain/section-index"
+    },
+    {
       "source": "/20-domain/README",
-      "destination": "/20-domain"
+      "destination": "/20-domain/section-index"
     },
     {
       "source": "/20-domain/README.md",
-      "destination": "/20-domain"
+      "destination": "/20-domain/section-index"
     },
     {
       "source": "/30-protocol/event-protocol.md",
@@ -262,20 +274,28 @@
       "destination": "/30-protocol/gateway-api"
     },
     {
+      "source": "/30-protocol",
+      "destination": "/30-protocol/section-index"
+    },
+    {
       "source": "/30-protocol/README",
-      "destination": "/30-protocol"
+      "destination": "/30-protocol/section-index"
     },
     {
       "source": "/30-protocol/README.md",
-      "destination": "/30-protocol"
+      "destination": "/30-protocol/section-index"
+    },
+    {
+      "source": "/30-protocol/schemas",
+      "destination": "/30-protocol/schemas/section-index"
     },
     {
       "source": "/30-protocol/schemas/README",
-      "destination": "/30-protocol/schemas"
+      "destination": "/30-protocol/schemas/section-index"
     },
     {
       "source": "/30-protocol/schemas/README.md",
-      "destination": "/30-protocol/schemas"
+      "destination": "/30-protocol/schemas/section-index"
     },
     {
       "source": "/30-protocol/ui-protocol.md",
@@ -294,12 +314,16 @@
       "destination": "/40-governance/policy-model"
     },
     {
+      "source": "/40-governance",
+      "destination": "/40-governance/section-index"
+    },
+    {
       "source": "/40-governance/README",
-      "destination": "/40-governance"
+      "destination": "/40-governance/section-index"
     },
     {
       "source": "/40-governance/README.md",
-      "destination": "/40-governance"
+      "destination": "/40-governance/section-index"
     },
     {
       "source": "/40-governance/threat-model.md",
@@ -318,12 +342,16 @@
       "destination": "/50-workflows/examples/purchase-approval"
     },
     {
+      "source": "/50-workflows/examples",
+      "destination": "/50-workflows/examples/section-index"
+    },
+    {
       "source": "/50-workflows/examples/README",
-      "destination": "/50-workflows/examples"
+      "destination": "/50-workflows/examples/section-index"
     },
     {
       "source": "/50-workflows/examples/README.md",
-      "destination": "/50-workflows/examples"
+      "destination": "/50-workflows/examples/section-index"
     },
     {
       "source": "/50-workflows/examples/shipment-exception.md",
@@ -334,12 +362,16 @@
       "destination": "/50-workflows/execution-semantics"
     },
     {
+      "source": "/50-workflows",
+      "destination": "/50-workflows/section-index"
+    },
+    {
       "source": "/50-workflows/README",
-      "destination": "/50-workflows"
+      "destination": "/50-workflows/section-index"
     },
     {
       "source": "/50-workflows/README.md",
-      "destination": "/50-workflows"
+      "destination": "/50-workflows/section-index"
     },
     {
       "source": "/50-workflows/step-types.md",
@@ -358,12 +390,16 @@
       "destination": "/60-operations/quotas-and-metering"
     },
     {
+      "source": "/60-operations",
+      "destination": "/60-operations/section-index"
+    },
+    {
       "source": "/60-operations/README",
-      "destination": "/60-operations"
+      "destination": "/60-operations/section-index"
     },
     {
       "source": "/60-operations/README.md",
-      "destination": "/60-operations"
+      "destination": "/60-operations/section-index"
     },
     {
       "source": "/60-operations/reliability.md",
@@ -382,12 +418,16 @@
       "destination": "/70-delivery/mvp-definition"
     },
     {
+      "source": "/70-delivery",
+      "destination": "/70-delivery/section-index"
+    },
+    {
       "source": "/70-delivery/README",
-      "destination": "/70-delivery"
+      "destination": "/70-delivery/section-index"
     },
     {
       "source": "/70-delivery/README.md",
-      "destination": "/70-delivery"
+      "destination": "/70-delivery/section-index"
     },
     {
       "source": "/70-delivery/testing-strategy.md",
@@ -414,12 +454,16 @@
       "destination": "/80-reference/prior-art-survey"
     },
     {
+      "source": "/80-reference",
+      "destination": "/80-reference/section-index"
+    },
+    {
       "source": "/80-reference/README",
-      "destination": "/80-reference"
+      "destination": "/80-reference/section-index"
     },
     {
       "source": "/80-reference/README.md",
-      "destination": "/80-reference"
+      "destination": "/80-reference/section-index"
     },
     {
       "source": "/adr/adr-0001-product-shape-multi-tenant-saas.md",
@@ -498,12 +542,16 @@
       "destination": "/adr/adr-template"
     },
     {
+      "source": "/adr",
+      "destination": "/adr/section-index"
+    },
+    {
       "source": "/adr/README",
-      "destination": "/adr"
+      "destination": "/adr/section-index"
     },
     {
       "source": "/adr/README.md",
-      "destination": "/adr"
+      "destination": "/adr/section-index"
     },
     {
       "source": "/CHANGELOG.md",
@@ -514,20 +562,28 @@
       "destination": "/GLOSSARY"
     },
     {
+      "source": "/",
+      "destination": "/section-index"
+    },
+    {
       "source": "/README",
-      "destination": "/"
+      "destination": "/section-index"
     },
     {
       "source": "/README.md",
-      "destination": "/"
+      "destination": "/section-index"
+    },
+    {
+      "source": "/rfc",
+      "destination": "/rfc/section-index"
     },
     {
       "source": "/rfc/README",
-      "destination": "/rfc"
+      "destination": "/rfc/section-index"
     },
     {
       "source": "/rfc/README.md",
-      "destination": "/rfc"
+      "destination": "/rfc/section-index"
     },
     {
       "source": "/VERSIONING.md",
