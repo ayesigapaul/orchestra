@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.9.1
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -149,6 +149,11 @@ having scanned nothing. And it must assert the role posture as well as the table
 application role neither owning the tables nor holding a bypass attribute — because a correct
 policy under a bypassing role is not a control.
 
+Two more follow from [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md). The check fails on
+any `FOREIGN KEY` constraint in a service schema, and on a reference column whose table's write
+policy carries no existence clause for it, because a policy that forgets one admits a cross-tenant
+identifier without complaint.
+
 ## 6. Cross-tenant references — why filtering is not forbidding
 
 [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule **TA2**
@@ -160,26 +165,30 @@ querying role, and it therefore does not see the policy at all. A plain foreign 
 a Tool consequently admits a row naming another Tenant's Tool, and the success or failure of the
 constraint itself discloses whether that identifier exists.
 
-**The structure that forbids it is tenant-qualified keys.** Derived from ADR-0011's own requirement
-that keys be designed so a Tenant can be relocated without a schema change:
+**The structure that forbids it is a write policy, not a foreign key.**
+[ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) removes foreign key constraints from every
+schema, so that any schema can move to its own database, and puts the check in row-level security:
 
 - Every tenant-scoped table's primary key includes the tenant identifier.
-- Every foreign key between tenant-scoped tables is composite and carries the tenant identifier on
-  both sides, referencing the parent's tenant column rather than only its surface identifier.
-- The referencing row's own tenant column participates in both its primary key and its foreign key,
-  so one column cannot hold two values.
+- A reference is an identifier column, and no `FOREIGN KEY` constraint exists anywhere.
+- The referencing table's write policy requires, in `WITH CHECK`, that its tenant identifier is the
+  transaction's tenant and that a row with that tenant identifier and the referenced identifier
+  exists. The lookup runs as the application role, so another Tenant's rows are invisible to it, and
+  the clause governs updates as well as inserts.
 
-A grant naming another Tenant's Tool is then not a row policy declines to show; it is a row that
-cannot be constructed, because it would have to be a row of the other Tenant, which the write policy
-refuses. The constraint is declarative and per-schema rather than per-table application logic, which
-is what makes it survive tables nobody has written yet.
+A grant naming another Tenant's Tool is then refused by the engine with exactly the error a grant
+naming a Tool that does not exist receives, so the refusal discloses nothing. The check lives in the
+table's own policy, so it moves with the schema.
 
-The costs are real. Composite keys widen every index and every foreign key. Surface identifiers in
-public contracts are not the storage key, so the mapping is one more thing to get right — and a
-surface identifier unique only within a Tenant would push tenant identification into every URL and
-every event, a public-contract consequence rather than a storage one. Whether the surface identifier
-is additionally globally unique is not decided here; it is schema work following the datastore
-choice. Section 7 needs the same structure, which is the argument for taking the cost once.
+The costs are real. Every reference adds a subquery to its table's write policy. Nothing stops a
+referent being deleted while references remain, so deletion is designed per record in the owning
+service. A write policy that omits its existence clause silently admits a cross-tenant identifier,
+which is why section 5's control checks for one. Surface identifiers in public contracts are not the
+storage key, so the mapping is one more thing to get right — and a surface identifier unique only
+within a Tenant would push tenant identification into every URL and every event, a public-contract
+consequence rather than a storage one. Whether the surface identifier is additionally globally
+unique is not decided here; it is schema work following the datastore choice. Section 7 needs
+tenant-qualified keys too, which is the argument for taking their cost once.
 
 ## 7. The promotion path
 
@@ -196,8 +205,9 @@ all tenants share one connection. What that forbids, in practice:
    rather than a term of [`../GLOSSARY.md`](../GLOSSARY.md): it is a routing lookup, and a later
    document is free to call it something else.
 2. **No cross-tenant join, foreign key or transaction anywhere.** Each works today and cannot work
-   after a move. Section 6's tenant-qualified keys make the foreign-key half structural rather
-   than a convention.
+   after a move. There is no foreign key constraint at all
+   ([ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md)), and the section 6 write policies
+   standing in for them live in each table's own schema, so they move with it.
 3. **Operator aggregation must be expressible per Tenant.** ADR-0011 lists cross-tenant aggregation
    as an ordinary query among its positive consequences. That is true today and false the moment one
    Tenant leaves, so aggregation for metering and support is written as a per-Tenant query plus
@@ -280,7 +290,7 @@ than of the requirement, and the enforcement path owns the entry if it does
 | Whether per-tenant encryption keys extend beyond credentials to data at rest | Left open by ADR-0011; ADR-0002 covers only credentials | **Yes** — a storage and key-management commitment |
 | The complete inventory of stores outside the datastore; section 8 fixes the scoping rule and the registry, not the list | [`containers.md`](containers.md) and [`data-plane.md`](data-plane.md) as each store is introduced; the planned `connector.md` for the connector's own | No — the rule holds on any inventory |
 | Whether platform-operator work reaches a Policy Enforcement Point at all or only the datastore, and how it is attributed under invariant I2 — one question, not two | [`../40-governance/audit-model.md`](../40-governance/audit-model.md), which owns the general case; boundary B6 of [`../40-governance/threat-model.md`](../40-governance/threat-model.md) records it unmade | **Yes** — it changes the identity model and the audit contract |
-| By what structure a cross-tenant grant is kept out of the datastore, given that row-level security filters rather than forbids — answered in section 6 by tenant-qualified composite keys, recorded here so the choice is traceable rather than resident in prose | This document, which [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule TA2 assigns it to | No — that document classifies it as later-document work, and this row repeats the classification |
+| By what structure a cross-tenant grant is kept out of the datastore, given that row-level security filters rather than forbids — answered in section 6 by write policies that require the referent to exist in the same Tenant, with no foreign key constraint, recorded here so the choice is traceable rather than resident in prose | This document, which [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule TA2 assigns it to | Decided by [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 | Whether a surface identifier is globally unique as well as tenant-qualified, and the identifier shape | Schema work after the datastore decision; constrained by [`../VERSIONING.md`](../VERSIONING.md) once an identifier appears in a public contract | No |
 | The promotion procedure itself — sequencing, verification and cutover | The planned `deployment-topologies.md` listed in [`./README.md`](README.md) | No — section 7 fixes the constraints, not the runbook |
 | Whether promotion is offered commercially, to whom, and on what terms | A design-partner conversation; ADR-0011 designs the path without committing to sell it | No |

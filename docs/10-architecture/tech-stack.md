@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.23.0
+version: 0.24.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -34,6 +34,7 @@ These are not open. They constrain everything below.
 | The run supervisor is built on PostgreSQL, with Temporal as the named fallback | [ADR-0019](../adr/adr-0019-postgres-run-supervisor.md) |
 | The datastore is PostgreSQL: row-level security forced on every tenant-scoped table, tenant context set per transaction, through a transaction-mode pooler | [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) |
 | Tenants, Workspaces, Persons and Principals belong to the Tenant User Management service, one Person per Tenant, and the Gateway resolves every credential through it | [ADR-0022](../adr/adr-0022-tenant-user-management-owns-tenancy.md) |
+| No table carries a foreign key constraint; a reference is an identifier, and a row-level security write policy refuses a reference to another Tenant's row | [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 

@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.24.0
+version: 0.25.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,28 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.25.0] — 2026-09-13
+
+Foreign key constraints leave the design, so any schema can later move to its own database, and a
+cross-tenant reference stays impossible to write.
+
+### Added
+
+- [ADR-0023](adr/adr-0023-no-foreign-key-constraints.md) — no schema carries a foreign key
+  constraint, and a reference is an identifier column. A referencing table's row-level security
+  write policy requires the referenced row to exist in the same Tenant. PostgreSQL 18.6 was shown to
+  enforce it: another Tenant's referent, a missing one, a repointed one and a write with no tenant
+  context are all refused with one indistinguishable error.
+
+### Changed
+
+- `10-architecture/multi-tenancy.md` section 6 replaces composite foreign keys with that write
+  policy; sections 5, 7 and 10 follow, and the CI control gains the checks ADR-0023 requires.
+- `40-governance/tool-authorization.md` rule TA2 names the structure it had left open.
+- `10-architecture/tech-stack.md` section 1 lists the decision.
 
 ---
 
