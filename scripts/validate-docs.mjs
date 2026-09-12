@@ -13,7 +13,7 @@
  *
  * Usage: node scripts/validate-docs.mjs
  */
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, lstatSync } from 'node:fs';
 import { join, relative, dirname, resolve, sep } from 'node:path';
 
 const ROOT = resolve(process.argv[2] ?? '.');
@@ -33,6 +33,10 @@ function walk(dir, out = []) {
   if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir)) {
     const p = join(dir, entry);
+      // index.md files are symlinks to a directory's README.md, so Mintlify can serve a section
+      // index — it refuses to serve a page named README. Following them would count every such
+      // document twice.
+    if (lstatSync(p).isSymbolicLink()) continue;
     if (statSync(p).isDirectory()) {
       if (!SKIP_DIRS.has(entry)) walk(p, out);
     } else if (entry.endsWith('.md')) {

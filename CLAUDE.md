@@ -38,6 +38,8 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0014 | Orchestra builds the run supervisor; the runtime is an execution substrate | Accepted |
 | 0015 | Differentiate on governed, accountable actions, not on connectivity | Accepted |
 | 0016 | The compilation target is the LangGraph library, never its server | Accepted |
+| 0017 | Keycloak is the identity provider, self-hosted | Accepted |
+| 0018 | Apache APISIX is the edge, in front of the Gateway | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -128,6 +130,12 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   prefix, so `in #16` mid-paragraph is read as a footer and warns `footer-leading-blank` — and the
   hygiene job sets `failOnWarnings: true`. Write `pull request 16`, and note that commitlint exits
   **0** on warnings, so a local run that checks only the exit code will call it clean.
+- **Mintlify will not serve a page named README.** It treats `README.md` as a repository readme, and
+  redirects a directory to it, which then 404s — that was a live 404 on the home page and on all 14
+  section indexes. Each directory therefore carries an `index.md` **symlink** to its `README.md`,
+  created and verified by `scripts/build-docs-nav.mjs`. Every other script in `scripts/` skips
+  symlinks so the alias is not counted as a second copy of the document. A checkout without symlink
+  support would break this.
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.

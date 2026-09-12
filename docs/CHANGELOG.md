@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-12
 owners: [platform-architecture]
@@ -18,6 +18,36 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.19.0] — 2026-09-12
+
+Two technology decisions recorded, and the published site fixed.
+
+### Added
+
+- [ADR-0017](adr/adr-0017-keycloak-for-identity.md) — Keycloak, self-hosted, is the identity
+  provider, with a Keycloak Organization per Tenant. It takes the opposite path to what
+  `tech-stack.md` recommended, and says why: per-connection pricing scales with the thing the
+  business wants more of, and some contracts forbid a third party in the authentication path. The
+  cost is stated plainly — Orchestra now operates a security-critical stateful service, SCIM is
+  preview in 26.7.0, and multi-cluster HA is experimental. Keycloak is identity only: it is not the
+  authorization model, and it does not hold BYOK model credentials.
+- [ADR-0018](adr/adr-0018-apisix-at-the-edge.md) — Apache APISIX is the edge in front of the
+  Gateway, verifying tokens against Keycloak. **Gateway** keeps its glossary meaning and the
+  component stays Orchestra's; the record fixes the split between them, and three prohibitions: the
+  edge is not the authorization boundary, it does not set the Tenant, and buffering is disabled on
+  the event-stream route.
+
+### Fixed
+
+- **The published site returned 404 on its home page and on every section index.** Mintlify will not
+  serve a page named README — it redirects a directory to the README and then cannot serve it. Each
+  directory now carries an `index.md` symlink to its `README.md`, generated and verified by
+  `scripts/build-docs-nav.mjs`, and the README URLs redirect to the section root. The README stays
+  canonical and nothing is duplicated. Verified against a running server: the home page, all 14
+  section indexes and the `.md` links now resolve.
 
 ---
 

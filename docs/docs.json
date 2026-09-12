@@ -15,7 +15,7 @@
           {
             "group": "Start here",
             "pages": [
-              "README",
+              "index",
               "CHANGELOG",
               "GLOSSARY",
               "VERSIONING"
@@ -24,7 +24,7 @@
           {
             "group": "Overview",
             "pages": [
-              "00-overview/README",
+              "00-overview/index",
               "00-overview/personas",
               "00-overview/product-thesis",
               "00-overview/roadmap",
@@ -35,7 +35,7 @@
           {
             "group": "Architecture",
             "pages": [
-              "10-architecture/README",
+              "10-architecture/index",
               "10-architecture/connector",
               "10-architecture/containers",
               "10-architecture/control-plane",
@@ -50,7 +50,7 @@
           {
             "group": "Domain model",
             "pages": [
-              "20-domain/README",
+              "20-domain/index",
               "20-domain/domain-model",
               "20-domain/lifecycle-state-machines"
             ]
@@ -58,7 +58,7 @@
           {
             "group": "Protocol",
             "pages": [
-              "30-protocol/README",
+              "30-protocol/index",
               "30-protocol/event-protocol",
               "30-protocol/gateway-api",
               "30-protocol/ui-protocol"
@@ -67,13 +67,13 @@
           {
             "group": "Protocol/schemas",
             "pages": [
-              "30-protocol/schemas/README"
+              "30-protocol/schemas/index"
             ]
           },
           {
             "group": "Governance",
             "pages": [
-              "40-governance/README",
+              "40-governance/index",
               "40-governance/approval-workflows",
               "40-governance/audit-model",
               "40-governance/policy-model",
@@ -84,7 +84,7 @@
           {
             "group": "Workflows",
             "pages": [
-              "50-workflows/README",
+              "50-workflows/index",
               "50-workflows/execution-semantics",
               "50-workflows/step-types",
               "50-workflows/workflow-dsl"
@@ -93,7 +93,7 @@
           {
             "group": "Workflows/examples",
             "pages": [
-              "50-workflows/examples/README",
+              "50-workflows/examples/index",
               "50-workflows/examples/invoice-payment",
               "50-workflows/examples/purchase-approval",
               "50-workflows/examples/shipment-exception"
@@ -102,7 +102,7 @@
           {
             "group": "Operations",
             "pages": [
-              "60-operations/README",
+              "60-operations/index",
               "60-operations/observability",
               "60-operations/quotas-and-metering",
               "60-operations/reliability"
@@ -111,7 +111,7 @@
           {
             "group": "Delivery",
             "pages": [
-              "70-delivery/README",
+              "70-delivery/index",
               "70-delivery/compliance-roadmap",
               "70-delivery/milestones",
               "70-delivery/mvp-definition",
@@ -121,7 +121,7 @@
           {
             "group": "Reference",
             "pages": [
-              "80-reference/README",
+              "80-reference/index",
               "80-reference/a2ui-evaluation",
               "80-reference/ag-ui-evaluation",
               "80-reference/langgraph-evaluation",
@@ -132,7 +132,7 @@
           {
             "group": "Decisions (ADR)",
             "pages": [
-              "adr/README",
+              "adr/index",
               "adr/adr-0001-product-shape-multi-tenant-saas",
               "adr/adr-0002-enterprise-segment-and-byok",
               "adr/adr-0003-governance-layer-positioning",
@@ -149,13 +149,15 @@
               "adr/adr-0014-run-supervisor-is-orchestras",
               "adr/adr-0015-governed-action-positioning",
               "adr/adr-0016-compile-to-the-langgraph-library",
+              "adr/adr-0017-keycloak-for-identity",
+              "adr/adr-0018-apisix-at-the-edge",
               "adr/adr-template"
             ]
           },
           {
             "group": "Proposals (RFC)",
             "pages": [
-              "rfc/README"
+              "rfc/index"
             ]
           }
         ]
@@ -164,32 +166,20 @@
   },
   "redirects": [
     {
-      "source": "/README.md",
-      "destination": "/README"
-    },
-    {
-      "source": "/CHANGELOG.md",
-      "destination": "/CHANGELOG"
-    },
-    {
-      "source": "/GLOSSARY.md",
-      "destination": "/GLOSSARY"
-    },
-    {
-      "source": "/VERSIONING.md",
-      "destination": "/VERSIONING"
-    },
-    {
-      "source": "/00-overview/README.md",
-      "destination": "/00-overview/README"
-    },
-    {
       "source": "/00-overview/personas.md",
       "destination": "/00-overview/personas"
     },
     {
       "source": "/00-overview/product-thesis.md",
       "destination": "/00-overview/product-thesis"
+    },
+    {
+      "source": "/00-overview/README",
+      "destination": "/00-overview"
+    },
+    {
+      "source": "/00-overview/README.md",
+      "destination": "/00-overview"
     },
     {
       "source": "/00-overview/roadmap.md",
@@ -202,10 +192,6 @@
     {
       "source": "/00-overview/vision.md",
       "destination": "/00-overview/vision"
-    },
-    {
-      "source": "/10-architecture/README.md",
-      "destination": "/10-architecture/README"
     },
     {
       "source": "/10-architecture/connector.md",
@@ -236,16 +222,20 @@
       "destination": "/10-architecture/multi-tenancy"
     },
     {
+      "source": "/10-architecture/README",
+      "destination": "/10-architecture"
+    },
+    {
+      "source": "/10-architecture/README.md",
+      "destination": "/10-architecture"
+    },
+    {
       "source": "/10-architecture/system-context.md",
       "destination": "/10-architecture/system-context"
     },
     {
       "source": "/10-architecture/tech-stack.md",
       "destination": "/10-architecture/tech-stack"
-    },
-    {
-      "source": "/20-domain/README.md",
-      "destination": "/20-domain/README"
     },
     {
       "source": "/20-domain/domain-model.md",
@@ -256,8 +246,12 @@
       "destination": "/20-domain/lifecycle-state-machines"
     },
     {
-      "source": "/30-protocol/README.md",
-      "destination": "/30-protocol/README"
+      "source": "/20-domain/README",
+      "destination": "/20-domain"
+    },
+    {
+      "source": "/20-domain/README.md",
+      "destination": "/20-domain"
     },
     {
       "source": "/30-protocol/event-protocol.md",
@@ -268,16 +262,24 @@
       "destination": "/30-protocol/gateway-api"
     },
     {
-      "source": "/30-protocol/ui-protocol.md",
-      "destination": "/30-protocol/ui-protocol"
+      "source": "/30-protocol/README",
+      "destination": "/30-protocol"
+    },
+    {
+      "source": "/30-protocol/README.md",
+      "destination": "/30-protocol"
+    },
+    {
+      "source": "/30-protocol/schemas/README",
+      "destination": "/30-protocol/schemas"
     },
     {
       "source": "/30-protocol/schemas/README.md",
-      "destination": "/30-protocol/schemas/README"
+      "destination": "/30-protocol/schemas"
     },
     {
-      "source": "/40-governance/README.md",
-      "destination": "/40-governance/README"
+      "source": "/30-protocol/ui-protocol.md",
+      "destination": "/30-protocol/ui-protocol"
     },
     {
       "source": "/40-governance/approval-workflows.md",
@@ -292,32 +294,20 @@
       "destination": "/40-governance/policy-model"
     },
     {
+      "source": "/40-governance/README",
+      "destination": "/40-governance"
+    },
+    {
+      "source": "/40-governance/README.md",
+      "destination": "/40-governance"
+    },
+    {
       "source": "/40-governance/threat-model.md",
       "destination": "/40-governance/threat-model"
     },
     {
       "source": "/40-governance/tool-authorization.md",
       "destination": "/40-governance/tool-authorization"
-    },
-    {
-      "source": "/50-workflows/README.md",
-      "destination": "/50-workflows/README"
-    },
-    {
-      "source": "/50-workflows/execution-semantics.md",
-      "destination": "/50-workflows/execution-semantics"
-    },
-    {
-      "source": "/50-workflows/step-types.md",
-      "destination": "/50-workflows/step-types"
-    },
-    {
-      "source": "/50-workflows/workflow-dsl.md",
-      "destination": "/50-workflows/workflow-dsl"
-    },
-    {
-      "source": "/50-workflows/examples/README.md",
-      "destination": "/50-workflows/examples/README"
     },
     {
       "source": "/50-workflows/examples/invoice-payment.md",
@@ -328,12 +318,36 @@
       "destination": "/50-workflows/examples/purchase-approval"
     },
     {
+      "source": "/50-workflows/examples/README",
+      "destination": "/50-workflows/examples"
+    },
+    {
+      "source": "/50-workflows/examples/README.md",
+      "destination": "/50-workflows/examples"
+    },
+    {
       "source": "/50-workflows/examples/shipment-exception.md",
       "destination": "/50-workflows/examples/shipment-exception"
     },
     {
-      "source": "/60-operations/README.md",
-      "destination": "/60-operations/README"
+      "source": "/50-workflows/execution-semantics.md",
+      "destination": "/50-workflows/execution-semantics"
+    },
+    {
+      "source": "/50-workflows/README",
+      "destination": "/50-workflows"
+    },
+    {
+      "source": "/50-workflows/README.md",
+      "destination": "/50-workflows"
+    },
+    {
+      "source": "/50-workflows/step-types.md",
+      "destination": "/50-workflows/step-types"
+    },
+    {
+      "source": "/50-workflows/workflow-dsl.md",
+      "destination": "/50-workflows/workflow-dsl"
     },
     {
       "source": "/60-operations/observability.md",
@@ -344,12 +358,16 @@
       "destination": "/60-operations/quotas-and-metering"
     },
     {
-      "source": "/60-operations/reliability.md",
-      "destination": "/60-operations/reliability"
+      "source": "/60-operations/README",
+      "destination": "/60-operations"
     },
     {
-      "source": "/70-delivery/README.md",
-      "destination": "/70-delivery/README"
+      "source": "/60-operations/README.md",
+      "destination": "/60-operations"
+    },
+    {
+      "source": "/60-operations/reliability.md",
+      "destination": "/60-operations/reliability"
     },
     {
       "source": "/70-delivery/compliance-roadmap.md",
@@ -364,12 +382,16 @@
       "destination": "/70-delivery/mvp-definition"
     },
     {
-      "source": "/70-delivery/testing-strategy.md",
-      "destination": "/70-delivery/testing-strategy"
+      "source": "/70-delivery/README",
+      "destination": "/70-delivery"
     },
     {
-      "source": "/80-reference/README.md",
-      "destination": "/80-reference/README"
+      "source": "/70-delivery/README.md",
+      "destination": "/70-delivery"
+    },
+    {
+      "source": "/70-delivery/testing-strategy.md",
+      "destination": "/70-delivery/testing-strategy"
     },
     {
       "source": "/80-reference/a2ui-evaluation.md",
@@ -392,8 +414,12 @@
       "destination": "/80-reference/prior-art-survey"
     },
     {
-      "source": "/adr/README.md",
-      "destination": "/adr/README"
+      "source": "/80-reference/README",
+      "destination": "/80-reference"
+    },
+    {
+      "source": "/80-reference/README.md",
+      "destination": "/80-reference"
     },
     {
       "source": "/adr/adr-0001-product-shape-multi-tenant-saas.md",
@@ -460,12 +486,52 @@
       "destination": "/adr/adr-0016-compile-to-the-langgraph-library"
     },
     {
+      "source": "/adr/adr-0017-keycloak-for-identity.md",
+      "destination": "/adr/adr-0017-keycloak-for-identity"
+    },
+    {
+      "source": "/adr/adr-0018-apisix-at-the-edge.md",
+      "destination": "/adr/adr-0018-apisix-at-the-edge"
+    },
+    {
       "source": "/adr/adr-template.md",
       "destination": "/adr/adr-template"
     },
     {
+      "source": "/adr/README",
+      "destination": "/adr"
+    },
+    {
+      "source": "/adr/README.md",
+      "destination": "/adr"
+    },
+    {
+      "source": "/CHANGELOG.md",
+      "destination": "/CHANGELOG"
+    },
+    {
+      "source": "/GLOSSARY.md",
+      "destination": "/GLOSSARY"
+    },
+    {
+      "source": "/README",
+      "destination": "/"
+    },
+    {
+      "source": "/README.md",
+      "destination": "/"
+    },
+    {
+      "source": "/rfc/README",
+      "destination": "/rfc"
+    },
+    {
       "source": "/rfc/README.md",
-      "destination": "/rfc/README"
+      "destination": "/rfc"
+    },
+    {
+      "source": "/VERSIONING.md",
+      "destination": "/VERSIONING"
     }
   ]
 }
