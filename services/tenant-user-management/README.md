@@ -37,6 +37,12 @@ imported from another service.
   rejection's reason is for logs, never for the caller.
 - **No endpoint before its contract.** Only `/healthz` is served until the resolution contract is
   specified in `docs/30-protocol/`.
+- **One HTTP contract** ([ADR-0025](../../docs/adr/adr-0025-json-api-http-contract.md)). Every
+  response is a JSON:API document, and every failure an error document from
+  `src/adapters/http/json-api.ts` with a registered code and retry safety. Operations are registered
+  through its `resource()`, which answers a wrong method with 405 and refuses an undeclared query
+  parameter. Tests validate real responses against `openapi.yaml`, a copy of this service's document
+  in `docs/30-protocol/openapi/` that CI keeps identical.
 
 ## Commands
 

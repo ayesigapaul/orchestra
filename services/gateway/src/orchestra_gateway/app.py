@@ -1,20 +1,25 @@
 """The Orchestra Gateway application.
 
-Phase 0 carries one probe route and nothing that belongs to the Gateway contract. The contract's
-path layout and its error envelope are both ADR-required and unmade (gateway-api.md section 9), so
-nothing here should be read as starting either.
+Phase 0 carries one probe route and no resource of the Gateway contract, whose path layout is
+ADR-required and unmade (gateway-api.md section 9). What is decided already applies: every response
+is a JSON:API document, and every failure an error document from one error layer (ADR-0025).
 """
 
 import logging
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Request
 
+from orchestra_gateway import jsonapi
 from orchestra_gateway.auth import TokenVerifier, Unauthenticated
+from orchestra_gateway.jsonapi import UNAUTHENTICATED, ApiError, JsonApiResponse
 from orchestra_gateway.settings import get_settings
 
 logger = logging.getLogger("orchestra_gateway.auth")
+
+# A resource that answers GET answers HEAD too, so Allow reads the same in every service.
+READ = ["GET", "HEAD"]
 
 
 def create_app(verifier: TokenVerifier | None = None) -> FastAPI:
@@ -44,6 +49,7 @@ def create_app(verifier: TokenVerifier | None = None) -> FastAPI:
         redoc_url=None,
         openapi_url=None,
     )
+    jsonapi.install(app)
 
     def verified_claims(
         request: Request, token_verifier: Annotated[TokenVerifier, Depends(get_verifier)]
@@ -53,33 +59,33 @@ def create_app(verifier: TokenVerifier | None = None) -> FastAPI:
         # here, not from what a proxy asserts (ADR-0018).
         scheme, _, token = request.headers.get("authorization", "").partition(" ")
         if scheme.lower() != "bearer" or not token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise ApiError(UNAUTHENTICATED, headers={"WWW-Authenticate": "Bearer"})
         try:
             return token_verifier.verify(token)
         except Unauthenticated as exc:
             # The reason goes to the log and never to the caller: telling a client why its
             # credential failed helps an attacker more than it helps an operator.
             logger.warning("credential rejected: %s", exc)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                headers={"WWW-Authenticate": 'Bearer error="invalid_token"'},
+            raise ApiError(
+                UNAUTHENTICATED, headers={"WWW-Authenticate": 'Bearer error="invalid_token"'}
             ) from None
 
-    @app.get("/healthz")
-    def healthz() -> dict[str, str]:
-        return {"status": "ok"}
+    @app.api_route("/healthz", methods=READ)
+    def healthz() -> JsonApiResponse:
+        return JsonApiResponse(jsonapi.document(meta={"status": "ok"}))
 
-    @app.get("/_probe/identity")
+    @app.api_route("/_probe/identity", methods=READ)
     def identity_probe(
         claims: Annotated[dict[str, Any], Depends(verified_claims)],
-    ) -> dict[str, str]:
+    ) -> JsonApiResponse:
         # Proves the path: the edge, then a credential verified here. Resolving these
         # claims to exactly one Principal and one Tenant (gateway-api.md G3 to G7) is
         # Phase 1, and this route does not pretend to.
-        return {"subject": claims["sub"], "issuer": claims["iss"]}
+        subject = claims["sub"]
+        probe = {"subject": subject, "issuer": claims["iss"]}
+        return JsonApiResponse(
+            jsonapi.document(data={"type": "identity-probes", "id": subject, "attributes": probe})
+        )
 
     return app
 

@@ -32,7 +32,11 @@ paths:
       responses:
         '200':
           $ref: './json-api.yaml#/components/responses/Healthy'
+        '400':
+          $ref: './json-api.yaml#/components/responses/BadRequest'
         '406':
           $ref: './json-api.yaml#/components/responses/NotAcceptable'
+        '415':
+          $ref: './json-api.yaml#/components/responses/UnsupportedMediaType'
         '500':
           $ref: './json-api.yaml#/components/responses/InternalError'

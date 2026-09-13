@@ -5,6 +5,7 @@ components:
   headers:
     RequestId:
       description: This request's identifier. Equal to the `id` of any error in the body (HC12).
+      required: true
       schema:
         type: string
     RetryAfter:
@@ -13,10 +14,12 @@ components:
         type: string
     WwwAuthenticate:
       description: The authentication scheme the caller must use.
+      required: true
       schema:
         type: string
     Allow:
       description: The methods this path accepts.
+      required: true
       schema:
         type: string
 
@@ -347,6 +350,46 @@ components:
                 code: server.internal
                 title: Something went wrong on our side
                 detail: The request could not be completed. Quote the request identifier when reporting it.
+                meta: { retry: safe }
+
+    OutcomeUnknown:
+      description: >-
+        A dependency failed after the request reached it, so whether it acted is unknown. Reconcile
+        before sending the request again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: b4c5d6e7-f809-4102-8314-354657687980
+                status: '502'
+                code: upstream.outcome_unknown
+                title: A dependency failed, and whether it acted is unknown
+                meta: { retry: indeterminate }
+
+    UpstreamUnavailable:
+      description: A dependency refused the request or could not be reached. Nothing took effect.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: c5d6e7f8-0910-4213-9425-465768798091
+                status: '503'
+                code: upstream.unavailable
+                title: A dependency is unavailable
                 meta: { retry: safe }
 
     Unavailable:

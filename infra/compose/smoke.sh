@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Phase 0's exit criterion, end to end: an authenticated request crosses APISIX to the Gateway, and
-# neither a missing credential nor an identity asserted in a header gets through.
+# neither a missing credential nor an identity asserted in a header gets through. Every answer, the
+# edge's own refusals included, is a JSON:API document under ADR-0025.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -8,28 +9,76 @@ docker compose up -d --build --wait --wait-timeout 420
 
 fail() { echo "✗ $1"; docker compose logs --tail 40 apisix gateway; exit 1; }
 
+EDGE=http://localhost:9080
+PROBE=$EDGE/_probe/identity
+
+# call <curl arguments>: sends one request, keeping its status, headers and body.
+call() {
+  local out
+  out=$(mktemp -d)
+  status=$(curl -s -o "$out/body" -D "$out/headers" -w '%{http_code}' "$@" || true)
+  headers=$(tr -d '\r' < "$out/headers")
+  body=$(cat "$out/body")
+  rm -rf "$out"
+}
+
+# expect_error <status> <code>: the last answer is a JSON:API error document carrying that code, and
+# its id is the request identifier the response carries.
+expect_error() {
+  [ "$status" = "$1" ] || fail "expected $1 $2, got $status: $body"
+  grep -qix 'content-type: application/vnd.api+json' <<<"$headers" \
+    || fail "expected the JSON:API media type with $2, got: $headers"
+  local id
+  id=$(awk -F': ' 'tolower($1) == "orchestra-request-id" { print $2 }' <<<"$headers")
+  BODY=$body CODE=$2 ID=$id python3 -c '
+import json, os
+document = json.loads(os.environ["BODY"])
+[error] = document["errors"]
+assert document["jsonapi"] == {"version": "1.1"}
+assert error["code"] == os.environ["CODE"] and error["id"] == os.environ["ID"] != ""
+assert error["meta"]["retry"] in ("safe", "unsafe", "indeterminate")
+' || fail "expected a JSON:API error document with code $2, got: $body"
+}
+
 # APISIX loads apisix.yaml on a short poll after it starts; give the route a moment to appear.
 for _ in $(seq 1 30); do
-  code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9080/_probe/identity || true)
-  [ "$code" = "401" ] && break
+  call "$PROBE"
+  [ "$status" = "401" ] && break
   sleep 2
 done
-[ "$code" = "401" ] || fail "no credential: expected 401 from the edge, got $code"
-echo "✓ no credential is refused at the edge"
+expect_error 401 auth.unauthenticated
+echo "✓ no credential is refused at the edge, as a JSON:API error"
+
+call -H "Authorization: Bearer not-a-token" "$PROBE"
+expect_error 401 auth.unauthenticated
+if grep -qi '^www-authenticate:.*error_description' <<<"$headers"; then
+  fail "a refused token's reason reached the caller: $headers"
+fi
+echo "✓ a refused token is not told why"
 
 token=$(curl -sf -X POST http://localhost:8080/realms/orchestra/protocol/openid-connect/token \
   -d grant_type=password -d client_id=orchestra-cli -d username=dev -d password=dev-local-only \
   | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])') \
   || fail "could not obtain a token from Keycloak"
 
-body=$(curl -s -H "Authorization: Bearer ${token}" http://localhost:9080/_probe/identity)
-echo "$body" | grep -q '"subject"' || fail "valid credential: expected an identity, got: $body"
+call -H "Authorization: Bearer ${token}" "$PROBE"
+[ "$status" = "200" ] && grep -q '"type":"identity-probes"' <<<"$body" \
+  || fail "valid credential: expected an identity-probes resource, got $status: $body"
 echo "✓ a verified credential crosses the edge and the Gateway: $body"
 
+call -H "Authorization: Bearer ${token}" "$EDGE/no-such-path"
+expect_error 404 resource.not_found
+echo "✓ the Gateway's own errors reach the caller through the edge unchanged"
+
 forged=$(printf '{"sub":"attacker"}' | base64)
-code=$(curl -s -o /dev/null -w '%{http_code}' -H "X-Userinfo: ${forged}" http://localhost:9080/_probe/identity)
-[ "$code" = "401" ] || fail "forged identity header: expected 401, got $code"
+call -H "X-Userinfo: ${forged}" "$PROBE"
+expect_error 401 auth.unauthenticated
 echo "✓ an identity asserted in a header is not a credential"
+
+# An HTTP/1.1 request without a Host header is refused by nginx before any plugin runs.
+call -H "Host:" "$EDGE/healthz"
+expect_error 400 request.malformed
+echo "✓ errors nginx raises itself are JSON:API errors too"
 
 # ADR-0021: tenant context is set with SET LOCAL because the pool is in transaction mode. Each call
 # below is a separate client, and the probe pool holds a single server connection, so every client

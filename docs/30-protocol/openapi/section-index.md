@@ -1,7 +1,7 @@
 ---
 title: OpenAPI Documents
 doc_id: DOC-097
-version: 0.1.0
+version: 0.2.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -41,9 +41,15 @@ components every service uses. The `.openapi.yaml` files beside this README are 
 self-contained so that a tool importing one file gets everything it needs:
 
 ```bash
-node scripts/build-openapi.mjs          # rebuild the bundles after editing src/
-node scripts/build-openapi.mjs --check  # what CI runs: fails on a stale bundle or a lint error
+node scripts/build-openapi.mjs          # rebuild the bundles and service copies after editing src/
+node scripts/build-openapi.mjs --check  # what CI runs: fails on a stale bundle or copy, or a lint error
 ```
 
-Never edit a bundle by hand. An operation, and every code it can return, is documented here before
-the endpoint ships ([`../http-conventions.md`](../http-conventions.md) HC14).
+Each bundle is also copied to `services/<service>/openapi.yaml`, where the service's tests validate
+its real responses against it, an unknown path, a wrong method and a refused media type included
+([`../http-conventions.md`](../http-conventions.md) HC15). A service reads nothing outside its own
+directory ([ADR-0020](../../adr/adr-0020-monorepo-with-enforced-service-boundaries.md)), so the copy
+is what it reads, and the same check fails when a copy drifts.
+
+Never edit a bundle or a copy by hand. An operation, and every code it can return, is documented here
+before the endpoint ships ([`../http-conventions.md`](../http-conventions.md) HC14).

@@ -35,14 +35,19 @@ paths:
       responses:
         '200':
           $ref: '#/components/responses/Healthy'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '406':
           $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
   headers:
     RequestId:
       description: This request's identifier. Equal to the `id` of any error in the body (HC12).
+      required: true
       schema:
         type: string
   schemas:
@@ -173,6 +178,27 @@ components:
               version: '1.1'
             meta:
               status: ok
+    BadRequest:
+      description: A query parameter is unknown or malformed, or the body is not a JSON:API document.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: 6f1c1f3e-4f9a-4b8e-9d2a-0c7b1d5e2a11
+                status: '400'
+                code: request.invalid_parameter
+                title: A query parameter is unknown or malformed
+                source:
+                  parameter: page[size]
+                meta:
+                  retry: unsafe
     NotAcceptable:
       description: The Accept header asks only for JSON:API media type parameters this service does not support.
       headers:
@@ -192,6 +218,27 @@ components:
                 title: No acceptable representation
                 source:
                   header: Accept
+                meta:
+                  retry: unsafe
+    UnsupportedMediaType:
+      description: The Content-Type is not the JSON:API media type, or carries unsupported parameters.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: 6f708192-a3b4-4c56-9e7f-809102132435
+                status: '415'
+                code: request.unsupported_media_type
+                title: Unsupported media type
+                source:
+                  header: Content-Type
                 meta:
                   retry: unsafe
     InternalError:

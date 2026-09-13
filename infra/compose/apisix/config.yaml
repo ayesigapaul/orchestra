@@ -1,6 +1,26 @@
 # Standalone mode: routes come from apisix.yaml in this repository, not from etcd, so every route
 # is versioned and reviewed like code (ADR-0018 follow-on).
+apisix:
+  # Orchestra's own plugin, baked in under orchestra/, is found before the built-in ones.
+  extra_lua_path: "/usr/local/apisix/orchestra/?.lua"
+
 deployment:
   role: data_plane
   role_data_plane:
     config_provider: yaml
+
+# Only the plugins the routes use are loaded, so a plugin nobody configured is not attack surface.
+plugins:
+  - orchestra-json-api
+  - openid-connect
+
+nginx_config:
+  # Errors nginx raises itself, such as an upstream it cannot reach, never pass through a plugin.
+  # They are answered with the same JSON:API error documents (ADR-0025, HC13).
+  http_server_configuration_snippet: |
+    error_page 400 500 502 503 504 @orchestra_error;
+    location @orchestra_error {
+        content_by_lua_block {
+            require("apisix.plugins.orchestra-json-api").error_page()
+        }
+    }

@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.27.0
+version: 0.28.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,26 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.28.0] — 2026-09-13
+
+The HTTP contract is implemented in the Gateway, Tenant User Management and the edge, and tested
+against its documentation. Implementing it showed where the documents were not yet precise enough.
+
+### Changed
+
+- `30-protocol/http-conventions.md` (0.2.0) — the code registry records each code's title, so every
+  service and the edge send the same one. `request.malformed` also covers a request that is not
+  well-formed HTTP, which only the edge sees. The codes for the edge's size limits are registered as
+  an open question, because no limit produces them yet.
+- `30-protocol/openapi/` — every operation documents 400 and 415, and the Gateway's also document the
+  502 and 503 the edge answers when the Gateway fails, through two new shared responses. Headers the
+  contract always sends are marked required. Each bundle is copied into its service for contract
+  tests, and `scripts/build-openapi.mjs --check` fails when a copy drifts.
+- `10-architecture/tech-stack.md` (0.27.0) — pins the contract-test validators: jsonschema 4.26.0
+  with referencing 0.37.0 and PyYAML 6.0.3, and Ajv 8.20.0 with yaml 2.9.1.
 
 ---
 
