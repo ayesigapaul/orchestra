@@ -1,6 +1,6 @@
 # Local stack
 
-PostgreSQL, PgBouncer, Keycloak, Apache APISIX, the Gateway, Tenant User Management and an OpenTelemetry Collector, each in its own container
+PostgreSQL, PgBouncer, Keycloak, Apache APISIX, the Gateway, Tenant User Management, an OpenTelemetry Collector, Grafana Tempo and Grafana, each in its own container
 ([ADR-0020](../../docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md) rule B6), at the
 versions pinned in [`docs/10-architecture/tech-stack.md`](../../docs/10-architecture/tech-stack.md).
 
@@ -19,6 +19,7 @@ runs the commands this directory documents, so `infra/compose/smoke.sh` and
 | --- | --- |
 | 9080 | APISIX, the edge. The only way to reach the Gateway |
 | 8080 | Keycloak. Admin console at `/admin`, user `admin` |
+| 3000 | Grafana, reading the traces in Tempo. Published on this machine only, and with no login |
 
 **Configuration is baked into images, never bind-mounted.** The Keycloak realm and the APISIX routes are copied in at build time, because a bind mount arrives empty when the Docker daemon's VM does not share this directory — which an external drive often is not. After editing either, rebuild; `smoke.sh` always does.
 
@@ -41,11 +42,16 @@ three.
 ([`http-conventions.md`](../../docs/30-protocol/http-conventions.md) HC12). APISIX's
 `opentelemetry` plugin, as a global rule, serves each request in a span whose parent is a valid
 incoming `traceparent`, and passes its own span to the Gateway as the parent; each service does the
-same for the calls it receives. Every span goes to `otel-collector` over OTLP/HTTP, and its debug
-exporter prints each one, so `docker compose logs otel-collector` shows a trace hop by hop. The
-edge's access log is one JSON line per request, carrying its trace and span under the names the
-services log with. `smoke.sh` sends a trace through the edge, then checks the chain of spans and
-each hop's log line for the request.
+same for the calls it receives. Every span goes to `otel-collector` over OTLP/HTTP. Its debug
+exporter prints each one, so `make traces` shows a trace hop by hop, and it sends each span on to
+Tempo, which Grafana reads at http://localhost:3000
+([ADR-0028](../../docs/adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)). Grafana has no
+login, so its port is published on this machine alone. The edge's access log is one JSON line per
+request, carrying its trace and span under the names the services log with. Every line, the edge's
+and the services', carries a tenant identifier, and a line for work with no Tenant carries the Nil
+UUID; the edge never knows a Tenant, so all its lines do. `smoke.sh` sends a trace through the
+edge, then checks the chain of spans, each hop's log line for the request, the Nil UUID on lines
+with no Tenant, the trace in Tempo, and Grafana reading Tempo.
 
 **PgBouncer is built, not pulled.** The PgBouncer project publishes no container image, and the
 widely pulled `pgbouncer/pgbouncer` belongs to a third party, so `pgbouncer/Dockerfile` installs the

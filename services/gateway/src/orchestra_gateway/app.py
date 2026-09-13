@@ -133,7 +133,8 @@ def create_app(verifier: TokenVerifier | None = None, resolver: Resolver | None 
         except ResolutionUnavailable as exc:
             logger.error("credential resolution unavailable: %s", exc, exc_info=exc)
             raise ApiError(UPSTREAM_UNAVAILABLE) from None
-        # The request's span and log line carry its Tenant (invariant I1), and never its Principal.
+        # From here on, the request's span and every line logged for it carry its Tenant where they
+        # carried the Nil UUID (invariant I1, ADR-0028), and never its Principal.
         request.state.tenant_id = identity.tenant_id
         return identity
 

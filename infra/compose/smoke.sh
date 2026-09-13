@@ -100,9 +100,11 @@ echo "✓ a verified credential crosses the edge and resolves to one Principal i
 # that called it, and each logs the request once, carrying the trace.
 fail_trace() {
   echo "✗ $1"
-  docker compose logs --tail 60 otel-collector apisix gateway tenant-user-management
+  docker compose logs --tail 60 otel-collector tempo grafana apisix gateway tenant-user-management
   exit 1
 }
+# RFC 9562's Nil UUID, which marks telemetry for work that belongs to no Tenant (ADR-0028).
+NIL_UUID=00000000-0000-0000-0000-000000000000
 trace_id=$(python3 -c 'import secrets; print(secrets.token_hex(16))')
 caller_span=$(python3 -c 'import secrets; print(secrets.token_hex(8))')
 call -H "Authorization: Bearer ${token}" -H "traceparent: 00-${trace_id}-${caller_span}-01" "$PROBE"
@@ -163,7 +165,7 @@ logs_dir=$(mktemp -d)
 for service in apisix gateway tenant-user-management; do
   docker compose logs --no-log-prefix "$service" >"$logs_dir/$service" 2>&1
 done
-DIR=$logs_dir TRACE=$trace_id REQUEST_ID=$traced_request TENANT=$LOCAL_TENANT python3 -c '
+DIR=$logs_dir TRACE=$trace_id REQUEST_ID=$traced_request TENANT=$LOCAL_TENANT NIL=$NIL_UUID python3 -c '
 import json, os, sys
 
 def served(service, message):
@@ -194,12 +196,76 @@ for passed, what in [
      "two hops logged the same span"),
     (not any("principal" in json.dumps(line) for line in (edge, gateway, callee)),
      "a request line carries a Principal, which telemetry never does"),
+    (edge.get("tenant_id") == os.environ["NIL"],
+     "the edge line does not carry the Nil UUID, though the edge never knows a Tenant"),
 ]:
     if not passed:
         sys.exit(what)
+
+# Each service checks its own health, in no Tenant, so those request lines carry the Nil UUID.
+for service, message in (("gateway", "message"), ("tenant-user-management", "msg")):
+    health = []
+    with open(os.path.join(os.environ["DIR"], service)) as lines:
+        for raw in lines:
+            try:
+                line = json.loads(raw)
+            except ValueError:
+                continue
+            if isinstance(line, dict) and line.get(message) == "request served" \
+                    and line.get("url.path") == "/healthz":
+                health.append(line)
+    if not health or any(line.get("tenant_id") != os.environ["NIL"] for line in health):
+        sys.exit(f"{service} does not log its health checks with the Nil UUID")
 ' || fail_trace "the request lines do not carry the trace as they should"
 rm -rf "$logs_dir"
 echo "✓ each hop logs the request once, with the trace, a span of its own, the request identifier and the Tenant"
+echo "✓ a line for work with no Tenant, at the edge or for a health check, carries the Nil UUID"
+
+# ADR-0028: the Collector also sends every span to Tempo, and Grafana reads Tempo. Tempo publishes no
+# port, so the trace is asked for from the Gateway's container, on the stack's network.
+trace_in_tempo() {
+  docker compose exec -T -e TRACE="$trace_id" gateway python - <<'PY'
+import json, os, sys, urllib.request
+
+url = "http://tempo:3200/api/v2/traces/" + os.environ["TRACE"]
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        document = json.load(response)
+except (OSError, ValueError) as error:
+    sys.exit(f"Tempo has not answered with the trace: {error}")
+batches = (
+    document.get("trace", {}).get("resourceSpans")
+    or document.get("resourceSpans")
+    or document.get("batches")
+    or []
+)
+services = {
+    attribute.get("value", {}).get("stringValue")
+    for batch in batches
+    for attribute in batch.get("resource", {}).get("attributes", [])
+    if attribute.get("key") == "service.name"
+}
+missing = {"apisix", "gateway", "tenant-user-management"} - services
+if missing:
+    sys.exit("the trace in Tempo has no span from " + ", ".join(sorted(missing)))
+PY
+}
+tempo_problem="Tempo was never asked"
+for _ in $(seq 1 30); do
+  if tempo_problem=$(trace_in_tempo 2>&1); then break; fi
+  sleep 1
+done
+trace_in_tempo >/dev/null 2>&1 || fail_trace "the trace did not reach Tempo: $tempo_problem"
+
+grafana_answer="Grafana was never asked"
+for _ in $(seq 1 30); do
+  grafana_answer=$(curl -s http://localhost:3000/api/datasources/uid/tempo/health 2>&1 || true)
+  grep -q '"status" *: *"OK"' <<<"$grafana_answer" && break
+  sleep 1
+done
+grep -q '"status" *: *"OK"' <<<"$grafana_answer" \
+  || fail_trace "Grafana at localhost:3000 cannot read Tempo: $grafana_answer"
+echo "✓ the trace reaches Tempo, and Grafana at localhost:3000 reads it"
 
 outsider=$(user_credential outsider outsider-local-only organization) \
   || fail "could not obtain the outsider's credential"

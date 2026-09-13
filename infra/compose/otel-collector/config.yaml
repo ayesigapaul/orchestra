@@ -1,7 +1,7 @@
 # The local stack's OpenTelemetry Collector. The edge and both services export their spans here over
-# OTLP/HTTP, and the debug exporter prints every span to this container's log, so a trace can be read
-# with `docker compose logs otel-collector` and smoke.sh can check one. Where spans go outside the
-# local stack is undecided (docs/60-operations/observability.md section 9).
+# OTLP/HTTP. The debug exporter prints every span to this container's log, which smoke.sh reads, and
+# the otlphttp exporter sends every span on to Tempo, where Grafana reads it (ADR-0028). Only this
+# file names where spans go.
 receivers:
   otlp:
     protocols:
@@ -11,9 +11,11 @@ receivers:
 exporters:
   debug:
     verbosity: detailed
+  otlphttp/tempo:
+    endpoint: http://tempo:4318
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
-      exporters: [debug]
+      exporters: [debug, otlphttp/tempo]

@@ -35,9 +35,11 @@ never read; the tests forge one and prove it is ignored ([ADR-0018](../../docs/a
 HC12). `src/orchestra_gateway/tracing.py` serves each request in an OpenTelemetry server span whose
 parent is a valid incoming `traceparent`, and makes the call to Tenant User Management and the token
 request in client spans whose context those calls carry. It logs each request once, as a JSON line
-with the trace, the span, the request identifier and, once the credential resolves, the Tenant, but
-never the Principal. `tests/test_tracing.py` checks each of these, and which headers start a new
-trace instead.
+with the trace, the span and the request identifier. Every line and span carries a tenant
+identifier: the Tenant once the credential resolves, and otherwise the Nil UUID
+([ADR-0028](../../docs/adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)), which no Tenant
+has, so a resolution that names it fails closed. Nothing ever carries the Principal.
+`tests/test_tracing.py` checks each of these, and which headers start a new trace instead.
 
 ## Working on it
 

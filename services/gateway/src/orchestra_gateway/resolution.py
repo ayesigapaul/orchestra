@@ -215,6 +215,9 @@ def _identity_from(response: httpx2.Response) -> Identity:
     if outcome != "resolved" or not all(isinstance(value, str) and value for value in fields):
         raise ResolutionUnavailable("the answer does not establish one Principal in one Tenant")
     tenant_id, principal_id, principal_kind = fields
+    if tenant_id == tracing.NIL_TENANT_ID:
+        # No Tenant has the Nil UUID, which telemetry reserves for work with no Tenant (ADR-0028).
+        raise ResolutionUnavailable("the answer names the Nil UUID as a Tenant")
     return Identity(tenant_id=tenant_id, principal_id=principal_id, principal_kind=principal_kind)
 
 

@@ -1,7 +1,7 @@
 ---
 title: Observability
 doc_id: DOC-071
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -421,7 +421,7 @@ belongs to no Tenant, such as a refusal before resolution, a refusal at the edge
 Neither carries a Principal, because telemetry has none (section 2). The edge decides whether a
 request's trace is kept and ignores the sampled flag a caller sends, and ADR-0028 keeps every trace
 until volume demands tail sampling, whose figures section 9 registers. The local stack's Collector
-prints each span to its log.
+prints each span to its log and sends it on to Tempo, which Grafana reads.
 
 ## 9. Open questions
 

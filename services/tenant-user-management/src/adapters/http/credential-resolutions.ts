@@ -8,6 +8,7 @@ import { DependencyUnavailable } from '../../application/errors.ts';
 import type { CallerAuthenticator } from '../../application/ports.ts';
 import type { Resolution } from '../../application/resolve-principal.ts';
 import { ApiError, codes, type JsonApiEnv, type Log, readDocument, resource, respond } from './json-api.ts';
+import { scopeToTenant } from './trace-context.ts';
 
 export interface CredentialResolutionDependencies {
   readonly callers: CallerAuthenticator;
@@ -54,8 +55,9 @@ export function credentialResolutions(
           log.warn({ requestId, reason: resolution.reason }, 'credential not resolved');
           return respond(c, { data: { type: TYPE, id: requestId, attributes: { outcome: 'rejected' } } });
         }
-        // The request's span and log line carry the Tenant it resolved to (invariant I1).
-        c.set('tenantId', resolution.tenantId);
+        // The request's span, and every line logged for it from here on, carry the Tenant it resolved
+        // to (invariant I1).
+        scopeToTenant(resolution.tenantId);
         return respond(c, {
           data: {
             type: TYPE,

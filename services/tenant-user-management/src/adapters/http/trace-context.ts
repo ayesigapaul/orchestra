@@ -1,13 +1,17 @@
 // W3C Trace Context through OpenTelemetry (http-conventions.md HC12). A valid incoming traceparent is
 // continued, never replaced: the request is served in a server span whose parent is the caller's
 // span, and every line logged inside it carries that trace and span. A missing or invalid traceparent
-// starts a new trace. The composition root installs the tracer provider (../telemetry/tracing.ts);
+// starts a new trace. Every line and server span also carries a tenant identifier: the Tenant the
+// request concerns once it is known, and otherwise the Nil UUID, which marks work that belongs to no
+// Tenant (ADR-0028). The composition root installs the tracer provider (../telemetry/tracing.ts);
 // without one, a request is served exactly the same, untraced.
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { performance } from 'node:perf_hooks';
 import { isSpanContextValid, ROOT_CONTEXT, SpanKind, SpanStatusCode, type TextMapGetter, trace } from '@opentelemetry/api';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import type { MiddlewareHandler } from 'hono';
 import { routePath } from 'hono/route';
+import { NIL_UUID } from '../../domain/identifiers.ts';
 import type { JsonApiEnv, Log } from './json-api.ts';
 
 // W3C Trace Context and nothing else, so baggage a caller sends is not carried into the service.
@@ -20,17 +24,36 @@ const fromHeaders: TextMapGetter<Headers> = {
   get: (headers, key) => headers.get(key) ?? undefined,
 };
 
-/** What every log line inside a request carries, under OpenTelemetry's log field names. */
-export function traceLogFields(): Record<string, string> {
+// What is known of the request being served. A handler records its Tenant once it learns it.
+interface RequestScope {
+  tenantId?: string | undefined;
+}
+
+const requestScopes = new AsyncLocalStorage<RequestScope>();
+
+/** Records the Tenant the request being served concerns, so its span and every later line carry it. */
+export function scopeToTenant(tenantId: string): void {
+  const scope = requestScopes.getStore();
+  if (scope !== undefined) scope.tenantId = tenantId;
+}
+
+/**
+ * What every log line carries: the Tenant of the request being served, or the Nil UUID outside a
+ * request and before its Tenant is known, with the trace and span under OpenTelemetry's field names.
+ */
+export function requestLogFields(): Record<string, string> {
+  const tenant = { tenant_id: requestScopes.getStore()?.tenantId ?? NIL_UUID };
   const span = trace.getActiveSpan()?.spanContext();
-  return span !== undefined && isSpanContextValid(span) ? { trace_id: span.traceId, span_id: span.spanId } : {};
+  return span !== undefined && isSpanContextValid(span)
+    ? { ...tenant, trace_id: span.traceId, span_id: span.spanId }
+    : tenant;
 }
 
 /**
  * Serves every request in a server span of its own, and logs one line for it once it is answered,
  * with the attribute names of OpenTelemetry's HTTP semantic conventions. The span and the line carry
- * the Tenant the request concerns once it is known (invariant I1), and never a Principal. Registered
- * before everything else, so a request refused before routing is traced and logged too.
+ * the Tenant the request concerns, or the Nil UUID, and never a Principal. Registered before
+ * everything else, so a request refused before routing is traced and logged too.
  */
 export function traceRequests(log: Log): MiddlewareHandler<JsonApiEnv> {
   const tracer = trace.getTracer('tenant-user-management');
@@ -42,37 +65,40 @@ export function traceRequests(log: Log): MiddlewareHandler<JsonApiEnv> {
       'url.scheme': new URL(c.req.url).protocol.replace(/:$/, ''),
     };
     const parent = propagator.extract(ROOT_CONTEXT, c.req.raw.headers, fromHeaders);
-    await tracer.startActiveSpan(method, { kind: SpanKind.SERVER, attributes }, parent, async (span) => {
-      const started = performance.now();
-      try {
-        await next();
-      } finally {
-        const status = c.res.status;
-        // The last route the request matched; middleware alone, as for an unknown path, is no route.
-        const matched = routePath(c, -1);
-        const route = matched === '*' || matched === '/*' ? undefined : matched;
-        const tenantId = c.get('tenantId');
-        if (route !== undefined) {
-          span.updateName(`${method} ${route}`);
-          span.setAttribute('http.route', route);
+    const scope: RequestScope = {};
+    await requestScopes.run(scope, () =>
+      tracer.startActiveSpan(method, { kind: SpanKind.SERVER, attributes }, parent, async (span) => {
+        const started = performance.now();
+        try {
+          await next();
+        } finally {
+          const status = c.res.status;
+          // The last route the request matched; middleware alone, as for an unknown path, is no route.
+          const matched = routePath(c, -1);
+          const route = matched === '*' || matched === '/*' ? undefined : matched;
+          const tenantId = scope.tenantId ?? NIL_UUID;
+          if (route !== undefined) {
+            span.updateName(`${method} ${route}`);
+            span.setAttribute('http.route', route);
+          }
+          span.setAttribute('orchestra.tenant_id', tenantId);
+          span.setAttribute('http.response.status_code', status);
+          if (status >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
+          log.info(
+            {
+              requestId: c.get('requestId'),
+              tenant_id: tenantId,
+              'http.request.method': method,
+              'http.route': route,
+              'url.path': c.req.path,
+              'http.response.status_code': status,
+              'http.server.request.duration': (performance.now() - started) / 1_000,
+            },
+            'request served',
+          );
+          span.end();
         }
-        if (tenantId !== undefined) span.setAttribute('orchestra.tenant_id', tenantId);
-        span.setAttribute('http.response.status_code', status);
-        if (status >= 500) span.setStatus({ code: SpanStatusCode.ERROR });
-        log.info(
-          {
-            requestId: c.get('requestId'),
-            tenant_id: tenantId,
-            'http.request.method': method,
-            'http.route': route,
-            'url.path': c.req.path,
-            'http.response.status_code': status,
-            'http.server.request.duration': (performance.now() - started) / 1_000,
-          },
-          'request served',
-        );
-        span.end();
-      }
-    });
+      }),
+    );
   };
 }

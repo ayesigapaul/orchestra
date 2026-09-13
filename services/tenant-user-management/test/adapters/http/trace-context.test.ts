@@ -4,7 +4,8 @@ import { InMemorySpanExporter, SimpleSpanProcessor, TracerProvider } from '@open
 import { Hono } from 'hono';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { install, type JsonApiEnv, respond } from '../../../src/adapters/http/json-api.ts';
-import { traceLogFields, traceRequests } from '../../../src/adapters/http/trace-context.ts';
+import { requestLogFields, scopeToTenant, traceRequests } from '../../../src/adapters/http/trace-context.ts';
+import { NIL_UUID } from '../../../src/domain/identifiers.ts';
 
 // The example the W3C Trace Context recommendation gives.
 const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736';
@@ -31,15 +32,20 @@ function served() {
   const app = new Hono<JsonApiEnv>();
   app.use(traceRequests(log));
   install(app, log);
-  app.get('/_test/trace', (c) => respond(c, { meta: { fields: traceLogFields() } }));
+  app.get('/_test/trace', (c) => respond(c, { meta: { fields: requestLogFields() } }));
   app.get('/_test/tenant', (c) => {
-    c.set('tenantId', 'tenant-a');
-    return respond(c, { meta: {} });
+    scopeToTenant('tenant-a');
+    return respond(c, { meta: { fields: requestLogFields() } });
   });
   app.get('/_test/fault', () => {
     throw new Error('connection to db.internal:5432 refused');
   });
   return { app, log };
+}
+
+async function fieldsOf(res: Response): Promise<Record<string, string>> {
+  const { meta } = (await res.json()) as { meta: { fields: Record<string, string> } };
+  return meta.fields;
 }
 
 function servedIn() {
@@ -54,7 +60,7 @@ describe('traceRequests', () => {
   it('continues a valid trace in a server span of its own, and logs inside it', async () => {
     const { app, log } = served();
     const res = await app.request('/_test/trace', { headers: { traceparent: TRACEPARENT } });
-    const { meta } = (await res.json()) as { meta: { fields: Record<string, string> } };
+    const fields = await fieldsOf(res);
 
     const span = servedIn();
     expect(span.spanContext().traceId).toBe(TRACE_ID);
@@ -62,10 +68,11 @@ describe('traceRequests', () => {
     expect(span.parentSpanContext?.spanId).toBe(PARENT_ID);
     expect(span.name).toBe('GET /_test/trace');
     expect(span.attributes).toMatchObject({ 'http.route': '/_test/trace', 'http.response.status_code': 200 });
-    expect(meta.fields).toEqual({ trace_id: TRACE_ID, span_id: span.spanContext().spanId });
+    expect(fields).toEqual({ tenant_id: NIL_UUID, trace_id: TRACE_ID, span_id: span.spanContext().spanId });
     expect(log.info).toHaveBeenCalledWith(
       expect.objectContaining({
         requestId: res.headers.get('Orchestra-Request-Id'),
+        tenant_id: NIL_UUID,
         'http.request.method': 'GET',
         'http.route': '/_test/trace',
         'http.response.status_code': 200,
@@ -96,7 +103,7 @@ describe('traceRequests', () => {
     expect(span.spanContext().traceId).not.toBe(TRACE_ID);
   });
 
-  it('traces and logs a request refused before it was routed, naming no route', async () => {
+  it('traces and logs a request refused before it was routed with the Nil UUID, naming no route', async () => {
     const { app, log } = served();
     const res = await app.request('/nowhere');
     expect(res.status).toBe(404);
@@ -104,13 +111,18 @@ describe('traceRequests', () => {
     expect(span.name).toBe('GET');
     expect(span.attributes['http.route']).toBeUndefined();
     expect(span.attributes['http.response.status_code']).toBe(404);
+    expect(span.attributes['orchestra.tenant_id']).toBe(NIL_UUID);
     expect(span.status.code).toBe(SpanStatusCode.UNSET);
-    expect(log.info).toHaveBeenCalledWith(expect.objectContaining({ 'http.response.status_code': 404 }), 'request served');
+    expect(log.info).toHaveBeenCalledWith(
+      expect.objectContaining({ tenant_id: NIL_UUID, 'http.response.status_code': 404 }),
+      'request served',
+    );
   });
 
-  it('carries the Tenant a request concerns on its span and its log line', async () => {
+  it('carries the Tenant a request concerns on its span and on every line logged after it is known', async () => {
     const { app, log } = served();
-    await app.request('/_test/tenant');
+    const fields = await fieldsOf(await app.request('/_test/tenant'));
+    expect(fields.tenant_id).toBe('tenant-a');
     expect(servedIn().attributes['orchestra.tenant_id']).toBe('tenant-a');
     expect(log.info).toHaveBeenCalledWith(expect.objectContaining({ tenant_id: 'tenant-a' }), 'request served');
   });
@@ -122,7 +134,8 @@ describe('traceRequests', () => {
     expect(servedIn().status.code).toBe(SpanStatusCode.ERROR);
   });
 
-  it('keeps no trace outside a request', () => {
-    expect(traceLogFields()).toEqual({});
+  it('gives a line logged outside any request the Nil UUID and no trace, whatever it is scoped to', () => {
+    scopeToTenant('tenant-a');
+    expect(requestLogFields()).toEqual({ tenant_id: NIL_UUID });
   });
 });

@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.43.0
+version: 0.44.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,18 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.44.0] — 2026-09-13
+
+ADR-0028 is carried out: telemetry for work with no Tenant carries the Nil UUID, and the local
+stack reads its traces in Grafana.
+
+### Changed
+
+- `60-operations/observability.md` (0.14.0) — section 8 says the local stack's Collector sends
+  every span on to Tempo, which Grafana reads.
 
 ---
 
