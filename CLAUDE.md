@@ -205,6 +205,16 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
 - **Documentation examples trip secret scanners.** A realistic-looking UUID in an HTTP example was
   enough for gitleaks to flag `generic-api-key`. Placeholders in angle brackets, matching the
   `<session-token>` style already used, keep the scan at full strength with no allowlist to maintain.
+- **`docker compose up --wait` fails on a one-shot job that no service depends on.** A migration
+  job that exits 0 is reported as a failed container unless another service waits for it with
+  `condition: service_completed_successfully`. That is why Tenant User Management's migrations have
+  the service itself as their dependent.
+- **A node-postgres pool with no `error` listener crashes the process when the pooler goes away.**
+  The pool emits an idle connection's failure as an event, and Node treats an unhandled one as an
+  uncaught exception, so a lost dependency became a crash rather than a 503. `connect()` in each
+  TypeScript service therefore requires the handler, and `smoke.sh` stops PgBouncer to prove it.
+- **PostgreSQL 15 made `pg_database_owner` the owner of `public`.** A rule that finds service
+  schemas by an `_owner` role name must exclude built-in `pg_` roles, or `public` reads as a service.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
   taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
   and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that

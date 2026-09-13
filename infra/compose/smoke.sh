@@ -109,6 +109,7 @@ health=$(docker compose exec -T tenant-user-management wget -qO- http://127.0.0.
   || fail "Tenant User Management health: expected its meta document, got: $health"
 echo "✓ Tenant User Management serves once its migrations have run"
 
+./row-level-security-control.sh
 ./tenant-isolation.sh
 
 docker compose --profile test run --rm --build tenant-user-management-integration \

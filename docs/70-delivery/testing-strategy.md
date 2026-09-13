@@ -1,7 +1,7 @@
 ---
 title: Testing Strategy
 doc_id: DOC-083
-version: 0.16.1
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -38,6 +38,12 @@ silently**, because those are the ones where a test is the control rather than a
 
 That last row is not a conventional test and belongs here anyway. ADR-0014 names it: assert licences
 over the dependency tree in CI, not by review.
+
+The first two rows are enforced in CI today. `scripts/check-row-level-security.sql` reads the
+catalog after migrations, and fails on a table without row-level security enabled and forced, among
+the other rules [`multi-tenancy.md`](../10-architecture/multi-tenancy.md) section 5 lists.
+`infra/compose/tenant-isolation.sh` proves two Tenants isolated through the transaction-mode pool.
+The Local stack job runs both on every pull request.
 
 ## 3. Test kinds, and what each is for
 

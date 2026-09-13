@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.31.0
+version: 0.32.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,20 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.32.0] — 2026-09-13
+
+The row-level security control exists, and CI proves that it can fail.
+
+### Changed
+
+- `10-architecture/multi-tenancy.md` (0.12.0) — section 5 records where the control lives,
+  `scripts/check-row-level-security.sql`, and the two rules writing it added. No service's role may
+  use another service's schema, and a schema owned by a built-in `pg_` role is never a service's.
+- `70-delivery/testing-strategy.md` (0.17.0) — the first two guarantees in section 2 are now
+  enforced in CI, by the control and by the two-Tenant isolation test.
 
 ---
 
