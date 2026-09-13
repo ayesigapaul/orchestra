@@ -1,11 +1,11 @@
 ---
 title: Observability
 doc_id: DOC-071
-version: 0.12.0
+version: 0.13.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-13
 owners: [platform-architecture]
-depends_on: [ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012, ADR-0013, ADR-0028]
 ---
 
 # Observability
@@ -27,8 +27,10 @@ write period, replication lag as a read-path property, quota queue depth and the
 Run explorer, tracing across the boundary an Agent Run creates, and what a request's telemetry
 carries. **Out of scope:** the instrumentation, which
 [`../10-architecture/tech-stack.md`](../10-architecture/tech-stack.md) section 7 fixes as
-OpenTelemetry exporting OTLP; storage engines, dashboard products and alert routing — none is chosen
-or implied — and **every number.** No retention period, latency target, service level objective,
+OpenTelemetry exporting OTLP; the telemetry backend, which
+[ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) fixes as a self-hosted
+Grafana stack; alert routing, which nothing chooses yet; and **every number.** No retention period,
+latency target, service level objective,
 error budget, alert threshold, health-check interval, sampling rate, queue-depth bound, backoff
 figure or rate limit is decided anywhere in this repository, and none is invented here; where a
 figure is load-bearing this document states what bounds it and registers it in section 9. Orchestra
@@ -412,12 +414,14 @@ W3C Trace Context, as [`../30-protocol/http-conventions.md`](../30-protocol/http
 HC12 requires: each hop serves it in a span of its own, whose parent is the span that called it, and
 exports that span over OTLP. Each hop also logs the request once, with the trace and span identifiers
 under OpenTelemetry's field names, `trace_id` and `span_id`, and with the request identifier the
-caller was given. Once the request has resolved to a Tenant, the line and the span carry its tenant
-identifier, as I1 requires. Neither carries a Principal, because telemetry has none (section 2). A
-request refused before its credential resolved has no Tenant to carry, and neither has a health
-check, which I1 as written does not provide for; section 9 registers it. The local stack records
-every trace, and its Collector prints each span to its log. Where spans go anywhere else, and what
-is sampled there, section 9 registers too.
+caller was given. Every line and every server span carries a tenant identifier, as I1 requires: the
+Tenant the request resolved to, or else the Nil UUID that
+[ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) reserves for work that
+belongs to no Tenant, such as a refusal before resolution, a refusal at the edge or a health check.
+Neither carries a Principal, because telemetry has none (section 2). The edge decides whether a
+request's trace is kept and ignores the sampled flag a caller sends, and ADR-0028 keeps every trace
+until volume demands tail sampling, whose figures section 9 registers. The local stack's Collector
+prints each span to its log.
 
 ## 9. Open questions
 
@@ -438,11 +442,14 @@ question, its classification is repeated rather than revised.
 | Whether the Run explorer is a Control Plane surface of its own or a view over the Audit surface, whether *Run explorer* enters the glossary, and whether a Run's model token usage appears in it | Document | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 4, which enumerates ten surfaces and names no explorer; its section 11 holds token usage on the Usage surface, reported and never billed under ADR-0009 |
 | What an Orchestra operator sees of a Tenant's Run, the compiled artifact included, and how that read is attributed | **ADR** | audit-model section 9, which owns operator attribution and the enforcement-point question as one decision; classification repeated |
 | The trace and audit grain of a Tool call inside an Agent Run | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 with [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) section 5; classification repeated, and neither audit nor metering can be applied retroactively |
-| What may be sampled, at what rate, and whether an Agent Run's trace may be sampled at all | Document | An operations design with [`reliability.md`](reliability.md), whose register does not yet carry the row. Bounded above by audit-model section 3, which forbids sampling any audited act, and below by section 7: what a model chose survives in the trail, so what a sampled-away trace destroys is the ungoverned material — the timing, and the calls considered and not made |
+| When volume makes keeping every trace too costly, what share of other traces tail sampling keeps and what counts as a slow trace; and whether an Agent Run's trace may be sampled at all | Document | An operations design with [`reliability.md`](reliability.md), from observed volume. [ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) keeps every trace until then, keeps every trace with an error and every slow trace after, and has the edge decide. Bounded above by audit-model section 3, which forbids sampling any audited act, and below by section 7: what a model chose survives in the trail, so what a sampled-away trace destroys is the ungoverned material — the timing, and the calls considered and not made |
 | Telemetry retention, which is not the audit-retention question | Document | Operational cost once volume is observable. audit-model section 11 classifies audit retention **ADR**; that classification is not inherited here, and putting telemetry in the audit store is exactly what would inherit it |
 | Who may read an Evidence Set, including one rendered into an operator console by a telemetry pipeline | Document | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 6 settles it by derivation and hands the binding rule to [`../40-governance/audit-model.md`](../40-governance/audit-model.md); what is open is the landing, not the answer. Classification repeated from audit-model section 13 |
-| What a log line and a span carry for a request that never reached a Tenant: one refused before its credential resolved, a refusal at the edge, or a health check | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) invariant I1, which requires a tenant identifier on every log line and excepts only the global Person, with the store registry of [`../10-architecture/multi-tenancy.md`](../10-architecture/multi-tenancy.md) section 8. Section 8 here records what is carried today |
-| Where spans and request log lines go outside the local stack, and who operates what receives them | Document | An operations design with [`reliability.md`](reliability.md). [`../10-architecture/tech-stack.md`](../10-architecture/tech-stack.md) section 7 fixes OTLP and keeps the backend replaceable; retention and sampling are the rows above |
+
+**Where telemetry goes outside the local stack** and **what a log line or span carries for work
+with no Tenant** left this register in version 0.13.0, because
+[ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) answers both. Section 8
+records the answers.
 
 One question registered here in an earlier version has left it: **what a Quota Envelope delay
 payload carries** is answered by [`quotas-and-metering.md`](quotas-and-metering.md) section 4's

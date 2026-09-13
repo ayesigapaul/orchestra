@@ -50,6 +50,8 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0025 | HTTP APIs speak JSON:API 1.1 with one error contract; each service's API is an OpenAPI document | Accepted |
 | 0026 | Services call each other over HTTP under that contract; facts leave through an outbox; gRPC is the named fallback | Accepted |
 | 0027 | Tenant User Management signs the Principal Token that carries a Principal and Tenant between services | Accepted |
+| 0028 | Telemetry goes to a self-hosted Grafana stack; every trace is kept until volume demands sampling; work with no Tenant carries the Nil UUID | Accepted |
+| 0029 | Kafka carries facts between services as CloudEvents keyed by Tenant, captured from each outbox by Debezium | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -82,7 +84,8 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   `scripts/check-service-boundaries.mjs` enforces it in CI, with no exemption mechanism.
 
 - **Versions** — every technology runs its **latest stable release, pinned exactly**; where a project
-  has an LTS line, latest LTS. No floors, no ranges, no pre-releases. The pinned table is
+  has an LTS line, latest LTS. No floors and no ranges, and never a chosen pre-release; one that a
+  stable, exactly pinned release pins itself is allowed and named in the pinned table,
   [`docs/10-architecture/tech-stack.md`](docs/10-architecture/tech-stack.md) section 1.1 — re-check
   against the registries, not memory, before relying on it.
 
@@ -119,13 +122,17 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   and family names are never required or composed (OpenID Connect, SCIM RFC 7643). Text is Unicode
   NFC, only an email address's domain is lowercased (RFC 5321), and formats are RFC 3339 times, BCP
   47 language tags, ISO 3166-1 countries, ISO 4217 currencies, E.164 phone numbers and IANA time
-  zones. Tokens use registered JWT claim names. HC3's snake_case JSON:API members stand, by ADR-0025.
+  zones. Tokens use registered JWT claim names, events are CloudEvents 1.0, and telemetry for work
+  with no Tenant carries the Nil UUID (RFC 9562). HC3's snake_case JSON:API members stand, by
+  ADR-0025.
 - **Calls between services** — HTTP under the same contract, never gRPC without an ADR for a
   measured need ([ADR-0026](docs/adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md),
   `http-conventions.md` HC16 to HC21). Every call carries the calling service's own token and is
   never trusted for where it came from. A service is never the Principal of an action, and a
   Principal or Tenant comes only from a verified token. Retry only what `meta.retry` calls `safe`. A
-  fact another service reacts to leaves through an outbox written in the owner's transaction.
+  fact another service reacts to leaves through an outbox written in the owner's transaction, and
+  Kafka carries it to consumers, captured by Debezium
+  ([ADR-0029](docs/adr/adr-0029-kafka-carries-facts-captured-by-debezium.md)).
 
 ## Commands
 

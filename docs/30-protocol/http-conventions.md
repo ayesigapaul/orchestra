@@ -1,11 +1,11 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.6.0
+version: 0.7.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
-depends_on: [ADR-0025, ADR-0026, ADR-0027]
+depends_on: [ADR-0025, ADR-0026, ADR-0027, ADR-0029]
 ---
 
 # HTTP Conventions
@@ -242,6 +242,8 @@ section 9.
 
 A fact another service reacts to is not a call. ADR-0026 has it leave its owner through a
 transactional outbox, and each event type is a wire contract in [`schemas/`](schemas/).
+[ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) has Kafka carry it to its
+consumers as a CloudEvent keyed by its Tenant, captured from the outbox by Debezium.
 
 ## 9. Open questions
 
@@ -253,3 +255,4 @@ transactional outbox, and each event type is a wire contract in [`schemas/`](sch
 | The edge's size limits — 1 MiB of request content, and 8 KiB for the request line and for each header field — which were set with no customer requirement to size them | A design partner's largest legitimate request, set in the edge's configuration in `infra/compose/apisix/` | No — the codes stay whatever the values become |
 | The Principal Token's specification: its explicit type, claims, issuance and exchange operations, header, grant for resumed work, and key set (HC18) | A document in this directory, before the first internal operation that acts for a Principal | No — [ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) decides the mechanism |
 | The framing of a stream between services, such as Server-Sent Events (HC21) | The first stream between services, with this document | No |
+| The specification of facts between services: topic names, the CloudEvents mapping, the outbox table's columns and the capture connector's configuration | A document in this directory, with the first event type | No — [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) decides the transport |

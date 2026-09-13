@@ -91,11 +91,14 @@ flowchart TD
   A25 --&gt; A26
   A24 --&gt; A27["ADR-0027&lt;br/&gt;Principal Tokens between services"]
   A26 --&gt; A27
+  A11 --&gt; A28["ADR-0028&lt;br/&gt;Telemetry backend, sampling, Nil UUID"]
+  A26 --&gt; A29["ADR-0029&lt;br/&gt;Kafka and Debezium carry facts"]
+  A21 --&gt; A29
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;
 </pre></div>
@@ -141,11 +144,14 @@ flowchart TD
   A25 --&gt; A26
   A24 --&gt; A27["ADR-0027&lt;br/&gt;Principal Tokens between services"]
   A26 --&gt; A27
+  A11 --&gt; A28["ADR-0028&lt;br/&gt;Telemetry backend, sampling, Nil UUID"]
+  A26 --&gt; A29["ADR-0029&lt;br/&gt;Kafka and Debezium carry facts"]
+  A21 --&gt; A29
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;</pre></details>
 </section>

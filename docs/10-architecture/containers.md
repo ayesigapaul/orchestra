@@ -1,7 +1,7 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.24.0
+version: 0.25.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -51,7 +51,8 @@ Management, a Control Plane container, and rejects the request when it cannot
 the shape [ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) gives
 them. A call is an HTTP request under the JSON:API contract, authenticated with the calling
 service's own credential. A fact another container reacts to leaves its owner through a
-transactional outbox.
+transactional outbox, and Kafka carries it to the containers that consume it, captured from the
+outbox by Debezium ([ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md)).
 
 ## 2. Container diagram
 
@@ -293,7 +294,7 @@ before implementation. **Document** means a later document suffices.
 | Where policy evaluation executes — in-process at each enforcement point, or a separate container | **ADR** if evaluation needs its own datastore access, otherwise Document | Blocked on the policy-language ADR and on whether a Policy may depend on aggregate state, both marked **ADR** in [`../40-governance/policy-model.md`](../40-governance/policy-model.md). Section 5 fixes that enforcement is in-process by construction and derives the constraints any answer must satisfy; the location is not settled here |
 | Which side of the language boundary the Definition Compiler sits on, and what artifact crosses it | **ADR** | [`data-plane.md`](data-plane.md) section 11, which carries the analysis of both candidates, with ADR-0005 behind it. This view names the container; it does not decide the side. It fixes where every point of contact with the substrate lives, which is the substitution argument the boundary exists to protect |
 | How the control-plane-to-runtime internal contract is versioned and deprecated | Document | [`../VERSIONING.md`](../VERSIONING.md), which enumerates nine artifacts and does not include this one, though ADR-0005 requires it be documented as a versioned contract |
-| The transport that carries events from a container's outbox to the containers that consume them: a relay pushing over HTTP, or a broker | **ADR** | [ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) names both candidates, and defers the choice until the first cross-service consumer exists. The event contracts themselves belong in [`../30-protocol/schemas/`](../30-protocol/schemas/) |
+| How long the Kafka topics that carry facts between services keep them, and how far a capture connector's replication slot may lag | Document | [`../60-operations/reliability.md`](../60-operations/reliability.md), with [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md), when the first event type and its consumer are built. Retention must cover the longest a consumer may be down, and the lag bound decides how much write-ahead log a stalled connector may hold. The event contracts themselves belong in [`../30-protocol/schemas/`](../30-protocol/schemas/) |
 | Whether the Connector fabric is a container at all | **ADR** | ADR-0007's validation steps. Until it binds, section 7 is planned work and the dotted edges in section 2 are provisional |
 | Which container writes the Audit Records that are not Policy Decisions, and where the write path ADR-0013 permits to degrade lives | Document | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) fixes the record classes and requires that a degraded period be visible; `reliability.md` in [`../60-operations/`](../60-operations/) owns how it is signalled. Section 3 names a container for the fail-closed path only and section 2 draws no edge for the rest, so the container is this view's to name once both land |
 | Which containers are separately deployable, and which share a process or a release | Document | `deployment-topologies.md`, planned in [`./README.md`](README.md). Nothing here is a service count |
