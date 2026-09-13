@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -162,6 +162,17 @@ forced, a policy that admits a row through the current Tenant's Membership, and 
 privilege for the application role. The linking role is the one role allowed a bypass attribute,
 and only while it cannot log in and owns nothing but the linking functions. And a reference column
 in a table the application role cannot write is checked by those functions, not by a write policy.
+
+**The control is `scripts/check-row-level-security.sql`.** The Local stack job runs it after every
+service's migrations, through `infra/compose/row-level-security-control.sh`, which also proves the
+control can fail. A probe schema that breaks each rule must be refused with every problem named, and
+the control must pass again once the probe is gone. Writing it added two rules:
+
+- A service's role may not use another service's schema. This enforces
+  [ADR-0020](../adr/adr-0020-monorepo-with-enforced-service-boundaries.md) rule B4 through grants.
+- A service schema is one owned by a `<service>_owner` role, never by a built-in `pg_` role.
+  PostgreSQL 15 made `pg_database_owner` the owner of `public`, which would otherwise read as a
+  service.
 
 ## 6. Cross-tenant references — why filtering is not forbidding
 
