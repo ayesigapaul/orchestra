@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -138,6 +138,8 @@ container authenticates, which the paragraph above fixes as the Gateway for ever
 and the Control Plane for the federated Platform User. The record lives in Tenant User Management,
 which both of them call to resolve a caller
 ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
+[`../30-protocol/credential-resolution.md`](../30-protocol/credential-resolution.md) specifies that
+call.
 
 **A service calling another service is not a Principal.**
 [ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) authenticates

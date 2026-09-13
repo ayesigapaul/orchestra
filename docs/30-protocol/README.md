@@ -1,9 +1,9 @@
 ---
 title: Protocol
 doc_id: DOC-040
-version: 0.16.0
+version: 0.17.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 owners: [platform-architecture]
 ---
 
@@ -22,6 +22,7 @@ section and [`../40-governance/`](../40-governance/) are the two that bind.
 
 | Document | Specifies |
 | --- | --- |
+| [`credential-resolution.md`](credential-resolution.md) | How the Gateway turns a verified credential into exactly one Principal and one Tenant, through Tenant User Management |
 | [`event-protocol.md`](event-protocol.md) | The Orchestra Agent Event Profile: what the Run event stream carries, its ordering and its replay |
 | [`gateway-api.md`](gateway-api.md) | The resource-oriented HTTP surface, its two authenticating entry points and its error taxonomy |
 | [`http-conventions.md`](http-conventions.md) | The response and error contract every HTTP API follows — JSON:API 1.1 documents, codes and retry safety (ADR-0025) |

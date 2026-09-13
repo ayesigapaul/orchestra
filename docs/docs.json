@@ -80,6 +80,7 @@
             "group": "Protocol",
             "pages": [
               "30-protocol/section-index",
+              "30-protocol/credential-resolution",
               "30-protocol/event-protocol",
               "30-protocol/gateway-api",
               "30-protocol/http-conventions",
@@ -307,6 +308,10 @@
     {
       "source": "/20-domain/README.md",
       "destination": "/20-domain/section-index"
+    },
+    {
+      "source": "/30-protocol/credential-resolution.md",
+      "destination": "/30-protocol/credential-resolution"
     },
     {
       "source": "/30-protocol/event-protocol.md",
