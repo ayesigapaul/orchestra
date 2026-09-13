@@ -51,9 +51,13 @@ imported from another service.
   in `docs/30-protocol/openapi/` that CI keeps identical.
 - **Every request is traced** ([`http-conventions.md`](../../docs/30-protocol/http-conventions.md)
   HC12). `src/adapters/http/trace-context.ts` serves each request in an OpenTelemetry server span
-  whose parent is a valid incoming `traceparent`, and logs it once with the trace, the span and,
-  once a resolution names it, the Tenant, but never a Principal. `src/adapters/telemetry/tracing.ts`
-  installs the tracer provider, which exports over OTLP/HTTP when an endpoint is configured.
+  whose parent is a valid incoming `traceparent`, and logs it once with the trace and the span.
+  Every line and span carries a tenant identifier: the Tenant a resolution names, and otherwise the
+  Nil UUID ([ADR-0028](../../docs/adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)), which
+  identity sync's lines carry too. Nothing carries a Principal. No Tenant may have the Nil UUID:
+  the domain refuses it as a `TenantId`, and a constraint refuses it in the tenant directory.
+  `src/adapters/telemetry/tracing.ts` installs the tracer provider, which exports over OTLP/HTTP
+  when an endpoint is configured.
 
 ## Database
 

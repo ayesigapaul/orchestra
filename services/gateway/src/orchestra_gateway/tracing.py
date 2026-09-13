@@ -4,16 +4,20 @@ A valid incoming traceparent is continued, never replaced: the Gateway serves th
 server span whose parent is the caller's span, and every line it logs inside the request carries
 that trace and span. A missing or invalid traceparent starts a new trace. A call to another service
 is made in a client span of its own whose context the call carries, so the callee's span names it as
-the parent. Spans are exported over OTLP when an endpoint is configured, and telemetry is best
+the parent. Every line and server span also carries a tenant identifier: the request's Tenant once
+its credential has resolved, and otherwise the Nil UUID, which marks work that belongs to no Tenant
+(ADR-0028). Spans are exported over OTLP when an endpoint is configured, and telemetry is best
 effort: a span that cannot be exported changes nothing a request does.
 """
 
+import contextvars
 import json
 import logging
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
+from typing import Any
 from urllib.parse import urlsplit
 
 from opentelemetry import trace
@@ -29,12 +33,28 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 SERVICE_NAME = "gateway"
 
+# RFC 9562's Nil UUID, which marks telemetry for work that belongs to no Tenant (ADR-0028). No
+# Tenant ever has it as its identifier.
+NIL_TENANT_ID = "00000000-0000-0000-0000-000000000000"
+
 logger = logging.getLogger("orchestra_gateway.requests")
 tracer = trace.get_tracer("orchestra_gateway")
 
 # W3C Trace Context and nothing else, so baggage a caller sends is not carried into Orchestra.
 _PROPAGATOR = TraceContextTextMapPropagator()
 _TRACE_HEADERS = {b"traceparent", b"tracestate"}
+
+# The state of the request being served, where its Tenant is recorded once its credential resolves.
+# A request's dependencies run in copies of its context, and every copy holds this same dictionary.
+_request_state: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
+    "orchestra_gateway_request_state", default=None
+)
+
+
+def current_tenant_id() -> str:
+    """The Tenant of the request being served, or the Nil UUID when it has none (ADR-0028)."""
+    state = _request_state.get()
+    return (state or {}).get("tenant_id") or NIL_TENANT_ID
 
 
 def configure_tracing(otlp_endpoint: str | None) -> TracerProvider | None:
@@ -100,8 +120,9 @@ def record_answer(span: Span, status_code: int) -> None:
 class TraceContextMiddleware:
     """Serves every request in a server span of its own, and logs one line once it is answered.
 
-    Attribute names are those of OpenTelemetry's HTTP semantic conventions. The span and the line
-    carry the request's Tenant once it has resolved to one (invariant I1), and never a Principal.
+    Attribute names are those of OpenTelemetry's HTTP semantic conventions. The span and every line
+    carry the request's Tenant once its credential has resolved, and the Nil UUID until then
+    (invariant I1, ADR-0028). Neither ever carries a Principal.
     """
 
     def __init__(self, app: ASGIApp) -> None:
@@ -126,45 +147,51 @@ class TraceContextMiddleware:
             "url.path": scope["path"],
             "url.scheme": scope["scheme"],
         }
-        with tracer.start_as_current_span(
-            method, context=_incoming(scope), kind=SpanKind.SERVER, attributes=attributes
-        ) as span:
-            try:
-                await self.app(scope, receive, send_with_status)
-            finally:
-                state = scope.get("state", {})
-                # The router records the route it matched in the scope, so an unknown path has none.
-                route = getattr(scope.get("route"), "path", None)
-                tenant_id = state.get("tenant_id")
-                if route is not None:
-                    span.update_name(f"{method} {route}")
-                    span.set_attribute("http.route", route)
-                if tenant_id is not None:
+        state = scope.setdefault("state", {})
+        token = _request_state.set(state)
+        try:
+            with tracer.start_as_current_span(
+                method, context=_incoming(scope), kind=SpanKind.SERVER, attributes=attributes
+            ) as span:
+                try:
+                    await self.app(scope, receive, send_with_status)
+                finally:
+                    # The router records the route it matched, so an unknown path has none.
+                    route = getattr(scope.get("route"), "path", None)
+                    tenant_id = current_tenant_id()
+                    if route is not None:
+                        span.update_name(f"{method} {route}")
+                        span.set_attribute("http.route", route)
                     span.set_attribute("orchestra.tenant_id", tenant_id)
-                span.set_attribute("http.response.status_code", status)
-                if status >= 500:
-                    span.set_status(StatusCode.ERROR)
-                logger.info(
-                    "request served",
-                    extra={
-                        "request_id": state.get("request_id"),
-                        "tenant_id": tenant_id,
-                        "http.request.method": method,
-                        "http.route": route,
-                        "url.path": scope["path"],
-                        "http.response.status_code": status,
-                        "http.server.request.duration": time.perf_counter() - started,
-                    },
-                )
+                    span.set_attribute("http.response.status_code", status)
+                    if status >= 500:
+                        span.set_status(StatusCode.ERROR)
+                    logger.info(
+                        "request served",
+                        extra={
+                            "request_id": state.get("request_id"),
+                            "tenant_id": tenant_id,
+                            "http.request.method": method,
+                            "http.route": route,
+                            "url.path": scope["path"],
+                            "http.response.status_code": status,
+                            "http.server.request.duration": time.perf_counter() - started,
+                        },
+                    )
+        finally:
+            _request_state.reset(token)
 
 
 class TraceLogFilter(logging.Filter):
-    """Puts the current span's trace on every log record, under OpenTelemetry's log field names."""
+    """Puts the current trace and Tenant on every log record. The trace uses OpenTelemetry's log
+    field names, and a line with no Tenant carries the Nil UUID (ADR-0028)."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         context = trace.get_current_span().get_span_context()
         record.trace_id = trace.format_trace_id(context.trace_id) if context.is_valid else None
         record.span_id = trace.format_span_id(context.span_id) if context.is_valid else None
+        if getattr(record, "tenant_id", None) is None:
+            record.tenant_id = current_tenant_id()
         return True
 
 

@@ -8,7 +8,7 @@ from opentelemetry import trace
 from opentelemetry.trace import SpanKind, StatusCode
 
 from orchestra_gateway import tracing
-from orchestra_gateway.tracing import JsonLogFormatter, TraceLogFilter
+from orchestra_gateway.tracing import NIL_TENANT_ID, JsonLogFormatter, TraceLogFilter
 
 # The example the W3C Trace Context recommendation gives.
 TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736"
@@ -89,7 +89,7 @@ def test_logs_one_line_per_request_inside_its_span(client, mint, spans, caplog, 
     assert getattr(record, "http.response.status_code") == 200
 
 
-def test_a_refused_request_is_traced_and_logged_without_a_tenant(client, spans, caplog):
+def test_a_refused_request_is_traced_and_logged_with_the_nil_uuid(client, spans, caplog):
     with caplog.at_level("INFO", logger="orchestra_gateway.requests"):
         response = client.get("/_probe/identity")
 
@@ -97,9 +97,20 @@ def test_a_refused_request_is_traced_and_logged_without_a_tenant(client, spans, 
     span = served_in(spans)
     assert span.attributes["http.response.status_code"] == 401
     assert span.status.status_code is StatusCode.UNSET
-    assert "orchestra.tenant_id" not in span.attributes
+    assert span.attributes["orchestra.tenant_id"] == NIL_TENANT_ID
     [record] = [record for record in caplog.records if record.getMessage() == "request served"]
-    assert record.tenant_id is None
+    assert record.tenant_id == NIL_TENANT_ID
+
+
+def test_a_line_logged_before_the_credential_resolves_carries_the_nil_uuid(client, mint, caplog):
+    caplog.handler.addFilter(TraceLogFilter())
+    headers = {"Authorization": f"Bearer {mint(aud='someone-else')}"}
+    with caplog.at_level("WARNING", logger="orchestra_gateway.auth"):
+        client.get("/_probe/identity", headers=headers)
+
+    [record] = [r for r in caplog.records if r.getMessage().startswith("credential rejected")]
+    assert record.tenant_id == NIL_TENANT_ID
+    assert record.trace_id is not None
 
 
 def test_an_unknown_path_names_no_route(client, spans):
@@ -128,15 +139,17 @@ def test_log_lines_are_json_with_their_trace_and_an_rfc_3339_time(spans):
         TraceLogFilter().filter(record)
     line = json.loads(JsonLogFormatter().format(record))
     assert (line["trace_id"], line["span_id"]) == ids(span)
+    assert line["tenant_id"] == NIL_TENANT_ID
     assert (line["level"], line["message"]) == ("info", "hello")
     assert line["time"].endswith("+00:00")
 
 
-def test_a_line_logged_outside_a_request_carries_no_trace():
+def test_a_line_logged_outside_a_request_carries_the_nil_uuid_and_no_trace():
     record = logging.makeLogRecord({"name": "orchestra_gateway.test", "msg": "starting"})
     TraceLogFilter().filter(record)
     line = json.loads(JsonLogFormatter().format(record))
     assert "trace_id" not in line and "span_id" not in line
+    assert line["tenant_id"] == NIL_TENANT_ID
 
 
 def test_an_installed_tracer_provider_is_kept():

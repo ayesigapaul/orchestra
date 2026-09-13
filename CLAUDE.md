@@ -253,6 +253,10 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   `plugin_metadata is required` on every request and makes no span, while the Gateway's span
   quietly names the caller as its parent. `resource`, `collector` and `set_ngx_var` belong under
   `plugin_metadata` in `apisix.yaml`, and `smoke.sh` fails when the edge's span is missing.
+- **The link check follows every URL in Markdown, localhost included.** lychee runs on each pull
+  request over `./**/*.md`, so a bare `http://localhost:3000` in the compose README failed External
+  links with Connection refused. Name the port instead, or put a local address in backticks, which
+  lychee does not read.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
   taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
   and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that

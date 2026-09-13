@@ -59,4 +59,8 @@ describe('identifiers', () => {
     expect(TenantId('11111111-1111-4111-8111-11111111111A')).toBe('11111111-1111-4111-8111-11111111111a');
     expect(() => TenantId('tenant-1')).toThrow();
   });
+
+  it('refuse the Nil UUID as a Tenant, because telemetry reserves it for work with no Tenant', () => {
+    expect(() => TenantId('00000000-0000-0000-0000-000000000000')).toThrow();
+  });
 });

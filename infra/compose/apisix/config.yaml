@@ -18,10 +18,11 @@ plugins:
 
 nginx_config:
   # One JSON line per request, under the names the services log with: the edge's trace and span, the
-  # request identifier the caller was given, and OpenTelemetry's HTTP attribute names. escape=json
-  # keeps whatever a caller sends inside its string.
+  # request identifier the caller was given, and OpenTelemetry's HTTP attribute names. The edge never
+  # resolves a Tenant (ADR-0018), so every line carries the Nil UUID as its tenant (ADR-0028).
+  # escape=json keeps whatever a caller sends inside its string.
   http:
-    access_log_format: '{"time":"$time_iso8601","message":"request served","trace_id":"$opentelemetry_trace_id","span_id":"$opentelemetry_span_id","request_id":"$sent_http_orchestra_request_id","http.request.method":"$request_method","url.path":"$uri","http.response.status_code":$status,"http.server.request.duration":$request_time,"client.address":"$remote_addr","user_agent.original":"$http_user_agent"}'
+    access_log_format: '{"time":"$time_iso8601","message":"request served","tenant_id":"00000000-0000-0000-0000-000000000000","trace_id":"$opentelemetry_trace_id","span_id":"$opentelemetry_span_id","request_id":"$sent_http_orchestra_request_id","http.request.method":"$request_method","url.path":"$uri","http.response.status_code":$status,"http.server.request.duration":$request_time,"client.address":"$remote_addr","user_agent.original":"$http_user_agent"}'
     access_log_format_escape: json
   # Errors nginx raises itself, such as an upstream it cannot reach or a request over a size limit,
   # never pass through a plugin. They are answered with the same JSON:API error documents (ADR-0025,

@@ -8,6 +8,7 @@ import { KeycloakUsers } from './adapters/identity-provider/keycloak-users.ts';
 import { connect } from './adapters/postgres/database.ts';
 import { PostgresVerifiedPersons } from './adapters/postgres/verified-persons.ts';
 import { synchronizeIdentities } from './application/synchronize-identity.ts';
+import { NIL_UUID } from './domain/identifiers.ts';
 
 const config = z
   .object({
@@ -22,8 +23,13 @@ const config = z
   })
   .parse(process.env);
 
-// Timestamps in RFC 3339, as every Orchestra log line has them.
-const log = pino({ name: 'tenant-user-management-identity-sync', timestamp: pino.stdTimeFunctions.isoTime });
+// Timestamps in RFC 3339, as every Orchestra log line has them. Identity sync works on global
+// Persons, not in a Tenant, so its lines carry the Nil UUID (ADR-0028).
+const log = pino({
+  name: 'tenant-user-management-identity-sync',
+  timestamp: pino.stdTimeFunctions.isoTime,
+  mixin: () => ({ tenant_id: NIL_UUID }),
+});
 const database = connect(config.IDENTITY_SYNC_DATABASE_URL, {
   max: 1,
   onIdleConnectionError: (error) => log.error({ err: error }, 'a pooled database connection failed while idle'),

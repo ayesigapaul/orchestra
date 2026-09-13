@@ -16,7 +16,8 @@ help: ## List the targets
 up: ## Build and start the local stack, wait until it is healthy, and seed the local Tenant
 	$(COMPOSE) up -d --build --wait --wait-timeout 420
 	infra/compose/seed-local-tenant.sh
-	@echo "The edge is at http://localhost:9080, and Keycloak at http://localhost:8080 (console at /admin)."
+	@echo "The edge is at http://localhost:9080, Keycloak at http://localhost:8080 (console at /admin),"
+	@echo "and Grafana, with the stack's traces, at http://localhost:3000."
 
 down: ## Stop the local stack, keeping its data
 	$(COMPOSE) down
@@ -35,7 +36,7 @@ ps: ## Show every container and its health
 logs: ## Follow the logs of every service, or of one with SERVICE=<name>
 	$(COMPOSE) logs -f $(SERVICE)
 
-traces: ## Follow the spans the OpenTelemetry Collector prints
+traces: ## Follow the spans the Collector prints; Grafana at localhost:3000 shows them as traces
 	$(COMPOSE) logs -f otel-collector
 
 seed: ## Seed the local Tenant and the dev user's Platform User again

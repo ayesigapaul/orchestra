@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server';
 import pino from 'pino';
 import { z } from 'zod';
 import { createApp } from './adapters/http/app.ts';
-import { traceLogFields } from './adapters/http/trace-context.ts';
+import { requestLogFields } from './adapters/http/trace-context.ts';
 import {
   IdentityProviderCallerAuthenticator,
   IdentityProviderCredentialVerifier,
@@ -43,11 +43,12 @@ const tracing = startTracing({
   otlpEndpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT,
 });
 
-// Timestamps in RFC 3339, and every line logged inside a request carries its W3C trace.
+// Timestamps in RFC 3339. Every line carries its Tenant, or the Nil UUID where there is none
+// (ADR-0028), and every line logged inside a request carries its W3C trace.
 const log = pino({
   name: 'tenant-user-management',
   timestamp: pino.stdTimeFunctions.isoTime,
-  mixin: traceLogFields,
+  mixin: requestLogFields,
 });
 const database = connect(config.DATABASE_URL, {
   onIdleConnectionError: (error) => log.error({ err: error }, 'a pooled database connection failed while idle'),

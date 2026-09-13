@@ -1,0 +1,11 @@
+# The local stack's traces, read from Tempo (ADR-0028).
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    isDefault: true
+    editable: false

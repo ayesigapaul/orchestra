@@ -158,8 +158,6 @@ export interface JsonApiEnv {
     requestId: string;
     /** Set while an operation that never takes effect runs (Operation.changesNothing). */
     changesNothing?: boolean;
-    /** The Tenant the request concerns, once it is known. Its span and log line carry it (I1). */
-    tenantId?: string;
   };
 }
 

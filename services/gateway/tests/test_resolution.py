@@ -285,8 +285,9 @@ def test_the_deadline_bounds_every_attempt(callee, clock):
         resolution({"outcome": "undecided"}),
         resolution({"outcome": "resolved", "tenant_id": TENANT_ID}),
         document(200, {"data": {"type": "identity-probes", "id": "x", "attributes": RESOLVED}}),
+        resolution({**RESOLVED, "tenant_id": "00000000-0000-0000-0000-000000000000"}),
     ],
-    ids=["not-json", "unknown-outcome", "no-principal", "another-type"],
+    ids=["not-json", "unknown-outcome", "no-principal", "another-type", "nil-uuid-tenant"],
 )
 def test_an_answer_that_establishes_no_identity_fails_closed(callee, clock, answer):
     upstreams = Upstreams(callee, [answer], documented=False)
