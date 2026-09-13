@@ -45,6 +45,16 @@ Tenants cannot see or reference each other's rows
 [ADR-0023](../../docs/adr/adr-0023-no-foreign-key-constraints.md),
 [ADR-0024](../../docs/adr/adr-0024-global-person-with-tenant-memberships.md)).
 
+**Credential resolution is proved across the stack's network.** The realm enables Organizations: a
+`local-tenant` Organization holds the `dev` user, the `outsider` user belongs to none, and the
+confidential `orchestra-gateway` client authenticates through the client credentials grant.
+`seed-local-tenant.sh` maps that Organization to a Tenant and gives `dev` a Platform User in it.
+`smoke.sh` runs the seed, then asks Tenant User Management from the Gateway's container, as the
+Gateway will ([`credential-resolution.md`](../../docs/30-protocol/credential-resolution.md)). A
+credential from `dev` resolves. One from `outsider`, one without the `organization` scope and a
+forged one are all rejected alike. An end user's credential cannot authenticate a calling service,
+and no token reaches the service's log.
+
 **PostgreSQL's init scripts run only against an empty volume.** After changing `postgres/initdb/`,
 or when a stack predates it, recreate the stack with `down -v`.
 

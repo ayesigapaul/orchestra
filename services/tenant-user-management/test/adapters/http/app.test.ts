@@ -1,11 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createApp } from '../../../src/adapters/http/app.ts';
+import { createApp, type HttpDependencies } from '../../../src/adapters/http/app.ts';
+import { rejected } from '../../../src/application/resolve-principal.ts';
 import { expectDocumented, expectErrorDocument } from './contract.ts';
 
 const JSON_API = 'application/vnd.api+json';
-const silent = { error: () => {} };
-const request = (path: string, init?: RequestInit) =>
-  createApp({ log: silent, ready: async () => {} }).request(path, init);
+const silent = { warn: () => {}, error: () => {} };
+
+// These tests are about the contract around every operation, so resolution here admits no caller.
+const appWith = (dependencies: Partial<HttpDependencies> = {}) =>
+  createApp({
+    log: silent,
+    ready: async () => {},
+    credentialResolution: {
+      callers: { authenticate: async () => undefined },
+      allowedCallers: [],
+      resolve: async () => rejected('invalid-credential'),
+    },
+    ...dependencies,
+  });
+const request = (path: string, init?: RequestInit) => appWith().request(path, init);
 
 describe('HTTP adapter', () => {
   it('reports health as a meta document', async () => {
@@ -14,9 +27,9 @@ describe('HTTP adapter', () => {
   });
 
   it('answers 503 when its database cannot be reached, and says why only to the log', async () => {
-    const log = { error: vi.fn() };
+    const log = { warn: vi.fn(), error: vi.fn() };
     const unreachable = () => Promise.reject(new Error('connect ECONNREFUSED pgbouncer:6432'));
-    const res = await createApp({ log, ready: unreachable }).request('/healthz');
+    const res = await appWith({ log, ready: unreachable }).request('/healthz');
     expect(res.status).toBe(503);
     expect(await res.clone().text()).not.toContain('pgbouncer');
     const body = await expectDocumented(res, '/healthz', 'GET');
@@ -93,8 +106,8 @@ describe('HTTP adapter', () => {
     ['GET', 'safe'],
     ['POST', 'indeterminate'],
   ] as const)('logs a fault on %s and never describes it, with retry %s', async (method, retry) => {
-    const log = { error: vi.fn() };
-    const app = createApp({ log, ready: async () => {} });
+    const log = { warn: vi.fn(), error: vi.fn() };
+    const app = appWith({ log });
     app.on(method, '/_test/fault', () => {
       throw new Error('connection to db.internal:5432 refused');
     });

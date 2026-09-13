@@ -33,3 +33,37 @@ export interface PersonLinker {
 export interface PrincipalRepository {
   findPlatformUserByVerifiedSubject(tenantId: TenantId, subject: string): Promise<PlatformUser | undefined>;
 }
+
+/** What a verified credential establishes about its holder, and nothing the verifier could not check. */
+export interface VerifiedClaims {
+  readonly subject: string;
+  /** Every identity provider Organization the credential names. Resolution needs exactly one. */
+  readonly organizations: readonly string[];
+}
+
+export type CredentialVerification =
+  | { readonly outcome: 'verified'; readonly claims: VerifiedClaims }
+  | { readonly outcome: 'rejected' };
+
+/**
+ * Verifies a credential against the identity provider's signing keys (credential-resolution.md CR3).
+ * A credential that fails verification is rejected. When the keys cannot be reached, the verifier
+ * throws DependencyUnavailable instead, because the credential was never judged (CR8).
+ */
+export interface CredentialVerifier {
+  verify(credential: string): Promise<CredentialVerification>;
+}
+
+/** A service that called this one, established from its own verified token (http-conventions HC17). */
+export interface Caller {
+  /** The identity provider client the calling service authenticated as. */
+  readonly client: string;
+}
+
+/**
+ * Authenticates the calling service from its own token. A token that fails verification yields no
+ * Caller. When the signing keys cannot be reached, it throws DependencyUnavailable.
+ */
+export interface CallerAuthenticator {
+  authenticate(token: string): Promise<Caller | undefined>;
+}

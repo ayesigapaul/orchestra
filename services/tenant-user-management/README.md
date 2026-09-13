@@ -35,8 +35,11 @@ imported from another service.
   database by a write policy or by the linking functions.
 - **Resolution fails closed.** Anything short of one Principal and one Tenant is a rejection, and a
   rejection's reason is for logs, never for the caller.
-- **No endpoint before its contract.** Only `/healthz` is served until the resolution contract is
-  specified in `docs/30-protocol/`.
+- **Credential resolution trusts only what it verifies**
+  ([`credential-resolution.md`](../../docs/30-protocol/credential-resolution.md)). The caller
+  authenticates with its own token before its body is read, and the credential is verified again
+  here against the identity provider's keys. Every rejection answers alike, whatever its reason.
+  Keys that cannot be fetched are a 503, never a rejection, and a credential is never logged.
 - **One HTTP contract** ([ADR-0025](../../docs/adr/adr-0025-json-api-http-contract.md)). Every
   response is a JSON:API document, and every failure an error document from
   `src/adapters/http/json-api.ts` with a registered code and retry safety. Operations are registered
@@ -71,8 +74,17 @@ enforces `erasableSyntaxOnly`, which rejects the syntax Node cannot strip, such 
 pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm test           # unit and adapter tests, the in-memory tenancy adapter among them
-pnpm start          # needs DATABASE_URL, the service's role through the pool; PORT defaults to 8080
+pnpm start          # needs the configuration below; PORT defaults to 8080
 ```
+
+| Variable | What it is |
+| --- | --- |
+| `DATABASE_URL` | The service's own role, through the pool |
+| `IDENTITY_PROVIDER_ISSUER` | The issuer every token must carry |
+| `IDENTITY_PROVIDER_JWKS_URL` | The identity provider's key set, where this service reaches it |
+| `CREDENTIAL_AUDIENCE` | The audience a credential to resolve must name: the Gateway's |
+| `SERVICE_AUDIENCE` | The audience a caller's own token must name; `tenant-user-management` by default |
+| `RESOLUTION_CALLERS` | The clients that may resolve credentials, comma-separated; `orchestra-gateway` by default |
 
 `pnpm test:integration` runs the same tenancy contract against PostgreSQL, through PgBouncer, as the
 service's own roles. It needs the local stack's network, so `infra/compose/smoke.sh` runs it in a
@@ -81,4 +93,4 @@ than skipping.
 
 ## Not yet here
 
-The identity-sync path and its Keycloak adapter, and the credential-resolution contract and endpoint.
+The identity-sync path and its Keycloak adapter.

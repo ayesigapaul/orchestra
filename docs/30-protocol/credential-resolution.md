@@ -1,7 +1,7 @@
 ---
 title: Credential Resolution
 doc_id: DOC-098
-version: 0.1.0
+version: 0.2.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -129,12 +129,12 @@ cannot reach the identity provider's signing keys, it has not judged the credent
 | Status | Code | When |
 | --- | --- | --- |
 | 200 | — | The credential resolved, or it did not (CR6) |
-| 400 | `request.malformed` | The body is not JSON, or not a JSON:API document |
-| 401 | `auth.unauthenticated` | The caller's own token is missing or does not verify (CR2) |
+| 400 | `request.malformed` | The body is not JSON, or not a JSON:API document with a resource object in `data` |
+| 401 | `auth.unauthenticated` | The caller's own token is missing or does not verify (CR2). It is checked before the body is read |
 | 403 | `auth.forbidden` | The caller's token verifies, but the caller may not resolve credentials (CR2) |
 | 406, 415 | `request.not_acceptable`, `request.unsupported_media_type` | [`http-conventions.md`](http-conventions.md) HC1 |
-| 422 | `request.validation_failed` | The document has no `credential`, or it is not a string; `source.pointer` names it |
-| 500 | `server.internal` | An unhandled fault |
+| 422 | `request.validation_failed` | A member is missing or invalid: a `type` other than `credential-resolutions`, or no non-empty string `credential`. Each is its own error, and `source.pointer` names it |
+| 500 | `server.internal` | An unhandled fault. `meta.retry` is `safe`, because a resolution changes nothing (CR1) |
 | 503 | `server.unavailable`, `upstream.unavailable` | The service is not ready, or the identity provider's keys cannot be reached (CR8) |
 
 ## 4. The local stack

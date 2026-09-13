@@ -23,7 +23,7 @@ describe('resolvePrincipal', () => {
   });
 
   it('resolves a verified subject in an active Tenant to exactly one Principal and one Tenant', async () => {
-    expect(await resolve({ subject: 'kc-bea', organization: 'org-b' })).toEqual({
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-b'] })).toEqual({
       outcome: 'resolved',
       tenantId: tenantB,
       principalId: beaInB,
@@ -31,7 +31,7 @@ describe('resolvePrincipal', () => {
   });
 
   it('does not resolve a subject with no Membership in the credential’s Tenant', async () => {
-    expect(await resolve({ subject: 'kc-bea', organization: 'org-a' })).toEqual({
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-a'] })).toEqual({
       outcome: 'rejected',
       reason: 'unknown-principal',
     });
@@ -40,18 +40,37 @@ describe('resolvePrincipal', () => {
   it('resolves one Person in two Tenants to a different Principal in each', async () => {
     const beaInA = PrincipalId('dddddddd-dddd-4ddd-8ddd-dddddddddddd');
     tenancy.addPlatformUser(await tenancy.linkVerified(tenantA, 'kc-bea'), beaInA);
-    expect(await resolve({ subject: 'kc-bea', organization: 'org-a' })).toMatchObject({ principalId: beaInA });
-    expect(await resolve({ subject: 'kc-bea', organization: 'org-b' })).toMatchObject({ principalId: beaInB });
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-a'] })).toMatchObject({ principalId: beaInA });
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-b'] })).toMatchObject({ principalId: beaInB });
   });
 
   it('rejects a credential that names no organization, or one the directory does not know', async () => {
-    expect(await resolve({ subject: 'kc-bea', organization: undefined })).toMatchObject({ outcome: 'rejected' });
-    expect(await resolve({ subject: 'kc-bea', organization: 'org-z' })).toMatchObject({ outcome: 'rejected' });
+    expect(await resolve({ subject: 'kc-bea', organizations: [] })).toEqual({
+      outcome: 'rejected',
+      reason: 'no-organization',
+    });
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-z'] })).toEqual({
+      outcome: 'rejected',
+      reason: 'unknown-organization',
+    });
+  });
+
+  it('rejects a credential that names more than one organization, since the Tenant would be a guess', async () => {
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-a', 'org-b'] })).toEqual({
+      outcome: 'rejected',
+      reason: 'ambiguous-organization',
+    });
+  });
+
+  it('treats one organization named twice as one', async () => {
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-b', ' org-b '] })).toMatchObject({
+      outcome: 'resolved',
+    });
   });
 
   it('rejects a suspended Tenant even for a known subject', async () => {
     directory.add({ tenantId: tenantB, status: 'suspended', identityProviderOrganization: 'org-b' });
-    expect(await resolve({ subject: 'kc-bea', organization: 'org-b' })).toEqual({
+    expect(await resolve({ subject: 'kc-bea', organizations: ['org-b'] })).toEqual({
       outcome: 'rejected',
       reason: 'tenant-not-active',
     });
@@ -62,6 +81,6 @@ describe('resolvePrincipal', () => {
       directory: { findByIdentityProviderOrganization: async () => Promise.reject(new Error('database down')) },
       principals: tenancy,
     });
-    await expect(failing({ subject: 'kc-bea', organization: 'org-b' })).rejects.toThrow('database down');
+    await expect(failing({ subject: 'kc-bea', organizations: ['org-b'] })).rejects.toThrow('database down');
   });
 });

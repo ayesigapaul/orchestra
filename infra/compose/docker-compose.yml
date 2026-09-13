@@ -58,6 +58,13 @@ services:
     image: orchestra-local/tenant-user-management:0.1.0
     environment:
       DATABASE_URL: postgresql://tenant_user_management_app:tenant-user-management-app-local-dev@pgbouncer:6432/orchestra
+      # The issuer tokens carry, and the key set inside the network, exactly as the Gateway has them. A
+      # credential to resolve names the Gateway as its audience; a caller's own token names this service.
+      IDENTITY_PROVIDER_ISSUER: http://localhost:8080/realms/orchestra
+      IDENTITY_PROVIDER_JWKS_URL: http://keycloak:8080/realms/orchestra/protocol/openid-connect/certs
+      CREDENTIAL_AUDIENCE: orchestra-gateway
+      SERVICE_AUDIENCE: tenant-user-management
+      RESOLUTION_CALLERS: orchestra-gateway
     depends_on:
       pgbouncer:
         condition: service_healthy
