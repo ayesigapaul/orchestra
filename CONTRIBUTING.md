@@ -51,8 +51,14 @@ commitlint. A scope is **required**.
 
 **Types** — `feat` `fix` `docs` `adr` `rfc` `refactor` `perf` `test` `build` `ci` `chore` `revert`
 
-**Scopes** — `overview` `architecture` `domain` `protocol` `governance` `workflows` `operations`
-`delivery` `reference` `adr` `rfc` `schemas` `ci` `repo` `deps` `release`
+**Scopes** — [`.commitlintrc.json`](.commitlintrc.json) holds the list CI enforces:
+
+- documentation sections — `overview` `architecture` `domain` `protocol` `governance` `workflows`
+  `operations` `delivery` `reference` `schemas`
+- services — `gateway` `tenant-user-management` `supervisor` `runtime` `compiler` `policy` `audit`
+  `model-broker` `tool-invocation` `control-plane` `admin-console`, and `services` for what spans
+  them
+- everything else — `adr` `rfc` `ci` `repo` `deps` `release` `infra` `apps` `tooling`
 
 ```text
 docs(governance): Add policy enforcement point specification
@@ -70,6 +76,26 @@ A breaking change to a published contract is marked `!` after the scope and expl
 - Complete the checklist in the PR template. Do not delete items; mark them N/A with a reason.
 - All CI checks must pass, and every review conversation must be resolved.
 - Merge strategy is **squash and merge**. `main` keeps a linear history.
+
+## Issues, labels and milestones
+
+Issues and pull requests carry labels from four families. `kind/` and `area/` use the words of the
+commit type and scope, so a label and a commit describe a change the same way.
+
+| Family | Says | Labels |
+| --- | --- | --- |
+| `kind/` | What sort of change — the commit types | `feature` `bug` `docs` `adr` `rfc` `refactor` `performance` `test` `build` `ci` `chore` `security` `dependencies` `question` |
+| `area/` | Where it lands — the commit scopes | A documentation section, a service, `infra` `apps` `ui-template` `tooling` `repo`, or `accessibility` |
+| `priority/` | How soon | `p0-critical` `p1-high` `p2-medium` `p3-low` |
+| `status/` | Why it is not moving | `triage` `needs-decision` `needs-design-partner` `blocked` |
+
+An issue template applies `status/triage`, which triage replaces with an area and a priority. An
+issue closed without a change carries `resolution/duplicate`, `resolution/invalid` or
+`resolution/wontfix`. `good first issue` and `help wanted` keep their GitHub meanings.
+
+Milestones mirror [`docs/70-delivery/milestones.md`](docs/70-delivery/milestones.md): M1 to M5,
+defined by exit criteria and carrying no dates, because that document carries none. A security
+vulnerability is never an issue — report it privately, as the issue chooser directs.
 
 ## Signed commits
 

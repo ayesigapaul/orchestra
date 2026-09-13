@@ -1,6 +1,6 @@
 name: Documentation issue
 description: Something in the specification set is wrong, unclear, contradictory or missing.
-labels: ["documentation", "triage"]
+labels: ["kind/docs", "status/triage"]
 body:
   - type: input
     id: location
