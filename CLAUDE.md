@@ -217,6 +217,10 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   TypeScript service therefore requires the handler, and `smoke.sh` stops PgBouncer to prove it.
 - **PostgreSQL 15 made `pg_database_owner` the owner of `public`.** A rule that finds service
   schemas by an `_owner` role name must exclude built-in `pg_` roles, or `public` reads as a service.
+- **A row-level security check cannot see rows its own statement wrote.** A write policy's
+  subquery runs on the statement's snapshot, so `INSERT … SELECT … FROM link_verified_person(…)`
+  was refused: the Membership the function had just created was not there yet. Link in one
+  statement and insert in the next, as `infra/compose/seed-local-tenant.sh` does.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
   taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
   and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that

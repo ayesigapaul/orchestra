@@ -2,10 +2,36 @@
   "realm": "orchestra",
   "enabled": true,
   "sslRequired": "none",
+  "organizationsEnabled": true,
   "clients": [
     {
       "clientId": "orchestra-gateway",
-      "name": "Orchestra Gateway (resource server)",
+      "name": "Orchestra Gateway",
+      "description": "The audience of an end user's access token, and the Gateway's own identity when it calls another service (ADR-0026).",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "orchestra-gateway-local-dev",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "protocolMappers": [
+        {
+          "name": "audience: tenant-user-management",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.client.audience": "tenant-user-management",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "tenant-user-management",
+      "name": "Tenant User Management",
+      "description": "The audience of the token a service presents when it calls Tenant User Management.",
       "enabled": true,
       "bearerOnly": true,
       "protocol": "openid-connect"
@@ -45,6 +71,7 @@
   ],
   "users": [
     {
+      "id": "00000000-0000-4000-8000-000000000001",
       "username": "dev",
       "enabled": true,
       "email": "dev@orchestra.localhost",
@@ -52,6 +79,26 @@
       "firstName": "Local",
       "lastName": "Developer",
       "credentials": [{ "type": "password", "value": "dev-local-only", "temporary": false }]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "username": "outsider",
+      "enabled": true,
+      "email": "outsider@elsewhere.localhost",
+      "emailVerified": true,
+      "firstName": "No",
+      "lastName": "Organization",
+      "credentials": [{ "type": "password", "value": "outsider-local-only", "temporary": false }]
+    }
+  ],
+  "organizations": [
+    {
+      "name": "Local Tenant",
+      "alias": "local-tenant",
+      "enabled": true,
+      "description": "The local stack's one Tenant. The tenant directory records it by this alias.",
+      "domains": [{ "name": "orchestra.localhost", "verified": false }],
+      "members": [{ "username": "dev", "membershipType": "UNMANAGED" }]
     }
   ]
 }

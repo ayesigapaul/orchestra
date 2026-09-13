@@ -21,6 +21,21 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 
 ---
 
+## [0.36.0] — 2026-09-13
+
+Tenant User Management answers credential resolution, under the contract that preceded it.
+
+### Changed
+
+- `30-protocol/credential-resolution.md` (0.2.0) — the responses table matches the
+  implementation. The caller's token is checked before the body is read, and a body with no
+  resource object in `data` is malformed. Each invalid member, a wrong `type` among them, is its
+  own 422. An unhandled fault is safe to retry, because a resolution changes nothing.
+- `10-architecture/tech-stack.md` (0.32.0) — pins jose 6.2.12, which verifies identity provider
+  tokens in TypeScript services.
+
+---
+
 ## [0.35.0] — 2026-09-13
 
 Credential resolution has its contract, ahead of its implementation.

@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.31.0
+version: 0.32.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -49,9 +49,9 @@ projects themselves mark non-LTS "current" lines as not for production. Node.js 
 today. Pre-releases, betas and release candidates are never used.
 
 Versions below were read from the registries — endoflife.date, PyPI, npm and GitHub releases — on
-2026-09-12, and the contract-test validators, dbmate, node-postgres and httpx2 on 2026-09-13, not
-from memory. Re-check them the same way before relying on this table; it is a snapshot, and it goes
-stale on the next release.
+2026-09-12, and the contract-test validators, dbmate, node-postgres, httpx2 and jose on 2026-09-13,
+not from memory. Re-check them the same way before relying on this table; it is a snapshot, and it
+goes stale on the next release.
 
 | Technology | Pinned | Channel note |
 | --- | --- | --- |
@@ -69,6 +69,7 @@ stale on the next release.
 | Zod | 4.6.2 | |
 | Pino | 10.3.1 | |
 | node-postgres (`pg`) | 8.23.0, with `@types/pg` 8.23.1 | PostgreSQL for TypeScript services. It sends unnamed statements unless a query is named, so PgBouncer's transaction pooling needs no prepared-statement tracking |
+| jose | 6.2.12 | Verifies identity provider tokens in TypeScript services against the provider's published key set, with the algorithm fixed by the verifier rather than read from the token |
 | Vitest | 5.0.0 | |
 | Ajv | 8.20.0, with `yaml` 2.9.1 | TypeScript services' contract tests validate real responses against their OpenAPI documents |
 | JSON:API | 1.1 | Every HTTP document ([ADR-0025](../adr/adr-0025-json-api-http-contract.md)). 1.2 is still in development |
