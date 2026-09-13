@@ -116,7 +116,10 @@ echo "✓ Tenant User Management serves once its migrations have run"
 ./row-level-security-control.sh
 ./tenant-isolation.sh
 
-docker compose --profile test run --rm --build tenant-user-management-integration \
+# --no-deps: the suite runs against the stack as it was brought up. Without it, compose recreated
+# PostgreSQL, PgBouncer and the service in CI, which closed Keycloak's database connections under
+# every check that followed.
+docker compose --profile test run --rm --build --no-deps tenant-user-management-integration \
   || fail "Tenant User Management's integration suite failed"
 echo "✓ both tenancy adapters pass one contract, the PostgreSQL one through the pool"
 

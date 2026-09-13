@@ -221,6 +221,10 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   subquery runs on the statement's snapshot, so `INSERT … SELECT … FROM link_verified_person(…)`
   was refused: the Membership the function had just created was not there yet. Link in one
   statement and insert in the next, as `infra/compose/seed-local-tenant.sh` does.
+- **`docker compose run` can recreate the stack it runs beside.** In CI, running the integration
+  suite with `run --build` recreated PostgreSQL, PgBouncer and Tenant User Management, which
+  closed Keycloak's pooled database connections, and the next token request failed. Locally nothing
+  was recreated, so it passed. `smoke.sh` runs the suite with `--no-deps`.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
   taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
   and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that
