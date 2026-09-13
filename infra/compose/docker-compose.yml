@@ -37,6 +37,29 @@ services:
       timeout: 3s
       retries: 30
 
+  # Tenant User Management's migrations, applied as its schema's owner role, directly rather than
+  # through the pool. A one-shot job: it exits once the schema is current, and `up --wait` waits
+  # for that exit.
+  tenant-user-management-migrate:
+    build:
+      context: ../../services/tenant-user-management
+      dockerfile: db/Dockerfile
+    image: orchestra-local/tenant-user-management-migrate:0.1.0
+    environment:
+      DATABASE_URL: postgres://tenant_user_management_owner:tenant-user-management-owner-local-dev@postgres:5432/orchestra?sslmode=disable&search_path=tenant_user_management
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Starts only once its schema is current. No published port: services reach it on this network
+  # (ADR-0026), and nothing outside the stack does.
+  tenant-user-management:
+    build: ../../services/tenant-user-management
+    image: orchestra-local/tenant-user-management:0.1.0
+    depends_on:
+      tenant-user-management-migrate:
+        condition: service_completed_successfully
+
   keycloak:
     build: ./keycloak
     image: orchestra-local/keycloak:26.7.3

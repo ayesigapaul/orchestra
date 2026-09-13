@@ -103,4 +103,12 @@ pool "RESET app.tenant_id" >/dev/null
   || fail_pool "expected transaction pooling to hand a plain SET to the next client, got '$seen'"
 echo "✓ the pool is in transaction mode: a plain SET does reach the next client, which is why it is forbidden"
 
+health=$(docker compose exec -T tenant-user-management wget -qO- http://127.0.0.1:8080/healthz) \
+  || fail "Tenant User Management is not serving"
+[ "$health" = '{"jsonapi":{"version":"1.1"},"meta":{"status":"ok"}}' ] \
+  || fail "Tenant User Management health: expected its meta document, got: $health"
+echo "✓ Tenant User Management serves once its migrations have run"
+
+./tenant-isolation.sh
+
 echo "Local stack passes."

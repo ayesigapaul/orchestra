@@ -1,6 +1,6 @@
 # Local stack
 
-PostgreSQL, PgBouncer, Keycloak, Apache APISIX and the Gateway, each in its own container
+PostgreSQL, PgBouncer, Keycloak, Apache APISIX, the Gateway and Tenant User Management, each in its own container
 ([ADR-0020](../../docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md) rule B6), at the
 versions pinned in [`docs/10-architecture/tech-stack.md`](../../docs/10-architecture/tech-stack.md).
 
@@ -31,6 +31,18 @@ pinned release from apt.postgresql.org and refuses to build unless the repositor
 pinned fingerprint. The pool runs in transaction mode, as
 [ADR-0021](../../docs/adr/adr-0021-postgresql-is-the-datastore.md) assumes, and `smoke.sh` proves
 it: tenant context set with `SET LOCAL` does not reach the next client, and a plain `SET` does.
+
+**Each service owns a schema, and provisioning creates its roles.** Creating a role needs a
+superuser, so `postgres/initdb/` creates Tenant User Management's schema and its four roles: an
+owner that runs migrations, the service's own role with no bypass, an identity-sync role, and a
+linker that cannot log in. The one-shot `tenant-user-management-migrate` job then applies the
+service's migrations from `services/tenant-user-management/db/` as the owner. The service itself
+starts only once that job has succeeded, with no published port. `smoke.sh` checks its health and
+runs `tenant-isolation.sh`. That script proves, through the pool and as the service's own roles, that two
+Tenants cannot see or reference each other's rows
+([ADR-0021](../../docs/adr/adr-0021-postgresql-is-the-datastore.md),
+[ADR-0023](../../docs/adr/adr-0023-no-foreign-key-constraints.md),
+[ADR-0024](../../docs/adr/adr-0024-global-person-with-tenant-memberships.md)).
 
 **PostgreSQL's init scripts run only against an empty volume.** After changing `postgres/initdb/`,
 or when a stack predates it, recreate the stack with `down -v`.

@@ -44,6 +44,24 @@ imported from another service.
   parameter. Tests validate real responses against `openapi.yaml`, a copy of this service's document
   in `docs/30-protocol/openapi/` that CI keeps identical.
 
+## Database
+
+The service owns the `tenant_user_management` schema in the one logical datastore
+([ADR-0021](../../docs/adr/adr-0021-postgresql-is-the-datastore.md)). Migrations live in
+`db/migrations/`, and `db/Dockerfile` applies them with the pinned dbmate, strictly in order, as the
+schema's owner. Provisioning creates the schema and four roles first, because creating a role needs
+a superuser. `infra/compose/postgres/initdb/` does this for the local stack.
+
+| Role | Can log in | What it may do |
+| --- | --- | --- |
+| `tenant_user_management_owner` | Yes | Run migrations; owns the tables, and forced row-level security binds it too |
+| `tenant_user_management_app` | Yes | The service's connection. Reads within its Tenant, links Persons only through the functions, creates Principals; no bypass, owns nothing |
+| `tenant_user_management_identity_sync` | Yes | Update a verified Person's name and email, and nothing else |
+| `tenant_user_management_linker` | No | Own the linking functions, which run with its bypass so they can find a Person another Tenant already linked |
+
+A Person has no creation timestamp, deliberately: a Tenant linking an existing Person would read in
+it that the person was already known elsewhere.
+
 ## Commands
 
 TypeScript runs directly on Node.js 24 by type stripping, so there is no build step. The compiler
