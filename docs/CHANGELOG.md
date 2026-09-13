@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.44.0
+version: 0.44.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,24 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.44.1] — 2026-09-13
+
+Two registers the open-questions index skipped are read, and two statements that the datastore is
+unselected are corrected.
+
+### Fixed
+
+- `scripts/open-questions.mjs` — reads a register headed "What this document does not decide" or
+  "Undecided", which brings in `20-domain/domain-model.md` section 11 and the undecided scope in
+  `00-overview/scope-and-non-goals.md` section 4. A row needs an ADR only when its classification
+  leads with Yes or ADR, so "No — ADR-0004 exists" no longer counts as one.
+- `00-overview/scope-and-non-goals.md` (0.14.1) — section 4 drops the datastore engine from what is
+  undecided, since ADR-0021 chose PostgreSQL.
+- `70-delivery/testing-strategy.md` (0.17.1) — section 4 records where the suites live and what
+  runs them, instead of calling them choices that wait on an unselected datastore.
 
 ---
 
