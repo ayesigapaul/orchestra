@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Phase 0's exit criterion, end to end: an authenticated request crosses APISIX to the Gateway, and
-# neither a missing credential nor an identity asserted in a header gets through. Every answer, the
-# edge's own refusals included, is a JSON:API document under ADR-0025.
+# Phase 0's exit criterion, end to end: an authenticated request crosses APISIX to the Gateway and
+# resolves to one Principal in one Tenant, and neither a missing credential nor an identity asserted
+# in a header gets through. Every answer, the edge's own refusals included, is a JSON:API document
+# under ADR-0025.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -60,15 +61,49 @@ if grep -qi '^www-authenticate:.*error_description' <<<"$headers"; then
 fi
 echo "✓ a refused token is not told why"
 
-token=$(curl -sf -X POST http://localhost:8080/realms/orchestra/protocol/openid-connect/token \
-  -d grant_type=password -d client_id=orchestra-cli -d username=dev -d password=dev-local-only \
-  | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])') \
-  || fail "could not obtain a token from Keycloak"
+# The probe resolves every credential through Tenant User Management (credential-resolution.md), so
+# the local Tenant and its Platform User are seeded first.
+./seed-local-tenant.sh
+LOCAL_TENANT=00000000-0000-4000-8000-000000000100 # seed-local-tenant.sh maps local-tenant to it
+fail_resolution() {
+  echo "✗ $1"
+  docker compose logs --tail 40 gateway tenant-user-management keycloak
+  exit 1
+}
 
+# access_token <form fields>: an access token from the local realm's token endpoint.
+access_token() {
+  curl -sf -X POST http://localhost:8080/realms/orchestra/protocol/openid-connect/token "$@" \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
+}
+# user_credential <username> <password> [scope]: that user's credential, from the local CLI client.
+user_credential() {
+  access_token -d grant_type=password -d client_id=orchestra-cli -d username="$1" -d password="$2" \
+    ${3:+-d scope="$3"}
+}
+
+token=$(user_credential dev dev-local-only organization) || fail "could not obtain a token from Keycloak"
 call -H "Authorization: Bearer ${token}" "$PROBE"
-[ "$status" = "200" ] && grep -q '"type":"identity-probes"' <<<"$body" \
-  || fail "valid credential: expected an identity-probes resource, got $status: $body"
-echo "✓ a verified credential crosses the edge and the Gateway: $body"
+[ "$status" = "200" ] || fail_resolution "valid credential: expected 200, got $status: $body"
+BODY=$body TENANT=$LOCAL_TENANT python3 -c '
+import json, os
+data = json.loads(os.environ["BODY"])["data"]
+attributes = data["attributes"]
+assert data["type"] == "identity-probes" and data["id"] == attributes["principal_id"] != ""
+assert attributes["tenant_id"] == os.environ["TENANT"]
+assert attributes["principal_kind"] == "platform-user"
+' || fail_resolution "valid credential: expected dev's Platform User in the local Tenant, got: $body"
+echo "✓ a verified credential crosses the edge and resolves to one Principal in one Tenant: $body"
+
+outsider=$(user_credential outsider outsider-local-only organization) \
+  || fail "could not obtain the outsider's credential"
+unscoped=$(user_credential dev dev-local-only) \
+  || fail "could not obtain a credential without the organization scope"
+for credential in "$outsider" "$unscoped"; do
+  call -H "Authorization: Bearer ${credential}" "$PROBE"
+  expect_error 401 auth.unauthenticated
+done
+echo "✓ a verified credential that resolves to no Principal is refused like one that fails verification"
 
 call -H "Authorization: Bearer ${token}" "$EDGE/no-such-path"
 expect_error 404 resource.not_found
@@ -123,25 +158,17 @@ docker compose --profile test run --rm --build --no-deps tenant-user-management-
   || fail "Tenant User Management's integration suite failed"
 echo "✓ both tenancy adapters pass one contract, the PostgreSQL one through the pool"
 
-# Credential resolution (docs/30-protocol/credential-resolution.md), asked across the stack's network
-# from the Gateway's container, as the Gateway will ask it, with tokens Keycloak issues to its clients.
-./seed-local-tenant.sh
-LOCAL_TENANT=00000000-0000-4000-8000-000000000100 # seed-local-tenant.sh maps local-tenant to it
-fail_resolution() { echo "✗ $1"; docker compose logs --tail 40 tenant-user-management keycloak; exit 1; }
-
-# access_token <form fields>: an access token from the local realm's token endpoint.
-access_token() {
-  curl -sf -X POST http://localhost:8080/realms/orchestra/protocol/openid-connect/token "$@" \
-    | python3 -c 'import json, sys; print(json.load(sys.stdin)["access_token"])'
-}
+# The resolution contract itself (docs/30-protocol/credential-resolution.md), asked across the
+# stack's network from the Gateway's container. Tokens are obtained again, because the checks above
+# can outlast their lifetime.
 gateway_token=$(access_token -d grant_type=client_credentials -d client_id=orchestra-gateway \
-  -d client_secret=orchestra-gateway-local-dev) || fail_resolution "the Gateway could not obtain its own token"
-dev_credential=$(access_token -d grant_type=password -d client_id=orchestra-cli -d scope=organization \
-  -d username=dev -d password=dev-local-only) || fail_resolution "could not obtain the dev user's credential"
-unscoped_credential=$(access_token -d grant_type=password -d client_id=orchestra-cli \
-  -d username=dev -d password=dev-local-only) || fail_resolution "could not obtain a credential without the organization scope"
-outsider_credential=$(access_token -d grant_type=password -d client_id=orchestra-cli -d scope=organization \
-  -d username=outsider -d password=outsider-local-only) || fail_resolution "could not obtain the outsider's credential"
+  -d client_secret=orchestra-gateway-local-dev) || fail_resolution "could not obtain the Gateway's own token"
+dev_credential=$(user_credential dev dev-local-only organization) \
+  || fail_resolution "could not obtain the dev user's credential"
+unscoped_credential=$(user_credential dev dev-local-only) \
+  || fail_resolution "could not obtain a credential without the organization scope"
+outsider_credential=$(user_credential outsider outsider-local-only organization) \
+  || fail_resolution "could not obtain the outsider's credential"
 
 # resolve <caller token> <credential>: prints the status, a space, then the body.
 resolve() {
@@ -203,6 +230,21 @@ for secret in "$dev_credential" "$unscoped_credential" "$outsider_credential" "$
   if grep -qF -- "$secret" <<<"$logs"; then fail_resolution "a token reached Tenant User Management's log"; fi
 done
 echo "✓ no credential or token reaches Tenant User Management's log"
+
+# Resolution fails closed (CR7): with Tenant User Management stopped, the Gateway answers 503 rather
+# than letting the credential through, and it serves again once the service returns.
+docker compose stop tenant-user-management >/dev/null 2>&1
+call -H "Authorization: Bearer ${dev_credential}" "$PROBE"
+expect_error 503 upstream.unavailable
+docker compose start tenant-user-management >/dev/null 2>&1
+for _ in $(seq 1 30); do
+  call -H "Authorization: Bearer ${dev_credential}" "$PROBE"
+  [ "$status" = "200" ] && break
+  sleep 1
+done
+[ "$status" = "200" ] \
+  || fail_resolution "the probe did not recover when Tenant User Management returned; got $status: $body"
+echo "✓ the Gateway fails closed while Tenant User Management is unreachable, and recovers when it returns"
 
 # A lost dependency is a 503, never a crash, and the service recovers when the dependency returns.
 tum_status() {

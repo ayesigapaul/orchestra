@@ -6,7 +6,9 @@
  *
  * Each bundle is also copied to services/<service>/openapi.yaml when that service exists, because
  * its contract tests validate real responses against the document (HC15) and a service reads
- * nothing outside its own directory (ADR-0020, rule B1).
+ * nothing outside its own directory (ADR-0020, rule B1). A service that calls another also gets
+ * services/<caller>/contracts/<callee>.openapi.yaml, so its tests check what it sends and what it
+ * expects back against the callee's own document (HC16).
  *
  * A hand-edited bundle or copy silently disagrees with its source, and a document that does not lint
  * imports badly into exactly the tools it exists for — so CI runs this with --check and fails on
@@ -16,9 +18,9 @@
  *        node scripts/build-openapi.mjs --check  fail if a bundle or copy is stale, or does not lint
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 // Keep in step with docs/10-architecture/tech-stack.md section 1.1.
 const REDOCLY = '@redocly/cli@2.52.1';
@@ -27,6 +29,8 @@ const SRC = join(DIR, 'src');
 const SERVICES = resolve('services');
 const SHARED = 'json-api.yaml';
 const CHECK = process.argv.includes('--check');
+// Which services each service calls. The caller keeps a copy of each callee's document (HC16).
+const CALLS = { gateway: ['tenant-user-management'] };
 
 const sources = readdirSync(SRC).filter((f) => f.endsWith('.yaml') && f !== SHARED).sort();
 if (sources.length === 0) {
@@ -41,11 +45,17 @@ const banner = (source) =>
 const copyBanner = (name) =>
   `# Copied by scripts/build-openapi.mjs from docs/30-protocol/openapi/${name}.openapi.yaml for this\n` +
   "# service's contract tests, because a service reads nothing outside its directory (ADR-0020).\n";
+const calleeBanner = (name, caller) =>
+  `# Copied by scripts/build-openapi.mjs from docs/30-protocol/openapi/${name}.openapi.yaml, the\n` +
+  `# document of a service ${caller} calls, for the contract tests of that call (HC16, ADR-0020).\n`;
 
 // Writes a generated file, or in --check mode records it as a problem when it differs.
 const problems = [];
 const emit = (path, content, label) => {
-  if (!CHECK) return writeFileSync(path, content);
+  if (!CHECK) {
+    mkdirSync(dirname(path), { recursive: true });
+    return writeFileSync(path, content);
+  }
   if (!existsSync(path) || readFileSync(path, 'utf8') !== content) problems.push(`${label} is stale or missing`);
 };
 
@@ -65,6 +75,12 @@ try {
     if (existsSync(join(SERVICES, name))) {
       emit(join(SERVICES, name, 'openapi.yaml'), copyBanner(name) + expected, `services/${name}/openapi.yaml`);
       copied.push(name);
+    }
+    for (const [caller, callees] of Object.entries(CALLS)) {
+      if (!callees.includes(name)) continue;
+      const copy = join(SERVICES, caller, 'contracts', `${name}.openapi.yaml`);
+      emit(copy, calleeBanner(name, caller) + expected, `services/${caller}/contracts/${name}.openapi.yaml`);
+      copied.push(`${caller} (the ${name} document it calls)`);
     }
     if (problems.length > failures) continue;
 

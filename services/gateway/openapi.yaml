@@ -5,7 +5,7 @@
 openapi: 3.1.2
 info:
   title: Orchestra Gateway
-  version: 0.1.0
+  version: 0.2.0
   summary: The public HTTP boundary, reached through the edge.
   description: |
     Every response is a JSON:API 1.1 document, and every failure an error document with a registered
@@ -14,10 +14,14 @@ info:
     **Local stack.** Bring it up with `infra/compose/smoke.sh`. The Gateway has no published port: it
     is reached through the edge, APISIX, on `http://localhost:9080`, where every route requires a
     bearer credential. The `keycloakLocal` security scheme fetches one with the local stack's
-    throwaway user, so Postman's "Get New Access Token" works as imported.
+    throwaway user and the `organization` scope, so Postman's "Get New Access Token" works as
+    imported.
 
-    This is Phase 0 of the contract. Credential resolution to a Principal and a Tenant, and the
-    resource paths of `gateway-api.md`, are not here yet.
+    **Every credential is resolved** to exactly one Principal and one Tenant by Tenant User
+    Management before anything proceeds — see docs/30-protocol/credential-resolution.md. A credential
+    that does not resolve is refused exactly like one that fails verification, and a resolution that
+    cannot complete is a 503 that is safe to retry. The resource paths of `gateway-api.md` are not
+    here yet.
   license:
     name: Proprietary
     identifier: LicenseRef-Proprietary
@@ -25,12 +29,13 @@ servers:
   - url: http://localhost:9080
     description: Local stack, through the edge (infra/compose)
 security:
-  - keycloakLocal: []
+  - keycloakLocal:
+      - organization
 tags:
   - name: Health
     description: Whether the Gateway is serving.
   - name: Diagnostics
-    description: Not part of the contract. Removed once credential resolution replaces it.
+    description: Not part of the contract. Removed when the first resource of gateway-api.md arrives.
 paths:
   /healthz:
     get:
@@ -60,11 +65,11 @@ paths:
       operationId: probeIdentity
       tags:
         - Diagnostics
-      summary: Show the subject and issuer of the verified credential
-      description: Proves the path from the edge to a credential the Gateway verified itself. An identity asserted in a header, such as X-Userinfo, is never a credential. Not part of the contract.
+      summary: Show the Principal and Tenant the credential resolved to
+      description: 'Proves the whole path: the edge, a credential the Gateway verified itself, and its resolution to one Principal in one Tenant by Tenant User Management. An identity asserted in a header, such as X-Userinfo, is never a credential. Not part of the contract.'
       responses:
         '200':
-          description: The credential was verified.
+          description: The credential was verified, and resolved to one Principal in one Tenant.
           headers:
             Orchestra-Request-Id:
               $ref: '#/components/headers/RequestId'
@@ -77,25 +82,33 @@ paths:
                   version: '1.1'
                 data:
                   type: identity-probes
-                  id: <subject>
+                  id: <principal-id>
                   attributes:
-                    subject: <subject>
-                    issuer: http://localhost:8080/realms/orchestra
+                    tenant_id: <tenant-id>
+                    principal_id: <principal-id>
+                    principal_kind: platform-user
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '406':
           $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '500':
           $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/UpstreamUnavailable'
 components:
   securitySchemes:
     keycloakLocal:
       type: oauth2
-      description: Local stack only. Client `orchestra-cli`, user `dev`, password `dev-local-only` — throwaway values from infra/compose, valid nowhere else.
+      description: 'Local stack only. Client `orchestra-cli`, user `dev`, password `dev-local-only` — throwaway values from infra/compose, valid nowhere else. The `organization` scope is required: it puts the Organization in the credential, and resolution needs exactly one.'
       flows:
         password:
           tokenUrl: http://localhost:8080/realms/orchestra/protocol/openid-connect/token
-          scopes: {}
+          scopes:
+            organization: The Organization the user acts in, which resolves to its Tenant.
   schemas:
     IdentityProbeDocument:
       type: object
@@ -117,16 +130,24 @@ components:
               const: identity-probes
             id:
               type: string
+              description: The Principal's identifier.
             attributes:
               type: object
               required:
-                - subject
-                - issuer
+                - tenant_id
+                - principal_id
+                - principal_kind
               properties:
-                subject:
+                tenant_id:
                   type: string
-                issuer:
+                  format: uuid
+                principal_id:
                   type: string
+                  format: uuid
+                principal_kind:
+                  type: string
+                  enum:
+                    - platform-user
     JsonApiObject:
       type: object
       description: The JSON:API version this document follows.

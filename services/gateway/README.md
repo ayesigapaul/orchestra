@@ -3,10 +3,22 @@
 The Data Plane's only ingress — the public HTTP and event-stream boundary
 ([`docs/30-protocol/gateway-api.md`](../../docs/30-protocol/gateway-api.md)).
 
-**Phase 0.** One probe route, `GET /_probe/identity`, which proves the path: APISIX in front, then a
-bearer credential this service verifies itself against Keycloak's signing keys. It is not part of the
-Gateway contract, whose path layout is ADR-required and unmade, and it goes when the first real
+**Phase 0.** One probe route, `GET /_probe/identity`, which proves the whole path: APISIX in front, a
+bearer credential this service verifies itself against Keycloak's signing keys, and that
+credential's resolution to one Principal in one Tenant by Tenant User Management. It is not part of
+the Gateway contract, whose path layout is ADR-required and unmade, and it goes when the first real
 resource arrives.
+
+**Resolution fails closed**
+([`credential-resolution.md`](../../docs/30-protocol/credential-resolution.md)).
+`src/orchestra_gateway/resolution.py` calls Tenant User Management as the `orchestra-gateway` client,
+with a client credentials token it reuses until shortly before the token expires. Each resolution
+has a deadline and repeats at most once: after a failure marked `safe`, after a connection that was
+never made, or after a refused service token, which it replaces first. A credential that does not
+resolve is refused like one that fails verification, and anything else short of a resolution is a
+503 `upstream.unavailable`. `tests/test_resolution.py` checks the call against
+`contracts/tenant-user-management.openapi.yaml`, a copy of that service's document that
+`scripts/build-openapi.mjs --check` keeps identical (HC16).
 
 **One HTTP contract** ([ADR-0025](../../docs/adr/adr-0025-json-api-http-contract.md)). Every response
 is a JSON:API document. Every failure — an unknown path, a wrong method, a refused media type,
@@ -31,5 +43,8 @@ uvx uv@0.12.13 run pytest
 uvx uv@0.12.13 run ruff check && uvx uv@0.12.13 run ruff format --check
 ```
 
-Configuration comes from the environment: `ORCHESTRA_GATEWAY_ISSUER`, `ORCHESTRA_GATEWAY_JWKS_URL`
-and `ORCHESTRA_GATEWAY_AUDIENCE`. The service refuses to start without them.
+Configuration comes from the environment, and the service refuses to start without it. The
+credentials it verifies need `ORCHESTRA_GATEWAY_ISSUER`, `ORCHESTRA_GATEWAY_JWKS_URL` and
+`ORCHESTRA_GATEWAY_AUDIENCE`. Resolving them needs `ORCHESTRA_GATEWAY_TENANT_USER_MANAGEMENT_URL`,
+`ORCHESTRA_GATEWAY_TOKEN_URL`, `ORCHESTRA_GATEWAY_CLIENT_ID` and `ORCHESTRA_GATEWAY_CLIENT_SECRET`,
+and `ORCHESTRA_GATEWAY_RESOLUTION_DEADLINE_SECONDS` defaults to 5.

@@ -127,9 +127,17 @@ services:
       ORCHESTRA_GATEWAY_ISSUER: http://localhost:8080/realms/orchestra
       ORCHESTRA_GATEWAY_JWKS_URL: http://keycloak:8080/realms/orchestra/protocol/openid-connect/certs
       ORCHESTRA_GATEWAY_AUDIENCE: orchestra-gateway
+      # Resolution: the Gateway calls Tenant User Management as its own client, with a client
+      # credentials token it obtains inside the network (credential-resolution.md).
+      ORCHESTRA_GATEWAY_TENANT_USER_MANAGEMENT_URL: http://tenant-user-management:8080
+      ORCHESTRA_GATEWAY_TOKEN_URL: http://keycloak:8080/realms/orchestra/protocol/openid-connect/token
+      ORCHESTRA_GATEWAY_CLIENT_ID: orchestra-gateway
+      ORCHESTRA_GATEWAY_CLIENT_SECRET: orchestra-gateway-local-dev
     # No published port: the Gateway is reachable only through the edge, as in production.
     depends_on:
       keycloak:
+        condition: service_healthy
+      tenant-user-management:
         condition: service_healthy
 
   apisix:
