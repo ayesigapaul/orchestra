@@ -8,10 +8,9 @@ import { membershipFor, type Membership } from '../../domain/membership.ts';
 import {
   assertedPerson,
   parseSubject,
-  recordIdentityProviderAttributes,
   verifiedPerson,
-  type IdentityProviderAttributes,
   type Person,
+  type VerifiedPerson,
 } from '../../domain/person.ts';
 import { platformUserFor, type PlatformUser } from '../../domain/principal.ts';
 import type {
@@ -19,6 +18,7 @@ import type {
   PrincipalRepository,
   TenantDirectory,
   TenantDirectoryEntry,
+  VerifiedPersons,
 } from '../../application/ports.ts';
 
 export class InMemoryTenantDirectory implements TenantDirectory {
@@ -33,7 +33,7 @@ export class InMemoryTenantDirectory implements TenantDirectory {
   }
 }
 
-export class InMemoryTenancy implements PersonLinker, PrincipalRepository {
+export class InMemoryTenancy implements PersonLinker, PrincipalRepository, VerifiedPersons {
   readonly #persons = new Map<PersonId, Person>();
   readonly #memberships = new Map<TenantId, Map<PersonId, Membership>>();
   readonly #platformUsers = new Map<TenantId, Map<MembershipId, PlatformUser>>();
@@ -58,12 +58,24 @@ export class InMemoryTenancy implements PersonLinker, PrincipalRepository {
     return this.#join(person, tenantId);
   }
 
-  /** The identity-sync path: the only way a Person gains a name or an email. */
-  recordIdentityProviderAttributes(verifiedSubject: string, attributes: IdentityProviderAttributes): void {
+  async findBySubject(verifiedSubject: string): Promise<VerifiedPerson | undefined> {
     const subject = parseSubject(verifiedSubject);
     const person = this.#find((p) => p.verification === 'identity-provider' && p.subject === subject);
-    if (person?.verification !== 'identity-provider') return;
-    this.#store(recordIdentityProviderAttributes(person, attributes));
+    return person?.verification === 'identity-provider' ? person : undefined;
+  }
+
+  async subjects(): Promise<readonly string[]> {
+    return [...this.#persons.values()]
+      .filter((p) => p.verification === 'identity-provider')
+      .map((p) => p.subject)
+      .sort();
+  }
+
+  /** The identity-sync path: the only way a Person gains a name or an email, and all it changes. */
+  async recordAttributes(person: VerifiedPerson): Promise<void> {
+    const stored = this.#persons.get(person.id);
+    if (stored?.verification !== 'identity-provider') return;
+    this.#store({ ...stored, displayName: person.displayName, email: person.email });
   }
 
   /** What one Tenant can see of the global Person table: exactly the Persons it holds a Membership for. */

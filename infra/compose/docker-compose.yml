@@ -72,7 +72,7 @@ services:
         condition: service_completed_successfully
 
   # The service's integration suite, on this network and through the pool, as the service's own
-  # roles. `up` does not start it; smoke.sh runs it.
+  # roles, and against the local realm. `up` does not start it; smoke.sh runs it.
   tenant-user-management-integration:
     profiles: [test]
     build:
@@ -83,8 +83,15 @@ services:
       DATABASE_URL: postgresql://tenant_user_management_app:tenant-user-management-app-local-dev@pgbouncer:6432/orchestra
       IDENTITY_SYNC_DATABASE_URL: postgresql://tenant_user_management_identity_sync:tenant-user-management-identity-sync-local-dev@pgbouncer:6432/orchestra
       OWNER_DATABASE_URL: postgresql://tenant_user_management_owner:tenant-user-management-owner-local-dev@postgres:5432/orchestra
+      # Identity sync reads the local realm as the service's own client, which can only read users.
+      IDENTITY_PROVIDER_URL: http://keycloak:8080
+      IDENTITY_PROVIDER_REALM: orchestra
+      IDENTITY_SYNC_CLIENT_ID: tenant-user-management
+      IDENTITY_SYNC_CLIENT_SECRET: tenant-user-management-local-dev
     depends_on:
       tenant-user-management:
+        condition: service_healthy
+      keycloak:
         condition: service_healthy
 
   keycloak:

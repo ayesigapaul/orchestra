@@ -4,6 +4,7 @@
 import { afterAll } from 'vitest';
 import { connect } from '../../src/adapters/postgres/database.ts';
 import { PostgresTenancy, PostgresTenantDirectory } from '../../src/adapters/postgres/tenancy.ts';
+import { PostgresVerifiedPersons } from '../../src/adapters/postgres/verified-persons.ts';
 import { MembershipId, PersonId, TenantId } from '../../src/domain/identifiers.ts';
 import type { Membership } from '../../src/domain/membership.ts';
 import type { Person } from '../../src/domain/person.ts';
@@ -90,14 +91,7 @@ describeTenancyAdapter('PostgresTenancy, through PgBouncer', () => {
         return user;
       }),
 
-    recordIdentityProviderAttributes: (subject, attributes) =>
-      identitySync.withoutTenant(async (s) => {
-        await s.query(
-          `UPDATE ${SCHEMA}.person SET display_name = $2, email = $3
-            WHERE verification = 'identity-provider' AND subject = $1`,
-          [subject, attributes.displayName, attributes.email ?? null],
-        );
-      }),
+    verifiedPersons: new PostgresVerifiedPersons(identitySync),
 
     personsVisibleTo: (tenantId) =>
       service.inTenant(tenantId, async (s) =>

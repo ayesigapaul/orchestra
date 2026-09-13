@@ -10,8 +10,7 @@ describeTenancyAdapter('InMemoryTenancy', (): TenancyHarness => {
     directory,
     addTenant: async (entry) => directory.add(entry),
     addPlatformUser: async (membership, id) => tenancy.addPlatformUser(membership, id),
-    recordIdentityProviderAttributes: async (subject, attributes) =>
-      tenancy.recordIdentityProviderAttributes(subject, attributes),
+    verifiedPersons: tenancy,
     personsVisibleTo: async (tenantId) => tenancy.personsVisibleTo(tenantId),
     membershipsVisibleTo: async (tenantId) => tenancy.membershipsVisibleTo(tenantId),
   };

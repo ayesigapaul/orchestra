@@ -6,6 +6,7 @@
   "packageManager": "pnpm@12.4.1",
   "scripts": {
     "start": "node src/main.ts",
+    "sync:identities": "node src/sync-identities.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts"
