@@ -114,6 +114,12 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   in `docs/30-protocol/openapi/`, bundled by `scripts/build-openapi.mjs`, which also copies it into
   the service as `openapi.yaml` for contract tests that validate real responses against it. Document
   an operation and every code it returns before shipping it.
+- **Standards** — international naming and data standards, never a local or ad hoc convention. A
+  person's name is the display name the identity provider holds, in its own order and script. Given
+  and family names are never required or composed (OpenID Connect, SCIM RFC 7643). Text is Unicode
+  NFC, only an email address's domain is lowercased (RFC 5321), and formats are RFC 3339 times, BCP
+  47 language tags, ISO 3166-1 countries, ISO 4217 currencies, E.164 phone numbers and IANA time
+  zones. Tokens use registered JWT claim names. HC3's snake_case JSON:API members stand, by ADR-0025.
 - **Calls between services** — HTTP under the same contract, never gRPC without an ADR for a
   measured need ([ADR-0026](docs/adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md),
   `http-conventions.md` HC16 to HC21). Every call carries the calling service's own token and is

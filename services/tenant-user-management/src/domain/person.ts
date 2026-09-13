@@ -67,13 +67,27 @@ export function recordIdentityProviderAttributes(
   person: VerifiedPerson,
   attributes: IdentityProviderAttributes,
 ): VerifiedPerson {
-  const displayName = attributes.displayName.trim();
+  // Unicode NFC, the form the W3C character model asks of text in interchange, so one name is stored
+  // one way however the identity provider composed its characters. Its order and script are kept.
+  const displayName = attributes.displayName.normalize('NFC').trim();
   if (displayName.length === 0) throw new InvariantViolated('a Person needs a display name');
 
-  const email = attributes.email?.trim().toLowerCase();
+  const email = attributes.email === undefined ? undefined : normalizeEmail(attributes.email);
   if (email !== undefined && !EMAIL.test(email)) {
     throw new InvariantViolated('a Person email must be an address');
   }
 
   return { ...person, displayName, email };
+}
+
+/**
+ * An email address with only its domain lowercased, because a domain name is case-insensitive
+ * (RFC 4343). The local part is kept exactly as given: RFC 5321 section 2.4 leaves its case to the
+ * receiving server, so lowercasing it could name another mailbox.
+ */
+function normalizeEmail(address: string): string {
+  const trimmed = address.trim();
+  const at = trimmed.lastIndexOf('@');
+  if (at <= 0) return trimmed;
+  return `${trimmed.slice(0, at)}@${trimmed.slice(at + 1).toLowerCase()}`;
 }

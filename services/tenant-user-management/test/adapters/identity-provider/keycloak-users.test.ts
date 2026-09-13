@@ -13,6 +13,7 @@ const DEV = {
   lastName: 'Developer',
   email: 'dev@orchestra.localhost',
   emailVerified: true,
+  attributes: { displayName: ['Local Developer'] },
 };
 
 type Answer = Response | (() => Response) | Error;
@@ -117,9 +118,24 @@ describe('KeycloakUsers', () => {
 });
 
 describe('attributesFrom', () => {
-  it('takes the name from the first and last name, and falls back to the username', () => {
-    expect(attributesFrom({ ...DEV, lastName: undefined })).toEqual(expect.objectContaining({ displayName: 'Local' }));
-    expect(attributesFrom({ ...DEV, firstName: ' ', lastName: null })).toEqual(expect.objectContaining({ displayName: 'dev' }));
+  it("keeps the identity provider's display name in its own order and script", () => {
+    expect(attributesFrom({ ...DEV, attributes: { displayName: ['山田 太郎'] } })).toEqual(
+      expect.objectContaining({ displayName: '山田 太郎' }),
+    );
+    expect(attributesFrom({ username: 'sukarno', attributes: { displayName: ['Sukarno'] } })).toEqual({
+      displayName: 'Sukarno',
+    });
+  });
+
+  it('falls back to the username, and never composes given and family names', () => {
+    const withoutDisplayName = { username: 'dev', firstName: 'Local', lastName: 'Developer' };
+    expect(attributesFrom(withoutDisplayName)).toEqual({ displayName: 'dev' });
+    expect(attributesFrom({ ...DEV, attributes: { displayName: ['  '] } })).toEqual(
+      expect.objectContaining({ displayName: 'dev' }),
+    );
+    expect(attributesFrom({ ...DEV, attributes: { displayName: 'not a list' } })).toEqual(
+      expect.objectContaining({ displayName: 'dev' }),
+    );
   });
 
   it('never gives a Person an email Keycloak has not verified', () => {

@@ -26,8 +26,9 @@ imported from another service.
 - **A Person's name and email come only from the identity provider.** The function that records them
   accepts a verified Person and nothing else, so setting them from a Tenant's assertion does not
   compile. Identity sync reads each verified Person's user from Keycloak as this service's own
-  client, which can only read users, and records the name and a verified email as the
-  identity-sync role.
+  client, which can only read users. As the identity-sync role, it records the display name the
+  realm holds, in its own order and script, and a verified email. It never composes a name from
+  given and family names.
 - **Principals are built from a Membership and its Person**, never from bare identifiers, so they
   take the Membership's Tenant by construction. A Platform User needs a verified Person.
 - **No way to attach a Person by identifier.** The `PersonLinker` port creates or reuses a Person and

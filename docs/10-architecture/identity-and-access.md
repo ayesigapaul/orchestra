@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.14.0
+version: 0.15.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -78,9 +78,13 @@ of a person's attributes.
 
 **How the identity provider's attributes reach a Person.** Tenant User Management pulls them.
 Its own client reads each user from the identity provider's admin API, holding one role that can
-read users and nothing else, and the identity-sync role records what it read. The name is the
-first and last name, or the username when neither is set. An email is recorded only once the
-identity provider has verified it, and cleared once it no longer holds one as verified. A subject
+read users and nothing else, and the identity-sync role records what it read. Names follow
+international standards. The name is the display name the identity provider holds, the
+`displayName` of RFC 2798 and SCIM (RFC 7643), kept in its own order and script and stored in
+Unicode NFC. When there is none it is the username, as SCIM allows. Orchestra never composes a name
+from given and family names, and requires neither. An email is recorded only once the identity
+provider has verified it, with only its domain lowercased (RFC 5321), and is cleared once the
+identity provider no longer holds one as verified. A subject
 the identity provider no longer knows is left as it is, because erasing a Person is its own design
 under [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md). When the sync runs is
 open (section 12).

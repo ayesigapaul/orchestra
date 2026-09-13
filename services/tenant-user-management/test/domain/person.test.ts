@@ -13,12 +13,24 @@ describe('Person', () => {
     expect(person.email).toBeUndefined();
   });
 
-  it('takes a trimmed name and a normalised email from the identity provider', () => {
+  it('takes a trimmed name, and an email whose domain alone is lowercased', () => {
     const person = recordIdentityProviderAttributes(verifiedPerson(id, 'kc-ada'), {
       displayName: '  Ada Lovelace ',
-      email: ' Ada@Example.COM ',
+      email: ' Ada.Lovelace@Example.COM ',
     });
-    expect(person).toMatchObject({ displayName: 'Ada Lovelace', email: 'ada@example.com' });
+    // RFC 5321 section 2.4: the case of the local part is the receiving server's to interpret.
+    expect(person).toMatchObject({ displayName: 'Ada Lovelace', email: 'Ada.Lovelace@example.com' });
+  });
+
+  it('stores a name in Unicode NFC, however the identity provider composed it', () => {
+    const decomposed = 'Zoë Nguyễn';
+    const person = recordIdentityProviderAttributes(verifiedPerson(id, 'kc-zoe'), { displayName: decomposed });
+    expect(person.displayName).toBe('Zoë Nguyễn');
+  });
+
+  it('keeps a name in the order and script the identity provider gave it', () => {
+    const person = recordIdentityProviderAttributes(verifiedPerson(id, 'kc-taro'), { displayName: '山田 太郎' });
+    expect(person.displayName).toBe('山田 太郎');
   });
 
   it('refuses a blank name and an email that is not an address', () => {

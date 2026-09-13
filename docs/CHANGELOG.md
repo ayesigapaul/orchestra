@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.39.0
+version: 0.40.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,19 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.40.0] — 2026-09-13
+
+Persons follow international naming and data standards.
+
+### Changed
+
+- `10-architecture/identity-and-access.md` (0.15.0) — section 2 now says a Person's name is the
+  display name the identity provider holds, in its own order and script and in Unicode NFC, or the
+  username. Orchestra never composes a name from given and family names, and lowercases only the
+  domain of an email address.
 
 ---
 

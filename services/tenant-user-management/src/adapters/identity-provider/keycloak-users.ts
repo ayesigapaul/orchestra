@@ -1,7 +1,9 @@
 // A user as Keycloak holds it (ADR-0017), read from its admin API as this service's own client. That
 // client holds view-users and nothing else, so reading is all it can do there. The mapping is the one
-// identity-and-access.md section 2 gives: a name from the first and last name, or the username when
-// neither is set, and an email only once Keycloak has verified it.
+// identity-and-access.md section 2 gives, under international naming standards. The name is the
+// display name the user profile holds (displayName, as RFC 2798 and SCIM name it), kept in its own
+// order and script, or the username when there is none. It is never composed from given and family
+// names, which would impose one culture's order. An email counts only once Keycloak has verified it.
 import { DependencyUnavailable } from '../../application/errors.ts';
 import type { IdentityProviderUsers } from '../../application/ports.ts';
 import type { IdentityProviderAttributes } from '../../domain/person.ts';
@@ -20,10 +22,10 @@ export interface KeycloakUsersOptions {
 /** The parts of Keycloak's user representation the mapping reads. Anything else is ignored. */
 export interface KeycloakUser {
   readonly username?: unknown;
-  readonly firstName?: unknown;
-  readonly lastName?: unknown;
   readonly email?: unknown;
   readonly emailVerified?: unknown;
+  /** User profile attributes, each held by Keycloak as a list of values. */
+  readonly attributes?: unknown;
 }
 
 // A token is replaced this long before it expires, so it is never presented as it lapses.
@@ -115,7 +117,13 @@ export class KeycloakUsers implements IdentityProviderUsers {
 /** The attributes a Keycloak user gives a Person. An unverified email is not one of them. */
 export function attributesFrom(user: KeycloakUser): IdentityProviderAttributes {
   const text = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
-  const name = [text(user.firstName), text(user.lastName)].filter((part) => part !== '').join(' ');
+  const displayName = text(firstValue(user.attributes, 'displayName')) || text(user.username);
   const email = user.emailVerified === true ? text(user.email) : '';
-  return { displayName: name || text(user.username), ...(email === '' ? {} : { email }) };
+  return { displayName, ...(email === '' ? {} : { email }) };
+}
+
+function firstValue(attributes: unknown, name: string): unknown {
+  if (attributes === null || typeof attributes !== 'object') return undefined;
+  const values = (attributes as Record<string, unknown>)[name];
+  return Array.isArray(values) ? values[0] : undefined;
 }
