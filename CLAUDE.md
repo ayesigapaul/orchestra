@@ -232,6 +232,12 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   suite with `run --build` recreated PostgreSQL, PgBouncer and Tenant User Management, which
   closed Keycloak's pooled database connections, and the next token request failed. Locally nothing
   was recreated, so it passed. `smoke.sh` runs the suite with `--no-deps`.
+- **nginx refuses some requests before it has a URI.** For a request line over its limit, an
+  `error_page` naming a named location fails with `empty URI in redirect to named location` and
+  answers 500, so `apisix/config.yaml` sends 414 to an internal exact location. nginx reports an
+  oversized header field as 400 while recording 494, so 494 gets a location that answers 431. A
+  `client_max_body_size` in the server block did not refuse before authentication either; the
+  `client-control` global rule does.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
   taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
   and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that

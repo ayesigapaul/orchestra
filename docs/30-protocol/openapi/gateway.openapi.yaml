@@ -3,7 +3,7 @@
 openapi: 3.1.2
 info:
   title: Orchestra Gateway
-  version: 0.2.0
+  version: 0.3.0
   summary: The public HTTP boundary, reached through the edge.
   description: |
     Every response is a JSON:API 1.1 document, and every failure an error document with a registered
@@ -50,8 +50,14 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '406':
           $ref: '#/components/responses/NotAcceptable'
+        '413':
+          $ref: '#/components/responses/ContentTooLarge'
+        '414':
+          $ref: '#/components/responses/UriTooLong'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '431':
+          $ref: '#/components/responses/HeaderFieldsTooLarge'
         '500':
           $ref: '#/components/responses/InternalError'
         '502':
@@ -91,8 +97,14 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '406':
           $ref: '#/components/responses/NotAcceptable'
+        '413':
+          $ref: '#/components/responses/ContentTooLarge'
+        '414':
+          $ref: '#/components/responses/UriTooLong'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '431':
+          $ref: '#/components/responses/HeaderFieldsTooLarge'
         '500':
           $ref: '#/components/responses/InternalError'
         '503':
@@ -351,6 +363,44 @@ components:
                   header: Accept
                 meta:
                   retry: unsafe
+    ContentTooLarge:
+      description: The request content is larger than the edge accepts (RFC 9110, 413 Content Too Large). Send smaller content; the same request will be refused again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: <request-id>
+                status: '413'
+                code: request.content_too_large
+                title: The request content is too large
+                meta:
+                  retry: unsafe
+    UriTooLong:
+      description: The request target is longer than the edge accepts (RFC 9110, 414 URI Too Long). Shorten the path or query; the same request will be refused again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: <request-id>
+                status: '414'
+                code: request.uri_too_long
+                title: The request URI is too long
+                meta:
+                  retry: unsafe
     UnsupportedMediaType:
       description: The Content-Type is not the JSON:API media type, or carries unsupported parameters.
       headers:
@@ -370,6 +420,25 @@ components:
                 title: Unsupported media type
                 source:
                   header: Content-Type
+                meta:
+                  retry: unsafe
+    HeaderFieldsTooLarge:
+      description: A request header field, or all of them together, is larger than the edge accepts (RFC 6585, 431 Request Header Fields Too Large). Send smaller header fields; the same request will be refused again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: <request-id>
+                status: '431'
+                code: request.header_fields_too_large
+                title: The request header fields are too large
                 meta:
                   retry: unsafe
     InternalError:
