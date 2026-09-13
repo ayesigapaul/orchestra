@@ -1,8 +1,12 @@
-"""Gateway configuration, read from the environment with the ORCHESTRA_GATEWAY_ prefix."""
+"""Gateway configuration, read from the environment with the ORCHESTRA_GATEWAY_ prefix.
+
+Telemetry is the exception: it is read under the variables OpenTelemetry specifies, which every
+OpenTelemetry deployment already sets, and nothing in it is required.
+"""
 
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,6 +33,17 @@ class Settings(BaseSettings):
     client_secret: SecretStr
 
 
+class TelemetrySettings(BaseSettings):
+    # The OTLP/HTTP endpoint spans are exported to. Unset, spans are still made, so traces continue
+    # and log lines carry them, but none is exported.
+    otlp_endpoint: str | None = Field(default=None, validation_alias="OTEL_EXPORTER_OTLP_ENDPOINT")
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+@lru_cache
+def get_telemetry_settings() -> TelemetrySettings:
+    return TelemetrySettings()

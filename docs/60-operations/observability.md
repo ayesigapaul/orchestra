@@ -1,7 +1,7 @@
 ---
 title: Observability
 doc_id: DOC-071
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-10
 owners: [platform-architecture]
@@ -24,8 +24,10 @@ implementation. Where a rule binds, this document links to it rather than restat
 
 **In scope.** The telemetry side of the audit boundary, the observable signal for a degraded audit
 write period, replication lag as a read-path property, quota queue depth and the surfaced delay, the
-Run explorer, and tracing across the boundary an Agent Run creates. **Out of scope:**
-instrumentation libraries, storage engines, dashboard products and alert routing — none is chosen
+Run explorer, tracing across the boundary an Agent Run creates, and what a request's telemetry
+carries. **Out of scope:** the instrumentation, which
+[`../10-architecture/tech-stack.md`](../10-architecture/tech-stack.md) section 7 fixes as
+OpenTelemetry exporting OTLP; storage engines, dashboard products and alert routing — none is chosen
 or implied — and **every number.** No retention period, latency target, service level objective,
 error budget, alert threshold, health-check interval, sampling rate, queue-depth bound, backoff
 figure or rate limit is decided anywhere in this repository, and none is invented here; where a
@@ -405,6 +407,18 @@ part is narrow and real: I1's tenant field is what makes the effect attributable
 The controls belong to [`reliability.md`](reliability.md) and
 [`quotas-and-metering.md`](quotas-and-metering.md).
 
+**What a request's telemetry carries.** A request is traced across the edge and every service under
+W3C Trace Context, as [`../30-protocol/http-conventions.md`](../30-protocol/http-conventions.md)
+HC12 requires: each hop serves it in a span of its own, whose parent is the span that called it, and
+exports that span over OTLP. Each hop also logs the request once, with the trace and span identifiers
+under OpenTelemetry's field names, `trace_id` and `span_id`, and with the request identifier the
+caller was given. Once the request has resolved to a Tenant, the line and the span carry its tenant
+identifier, as I1 requires. Neither carries a Principal, because telemetry has none (section 2). A
+request refused before its credential resolved has no Tenant to carry, and neither has a health
+check, which I1 as written does not provide for; section 9 registers it. The local stack records
+every trace, and its Collector prints each span to its log. Where spans go anywhere else, and what
+is sampled there, section 9 registers too.
+
 ## 9. Open questions
 
 **ADR** means the choice is costly to reverse or spans components and belongs in an ADR before
@@ -427,6 +441,8 @@ question, its classification is repeated rather than revised.
 | What may be sampled, at what rate, and whether an Agent Run's trace may be sampled at all | Document | An operations design with [`reliability.md`](reliability.md), whose register does not yet carry the row. Bounded above by audit-model section 3, which forbids sampling any audited act, and below by section 7: what a model chose survives in the trail, so what a sampled-away trace destroys is the ungoverned material — the timing, and the calls considered and not made |
 | Telemetry retention, which is not the audit-retention question | Document | Operational cost once volume is observable. audit-model section 11 classifies audit retention **ADR**; that classification is not inherited here, and putting telemetry in the audit store is exactly what would inherit it |
 | Who may read an Evidence Set, including one rendered into an operator console by a telemetry pipeline | Document | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 6 settles it by derivation and hands the binding rule to [`../40-governance/audit-model.md`](../40-governance/audit-model.md); what is open is the landing, not the answer. Classification repeated from audit-model section 13 |
+| What a log line and a span carry for a request that never reached a Tenant: one refused before its credential resolved, a refusal at the edge, or a health check | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) invariant I1, which requires a tenant identifier on every log line and excepts only the global Person, with the store registry of [`../10-architecture/multi-tenancy.md`](../10-architecture/multi-tenancy.md) section 8. Section 8 here records what is carried today |
+| Where spans and request log lines go outside the local stack, and who operates what receives them | Document | An operations design with [`reliability.md`](reliability.md). [`../10-architecture/tech-stack.md`](../10-architecture/tech-stack.md) section 7 fixes OTLP and keeps the backend replaceable; retention and sampling are the rows above |
 
 One question registered here in an earlier version has left it: **what a Quota Envelope delay
 payload carries** is answered by [`quotas-and-metering.md`](quotas-and-metering.md) section 4's

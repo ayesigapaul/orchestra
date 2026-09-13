@@ -8,6 +8,7 @@ import {
   credentialResolutions,
 } from './credential-resolutions.ts';
 import { ApiError, codes, install, type JsonApiEnv, type Log, resource, respond } from './json-api.ts';
+import { traceRequests } from './trace-context.ts';
 
 export interface HttpDependencies {
   readonly log: Log;
@@ -18,6 +19,8 @@ export interface HttpDependencies {
 
 export function createApp({ log, ready, credentialResolution }: HttpDependencies): Hono<JsonApiEnv> {
   const app = new Hono<JsonApiEnv>();
+  // First, so every request is served and logged in a span of its own, refusals included.
+  app.use(traceRequests(log));
   install(app, log);
   resource(app, '/healthz', {
     get: {

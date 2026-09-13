@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.41.0
+version: 0.42.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,23 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.42.0] — 2026-09-13
+
+A request's trace continues across the edge and both services.
+
+### Changed
+
+- `30-protocol/http-conventions.md` (0.6.0) — HC12 says how a trace continues: a span of its own at
+  every hop, whose parent is the span that called it, and a `traceparent` on every call naming the
+  span the call is made in.
+- `60-operations/observability.md` (0.12.0) — section 8 records what a request's telemetry carries,
+  and section 9 registers what the log line of a request that never reached a Tenant carries, and
+  where spans go outside the local stack. Section 1 defers the instrumentation to tech-stack.md.
+- `10-architecture/tech-stack.md` (0.34.0) — the OpenTelemetry row names the packages in use and the
+  beta the Python SDK pins, and section 7 says how the edge and the services trace.
 
 ---
 

@@ -16,6 +16,8 @@ from typing import Protocol
 
 import httpx2
 
+from orchestra_gateway import tracing
+
 logger = logging.getLogger("orchestra_gateway.resolution")
 
 MEDIA_TYPE = "application/vnd.api+json"
@@ -83,12 +85,15 @@ class ServiceTokens:
     def _obtain(self, timeout: float) -> tuple[str, float]:
         requested_at = self._clock()
         try:
-            response = self._client.post(
-                self._token_url,
-                data={"grant_type": "client_credentials"},
-                auth=self._auth,
-                timeout=timeout,
-            )
+            with tracing.outgoing_call("POST", self._token_url) as (span, trace_context):
+                response = self._client.post(
+                    self._token_url,
+                    data={"grant_type": "client_credentials"},
+                    auth=self._auth,
+                    headers=trace_context,
+                    timeout=timeout,
+                )
+                tracing.record_answer(span, response.status_code)
         except httpx2.HTTPError as exc:
             raise ResolutionUnavailable("the token endpoint could not be reached") from exc
         if response.status_code != 200:
@@ -127,19 +132,28 @@ class CredentialResolver:
         deadline = self._clock() + self._deadline_seconds
         body = json.dumps({"data": {"type": RESOLUTIONS, "attributes": {"credential": credential}}})
         repeated = renewed = False
+        attempts = 0
         while True:
             token = self._tokens.current(timeout=self._left(deadline))
             try:
-                response = self._client.post(
-                    self._url,
-                    content=body,
-                    headers={
-                        "Authorization": f"Bearer {token}",
-                        "Content-Type": MEDIA_TYPE,
-                        "Accept": MEDIA_TYPE,
-                    },
-                    timeout=self._left(deadline),
-                )
+                # Every attempt is a span of its own, and one after the first counts as a resend.
+                with tracing.outgoing_call(
+                    "POST", self._url, template=f"/{RESOLUTIONS}", resend_count=attempts
+                ) as (span, trace_context):
+                    attempts += 1
+                    response = self._client.post(
+                        self._url,
+                        content=body,
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                            "Content-Type": MEDIA_TYPE,
+                            "Accept": MEDIA_TYPE,
+                            # The callee serves the call in a span whose parent is this one (HC12).
+                            **trace_context,
+                        },
+                        timeout=self._left(deadline),
+                    )
+                    tracing.record_answer(span, response.status_code)
             except (httpx2.ConnectError, httpx2.ConnectTimeout) as exc:
                 # No connection was made, so nothing was sent, and the one repeat is safe (HC19).
                 if repeated:

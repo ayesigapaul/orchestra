@@ -54,6 +54,8 @@ export function credentialResolutions(
           log.warn({ requestId, reason: resolution.reason }, 'credential not resolved');
           return respond(c, { data: { type: TYPE, id: requestId, attributes: { outcome: 'rejected' } } });
         }
+        // The request's span and log line carry the Tenant it resolved to (invariant I1).
+        c.set('tenantId', resolution.tenantId);
         return respond(c, {
           data: {
             type: TYPE,

@@ -49,6 +49,11 @@ imported from another service.
   through its `resource()`, which answers a wrong method with 405 and refuses an undeclared query
   parameter. Tests validate real responses against `openapi.yaml`, a copy of this service's document
   in `docs/30-protocol/openapi/` that CI keeps identical.
+- **Every request is traced** ([`http-conventions.md`](../../docs/30-protocol/http-conventions.md)
+  HC12). `src/adapters/http/trace-context.ts` serves each request in an OpenTelemetry server span
+  whose parent is a valid incoming `traceparent`, and logs it once with the trace, the span and,
+  once a resolution names it, the Tenant, but never a Principal. `src/adapters/telemetry/tracing.ts`
+  installs the tracer provider, which exports over OTLP/HTTP when an endpoint is configured.
 
 ## Database
 
@@ -89,6 +94,7 @@ pnpm sync:identities # records the identity provider's attributes on every verif
 | `CREDENTIAL_AUDIENCE` | The audience a credential to resolve must name: the Gateway's |
 | `SERVICE_AUDIENCE` | The audience a caller's own token must name; `tenant-user-management` by default |
 | `RESOLUTION_CALLERS` | The clients that may resolve credentials, comma-separated; `orchestra-gateway` by default |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | Where spans are exported over OTLP/HTTP, under OpenTelemetry's own variable. Optional; unset, none is exported |
 
 `pnpm sync:identities` reads its own configuration:
 

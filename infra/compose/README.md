@@ -1,6 +1,6 @@
 # Local stack
 
-PostgreSQL, PgBouncer, Keycloak, Apache APISIX, the Gateway and Tenant User Management, each in its own container
+PostgreSQL, PgBouncer, Keycloak, Apache APISIX, the Gateway, Tenant User Management and an OpenTelemetry Collector, each in its own container
 ([ADR-0020](../../docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md) rule B6), at the
 versions pinned in [`docs/10-architecture/tech-stack.md`](../../docs/10-architecture/tech-stack.md).
 
@@ -30,6 +30,16 @@ global rule, before any credential is checked. A request line or a header field 
 refused by nginx with 414 or 431, and nginx's own 494 for an oversized header field is answered as
 the 431 of RFC 6585. Each is a JSON:API error with its registered code, and `smoke.sh` sends all
 three.
+
+**Every request is traced across the stack**
+([`http-conventions.md`](../../docs/30-protocol/http-conventions.md) HC12). APISIX's
+`opentelemetry` plugin, as a global rule, serves each request in a span whose parent is a valid
+incoming `traceparent`, and passes its own span to the Gateway as the parent; each service does the
+same for the calls it receives. Every span goes to `otel-collector` over OTLP/HTTP, and its debug
+exporter prints each one, so `docker compose logs otel-collector` shows a trace hop by hop. The
+edge's access log is one JSON line per request, carrying its trace and span under the names the
+services log with. `smoke.sh` sends a trace through the edge, then checks the chain of spans and
+each hop's log line for the request.
 
 **PgBouncer is built, not pulled.** The PgBouncer project publishes no container image, and the
 widely pulled `pgbouncer/pgbouncer` belongs to a third party, so `pgbouncer/Dockerfile` installs the

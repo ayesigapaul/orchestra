@@ -238,6 +238,11 @@ npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.
   oversized header field as 400 while recording 494, so 494 gets a location that answers 431. A
   `client_max_body_size` in the server block did not refuse before authentication either; the
   `client-control` global rule does.
+- **APISIX's `opentelemetry` plugin reads its collector from plugin metadata.** In 3.18 a
+  `plugin_attr.opentelemetry` block in `config.yaml` is ignored. The plugin warns that
+  `plugin_metadata is required` on every request and makes no span, while the Gateway's span
+  quietly names the caller as its parent. `resource`, `collector` and `set_ngx_var` belong under
+  `plugin_metadata` in `apisix.yaml`, and `smoke.sh` fails when the edge's span is missing.
 - **Provisional names.** `@orchestra/*` is a placeholder and the unscoped npm name `orchestra` is
   taken. **`orchestra.dev` is not ours** — it is parked by a third party, with a lander on the apex
   and a null MX, so no address or URL under it works. Schema `$id`s are GitHub-hosted for that

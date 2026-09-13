@@ -65,6 +65,8 @@ services:
       CREDENTIAL_AUDIENCE: orchestra-gateway
       SERVICE_AUDIENCE: tenant-user-management
       RESOLUTION_CALLERS: orchestra-gateway
+      # Spans leave over OTLP/HTTP, under the variable OpenTelemetry specifies.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     depends_on:
       pgbouncer:
         condition: service_healthy
@@ -140,6 +142,8 @@ services:
       ORCHESTRA_GATEWAY_TOKEN_URL: http://keycloak:8080/realms/orchestra/protocol/openid-connect/token
       ORCHESTRA_GATEWAY_CLIENT_ID: orchestra-gateway
       ORCHESTRA_GATEWAY_CLIENT_SECRET: orchestra-gateway-local-dev
+      # Spans leave over OTLP/HTTP, under the variable OpenTelemetry specifies.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
     # No published port: the Gateway is reachable only through the edge, as in production.
     depends_on:
       keycloak:
@@ -157,6 +161,12 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+
+  # Where the edge and both services export their spans, over OTLP/HTTP. Its debug exporter prints
+  # every span to its log. No published port, and no service waits for it: telemetry is best effort.
+  otel-collector:
+    build: ./otel-collector
+    image: orchestra-local/otel-collector:0.160.0
 
 volumes:
   pgdata: {}

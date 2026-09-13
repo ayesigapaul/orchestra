@@ -12,6 +12,10 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from referencing import Registry, Resource
 from referencing.jsonschema import DRAFT202012
 
@@ -30,6 +34,13 @@ DOCUMENT = SERVICE / "openapi.yaml"
 # The document of Tenant User Management, which the Gateway calls, kept identical the same way, so
 # the Gateway's tests check that call against the callee's own contract (HC16).
 CALLEE_DOCUMENT = SERVICE / "contracts" / "tenant-user-management.openapi.yaml"
+
+# Every span the Gateway ends, kept in memory. A process installs its tracer provider once, so it is
+# installed here before any test runs, and a test that reads spans starts with none.
+SPANS = InMemorySpanExporter()
+_provider = TracerProvider()
+_provider.add_span_processor(SimpleSpanProcessor(SPANS))
+trace.set_tracer_provider(_provider)
 
 # What the stand-in resolver makes of the subject every minted token carries by default.
 IDENTITY = Identity(
@@ -133,6 +144,12 @@ def contract() -> Contract:
 @pytest.fixture(scope="session")
 def callee() -> Contract:
     return Contract(CALLEE_DOCUMENT)
+
+
+@pytest.fixture
+def spans() -> InMemorySpanExporter:
+    SPANS.clear()
+    return SPANS
 
 
 @pytest.fixture(scope="session")

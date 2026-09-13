@@ -5,7 +5,10 @@ from collections.abc import Callable
 
 import httpx2
 import pytest
+from opentelemetry.trace import SpanKind, StatusCode, format_span_id
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
+from orchestra_gateway import tracing
 from orchestra_gateway.resolution import (
     CredentialResolver,
     Identity,
@@ -138,6 +141,39 @@ def test_sends_the_documented_request_authenticated_as_itself(callee, clock):
     body = json.loads(sent.content)
     callee.assert_request(body, PATH, "POST")
     assert body["data"]["attributes"]["credential"] == CREDENTIAL
+
+
+def test_each_call_is_a_client_span_whose_context_the_call_carries(callee, clock, spans):
+    upstreams = Upstreams(callee, [resolution(RESOLVED)])
+    trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
+    incoming = TraceContextTextMapPropagator().extract(
+        {"traceparent": f"00-{trace_id}-00f067aa0ba902b7-01", "tracestate": "congo=t61rcWkgMzE"}
+    )
+    # Stands for the request being served, in whose span the call is made.
+    with tracing.tracer.start_as_current_span("request", context=incoming) as request:
+        resolver(upstreams, clock).resolve(CREDENTIAL)
+
+    [call] = [span for span in spans.get_finished_spans() if span.name == f"POST {PATH}"]
+    assert call.kind is SpanKind.CLIENT
+    assert call.parent.span_id == request.get_span_context().span_id
+    assert call.attributes["http.response.status_code"] == 200
+    [sent] = upstreams.resolutions
+    span_id = format_span_id(call.get_span_context().span_id)
+    assert sent.headers["traceparent"] == f"00-{trace_id}-{span_id}-01"
+    assert sent.headers["tracestate"] == "congo=t61rcWkgMzE"
+
+
+def test_a_repeated_call_is_a_span_of_its_own_counted_as_a_resend(callee, clock, spans):
+    answers = [failure(503, "upstream.unavailable", "safe"), resolution(RESOLVED)]
+    upstreams = Upstreams(callee, answers)
+    resolver(upstreams, clock).resolve(CREDENTIAL)
+
+    calls = [span for span in spans.get_finished_spans() if span.name == f"POST {PATH}"]
+    assert [call.attributes.get("http.request.resend_count") for call in calls] == [None, 1]
+    assert calls[0].status.status_code is StatusCode.ERROR
+    assert calls[0].attributes["error.type"] == "503"
+    first, repeat = upstreams.resolutions
+    assert first.headers["traceparent"] != repeat.headers["traceparent"]
 
 
 def test_a_rejection_is_final(callee, clock):

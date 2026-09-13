@@ -1,6 +1,13 @@
 # Every refusal the edge makes is a JSON:API error document, whichever route is matched or none, and
 # no request content over 1 MiB is accepted.
 global_rules:
+  # Every request is traced, refusals included. The local stack records every trace; what is sampled
+  # anywhere else is undecided (docs/60-operations/observability.md section 9).
+  - id: tracing
+    plugins:
+      opentelemetry:
+        sampler:
+          name: always_on
   - id: json-api
     plugins:
       orchestra-json-api: {}
@@ -8,6 +15,19 @@ global_rules:
       # nginx reads of a body that declares no length (http-conventions.md section 4).
       client-control:
         max_body_size: 1048576
+
+# The edge serves every request in a span of its own, whose parent is a valid incoming traceparent,
+# and passes that span to the Gateway as the parent of its own (http-conventions.md HC12). The plugin
+# reads where spans go from its metadata, not from config.yaml, and set_ngx_var puts the edge's span
+# on its access log line.
+plugin_metadata:
+  - id: opentelemetry
+    resource:
+      service.name: apisix
+    collector:
+      address: otel-collector:4318
+      request_timeout: 3
+    set_ngx_var: true
 
 routes:
   - id: gateway

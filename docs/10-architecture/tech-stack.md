@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.33.0
+version: 0.34.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -88,7 +88,7 @@ goes stale on the next release.
 | Keycloak | 26.7.3 | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) recorded 26.7.0, current on its date |
 | Apache APISIX | 3.18.0 | |
 | PgBouncer | 1.25.2 | |
-| OpenTelemetry | Python SDK 1.44.0, Node SDK 0.222.0, Collector 0.160.0 | |
+| OpenTelemetry | Python SDK 1.44.0, JavaScript SDK 2.11.0 with its OTLP exporter 0.222.0, Collector 0.160.0 | The edge uses the `opentelemetry` plugin bundled with APISIX. The Python SDK pins `opentelemetry-semantic-conventions` 0.65b0, which is published only as a beta, and the JavaScript OTLP exporter is marked experimental |
 | Terraform | 1.16.2 | |
 | Testcontainers (Python) | 4.15.0 | |
 | Anthropic SDK | Python 1.5.0, TypeScript 0.125.0 | At the broker's edge only |
@@ -216,7 +216,10 @@ no plaintext in logs, traces or backups.
 
 **OpenTelemetry**, which [graduated in the CNCF in May 2026](https://opentelemetry.io/) and whose
 traces and metrics APIs are stable across the SDKs; logs are less uniform and should be treated as the
-least settled leg. Export OTLP and keep the backend replaceable.
+least settled leg. Export OTLP and keep the backend replaceable. The edge traces through the
+`opentelemetry` plugin bundled with APISIX and each service through its language's SDK, and every
+span leaves over OTLP/HTTP for a Collector. The local stack's Collector prints spans to its log,
+which chooses no backend.
 
 **Telemetry is not the audit trail, and the distinction is normative.**
 [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A6 forbids reconstructing an

@@ -22,7 +22,8 @@ const config = z
   })
   .parse(process.env);
 
-const log = pino({ name: 'tenant-user-management-identity-sync' });
+// Timestamps in RFC 3339, as every Orchestra log line has them.
+const log = pino({ name: 'tenant-user-management-identity-sync', timestamp: pino.stdTimeFunctions.isoTime });
 const database = connect(config.IDENTITY_SYNC_DATABASE_URL, {
   max: 1,
   onIdleConnectionError: (error) => log.error({ err: error }, 'a pooled database connection failed while idle'),

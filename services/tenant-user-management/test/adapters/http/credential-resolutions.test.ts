@@ -52,7 +52,7 @@ const resolution = (credential: unknown, type = 'credential-resolutions') => ({
 });
 
 async function serve(setup: Setup = {}) {
-  const log = { warn: vi.fn(), error: vi.fn() };
+  const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   const directory = new InMemoryTenantDirectory();
   const tenancy = new InMemoryTenancy();
   directory.add({ tenantId, status: 'active', identityProviderOrganization: 'org-a' });
