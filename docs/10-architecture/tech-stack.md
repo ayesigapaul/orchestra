@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.30.0
+version: 0.31.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -49,9 +49,9 @@ projects themselves mark non-LTS "current" lines as not for production. Node.js 
 today. Pre-releases, betas and release candidates are never used.
 
 Versions below were read from the registries — endoflife.date, PyPI, npm and GitHub releases — on
-2026-09-12, and the contract-test validators, dbmate and node-postgres on 2026-09-13, not from
-memory. Re-check them the same way before relying on this table; it is a snapshot, and it goes stale
-on the next release.
+2026-09-12, and the contract-test validators, dbmate, node-postgres and httpx2 on 2026-09-13, not
+from memory. Re-check them the same way before relying on this table; it is a snapshot, and it goes
+stale on the next release.
 
 | Technology | Pinned | Channel note |
 | --- | --- | --- |
@@ -81,6 +81,7 @@ on the next release.
 | ruff | 0.16.7 | |
 | pytest | 9.1.1 | |
 | jsonschema | 4.26.0, with `referencing` 0.37.0 and PyYAML 6.0.3 | Python services' contract tests validate real responses against their OpenAPI documents |
+| httpx2 | 2.12.0 | The client Starlette's test client uses; a development dependency of the Python services, never a runtime one |
 | LangGraph | `langgraph` 1.2.11, `langgraph-checkpoint` 4.2.0, `langgraph-checkpoint-postgres` 3.1.2 | MIT packages only ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)) |
 | psycopg | 3.3.5 | |
 | Keycloak | 26.7.3 | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) recorded 26.7.0, current on its date |

@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.33.0
+version: 0.34.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,18 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.34.0] — 2026-09-13
+
+The Gateway's tests move to the HTTP client Starlette's test client now expects.
+
+### Changed
+
+- `10-architecture/tech-stack.md` (0.31.0) — pins httpx2 2.12.0 as a development
+  dependency. The Gateway had carried httpx 0.28.1 as a runtime dependency that nothing imported,
+  only for Starlette's test client, which now warns against it.
 
 ---
 
