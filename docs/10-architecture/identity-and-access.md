@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -138,6 +138,17 @@ container authenticates, which the paragraph above fixes as the Gateway for ever
 and the Control Plane for the federated Platform User. The record lives in Tenant User Management,
 which both of them call to resolve a caller
 ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
+
+**A service calling another service is not a Principal.**
+[ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) authenticates
+every call between services with the calling service's own access token. The identity provider
+issues that token through the OAuth 2.0 client credentials grant, for the service being called. The
+credential says which service is calling and nothing more. It is never the accountable Principal of
+an action, and it is not a Service Account, which is a Tenant's machine caller into the Gateway. A
+callee that acts for a Principal in a Tenant takes both from a signed token it verifies. Three
+candidates exist for that token: the original credential relayed and resolved again, a token
+exchanged at the identity provider, or a token signed by the service that resolved the credential.
+The choice is registered in section 12.
 
 ## 4. Tenant and Workspace are scope, not isolation
 
@@ -411,3 +422,4 @@ and `threat-model.md`'s lifetimes row is below unchanged.
 | Which normative document carries the cancellation authorization rule of section 7 | `gateway-api.md` in [`../30-protocol/`](../30-protocol/) while cancellation is an ordinary operation on a public contract, or [`../40-governance/policy-model.md`](../40-governance/policy-model.md) if a later document adds an enforcement point there | No — unless it becomes an enforcement point, which changes E1's minimum |
 | Whether a Service Account consumes a seat, given ADR-0009 counts Principals authenticating to the Control Plane and carries no Service Account dimension | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), where [`../00-overview/personas.md`](../00-overview/personas.md) section 5 registers it | No — its classification, repeated |
 | GLOSSARY entries for *capability grant* and *administrative grant*, neither of which has one | [`../GLOSSARY.md`](../GLOSSARY.md), joining the entry [`../20-domain/domain-model.md`](../20-domain/domain-model.md) already registers for the first | No |
+| Which signed token carries the originating Principal and Tenant on a call between services, and who signs it: the original credential relayed and resolved again, a token exchanged at the identity provider, or a token the resolving service signs | A security review of the three candidates in section 3, before the first internal operation that acts for a Principal ([ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md)) | **ADR** — a trust boundary between services, and costly to reverse once services rely on it |

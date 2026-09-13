@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.28.0
+version: 0.29.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,34 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.29.0] — 2026-09-13
+
+How services talk to each other is decided, at the product owner's request.
+
+### Added
+
+- [ADR-0026](adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) — a call between
+  services is an HTTP request under ADR-0025's JSON:API contract. It is authenticated with the
+  calling service's own credential and never by network location. A fact another service reacts to
+  leaves its owner through a transactional outbox, delivered at least once. gRPC is the named
+  fallback, adopted for one pair of services by ADR for a measured hot path or bidirectional
+  streaming.
+
+### Changed
+
+- `30-protocol/http-conventions.md` (0.3.0) — a new section 8 adds HC16 to HC21 for calls between
+  services. They cover documentation and tests, authentication, a service never being the Principal
+  of an action, deadlines and retries by `meta.retry`, errors mapped rather than relayed, and
+  streams. The open questions move to section 9.
+- `10-architecture/identity-and-access.md` (0.11.0) — a service calling a service is neither a
+  Principal nor a Service Account. How a call carries the originating Principal and Tenant is
+  registered, ADR-required.
+- `10-architecture/containers.md` (0.24.0) — section 1 points to ADR-0026 for how calls and facts
+  travel between containers. Section 12 registers the outbox transport, ADR-required.
+- `10-architecture/tech-stack.md` (0.28.0), the ADR index and `CLAUDE.md` record ADR-0026.
 
 ---
 

@@ -1,18 +1,20 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.2.0
+version: 0.3.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
-depends_on: [ADR-0025]
+depends_on: [ADR-0025, ADR-0026]
 ---
 
 # HTTP Conventions
 
 The response contract, error contract and documentation rules every Orchestra HTTP API follows —
 public, administrative and internal — as [ADR-0025](../adr/adr-0025-json-api-http-contract.md)
-decides. This section is **normative**. MUST, MUST NOT, SHOULD and MAY carry their
+decides, and the rules for calls between services that
+[ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) adds. This
+section is **normative**. MUST, MUST NOT, SHOULD and MAY carry their
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) meanings.
 
 The reference is [JSON:API 1.1](https://jsonapi.org/format/1.1/). Where this document is silent,
@@ -193,7 +195,48 @@ documented response, with an example, for every status it can return, drawn from
 document is stale or does not lint. Each service's tests validate its actual responses against its
 document, including an unknown route, a wrong method and an unacceptable media type.
 
-## 8. Open questions
+## 8. Calls between services
+
+[ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) makes a call
+between services an HTTP request under this document, with no second contract format. These rules
+add what a call between services needs and a call from outside does not.
+
+**HC16 — An internal operation is documented and tested like a public one.** It appears in the
+callee's OpenAPI document (HC14), and the caller's tests check what it sends, and what it expects
+back, against that document.
+
+**HC17 — Every call is authenticated, and never by network location.** The caller presents an access
+token that the identity provider issued to it through the OAuth 2.0 client credentials grant, with
+the callee as its audience. The callee MUST verify the token's signature, issuer, audience and
+lifetime, and answers `auth.unauthenticated` otherwise. Being on the same network, host or address
+range is not a credential. Outside the local stack, every hop MUST be encrypted.
+
+**HC18 — A service is never the Principal of an action.** A service's credential authenticates the
+calling service and nothing more. A callee that acts for a Principal in a Tenant MUST take both from
+a signed token it verifies, and MUST NOT take either from a header or body member on the caller's
+word. Which token that is, and who signs it, is registered in section 9. An operation that needs it
+does not ship before that is decided.
+
+**HC19 — Deadlines and retries follow `meta.retry`.** Every call has a deadline. A caller MAY repeat
+a failed call only when the error's `meta.retry` is `safe`, after `Retry-After` when one is present.
+It MUST NOT repeat a call marked `unsafe`, and repeats one marked `indeterminate` only after
+reconciling (HC10). A deadline reached without an answer is `safe` for GET and HEAD, and
+`indeterminate` otherwise. Every state-changing internal operation MUST accept `Idempotency-Key`,
+with the meaning [`../VERSIONING.md`](../VERSIONING.md) section 4 gives it at the Gateway.
+
+**HC20 — A callee's error is the caller's to map, never to relay.** It reaches the caller's own client
+only through the caller's error layer (HC13). A callee that failed before acting becomes
+`upstream.unavailable`, and one that may have acted becomes `upstream.outcome_unknown`. Otherwise the
+error takes a code the caller's own contract documents. The callee's `detail`, `source` and request
+identifier go to the caller's log (HC11).
+
+**HC21 — A stream between services is a streamed HTTP response.** Its framing is registered in
+section 9.
+
+A fact another service reacts to is not a call. ADR-0026 has it leave its owner through a
+transactional outbox, and each event type is a wire contract in [`schemas/`](schemas/).
+
+## 9. Open questions
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
@@ -201,3 +244,5 @@ document, including an unknown route, a wrong method and an unacceptable media t
 | Whether any JSON:API extension or profile is adopted, such as atomic operations | A use case that needs one | No — additive under JSON:API 1.1 |
 | Whether `links.type` resolves to a published page per code, and on what host | Domain registration, which also governs schema `$id`s ([`../VERSIONING.md`](../VERSIONING.md) section 6) | No |
 | The codes for the edge's size limits — 413, 414 and 431 — which no configured limit produces yet | The first request size limit set at the edge, with this document's section 4 | No |
+| Which signed token carries the originating Principal and Tenant on a call between services, and who signs it (HC18) | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md), before the first internal operation that acts for a Principal | **Yes** — its classification, repeated |
+| The framing of a stream between services, such as Server-Sent Events (HC21) | The first stream between services, with this document | No |
