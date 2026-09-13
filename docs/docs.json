@@ -14,6 +14,20 @@
     "href": "/"
   },
   "favicon": "/assets/logo/favicon.svg",
+  "navbar": {
+    "links": [
+      {
+        "label": "Author",
+        "href": "https://ayesigapaul.vercel.app/"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "website": "https://ayesigapaul.vercel.app/",
+      "github": "https://github.com/ayesigapaul/orchestra"
+    }
+  },
   "navigation": {
     "tabs": [
       {

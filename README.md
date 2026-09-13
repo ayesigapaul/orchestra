@@ -1,5 +1,15 @@
 # Orchestra
 
+[![Documentation](https://github.com/ayesigapaul/orchestra/actions/workflows/docs.yml/badge.svg?branch=main)](https://github.com/ayesigapaul/orchestra/actions/workflows/docs.yml)
+[![Services](https://github.com/ayesigapaul/orchestra/actions/workflows/services.yml/badge.svg?branch=main)](https://github.com/ayesigapaul/orchestra/actions/workflows/services.yml)
+[![Repository hygiene](https://github.com/ayesigapaul/orchestra/actions/workflows/hygiene.yml/badge.svg?branch=main)](https://github.com/ayesigapaul/orchestra/actions/workflows/hygiene.yml)
+[![UI template](https://github.com/ayesigapaul/orchestra/actions/workflows/ui-template.yml/badge.svg?branch=main)](https://github.com/ayesigapaul/orchestra/actions/workflows/ui-template.yml)
+[![Docs](https://img.shields.io/badge/docs-published-0f766e)](https://orchestra-28364c7e.mintlify.site/section-index)
+[![API reference](https://img.shields.io/badge/API-OpenAPI%203.1-6ba539)](docs/30-protocol/openapi/)
+[![Wiki](https://img.shields.io/badge/wiki-start%20here-555555)](https://github.com/ayesigapaul/orchestra/wiki)
+[![Licence](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
+[![Author](https://img.shields.io/badge/author-Ayesiga%20Paul-111111)](https://ayesigapaul.vercel.app/)
+
 **A governance and connectivity layer for enterprise AI agents.**
 
 Orchestra is not an agent framework. Orchestration runtimes, model providers and the tool protocol
@@ -13,10 +23,18 @@ AI agent in front of a real business system and still answer the questions its a
 
 ## Status
 
-**Pre-implementation.** This repository currently contains the architecture and specification set.
-Decisions are recorded as ADRs; seven are Accepted and three are Proposed pending named validation.
+**Phase 0 of implementation, pre-customer.** The specification set is complete, and platform code
+has begun. The Gateway and Tenant User Management run in a local stack behind the APISIX edge, with
+PostgreSQL through PgBouncer and Keycloak for identity. Decisions are recorded as ADRs, and the ADR
+index gives each one's status.
 
-Start here: **[`docs/README.md`](docs/README.md)**
+- **Read the documentation** at
+  [orchestra-28364c7e.mintlify.site](https://orchestra-28364c7e.mintlify.site/section-index), which
+  is published from [`docs/`](docs/README.md).
+- **Try the APIs** by importing an OpenAPI document from
+  [`docs/30-protocol/openapi/`](docs/30-protocol/openapi/) into Postman, Insomnia or Bruno.
+- **Start contributing** with [the wiki](https://github.com/ayesigapaul/orchestra/wiki), then
+  [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 
@@ -78,10 +96,14 @@ flowchart TB
 
 | Path | Contents |
 | --- | --- |
-| [`docs/`](docs/) | Architecture and specification set — the current substance of this repository |
+| [`docs/`](docs/) | The architecture and specification set, published at [the documentation site](https://orchestra-28364c7e.mintlify.site/section-index) |
 | [`docs/adr/`](docs/adr/) | Architecture Decision Records — the binding decisions |
+| [`docs/30-protocol/openapi/`](docs/30-protocol/openapi/) | An OpenAPI document for every service's HTTP API, ready to import into Postman |
 | [`docs/VERSIONING.md`](docs/VERSIONING.md) | Compatibility policy across nine versioned artifacts |
-| [`scripts/`](scripts/) | Repository tooling |
+| [`services/`](services/) | Backend services, each an independent project ([ADR-0020](docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md)): the Gateway in Python, and Tenant User Management in TypeScript |
+| [`infra/compose/`](infra/compose/) | The local stack — PostgreSQL, PgBouncer, Keycloak, APISIX and the services — and `smoke.sh`, which proves it end to end |
+| [`ui-template/`](ui-template/) | The front-end starting point each surface is duplicated from |
+| [`scripts/`](scripts/) | Repository tooling, and the checks CI runs |
 
 ---
 
@@ -93,6 +115,10 @@ are recorded as ADRs, ADRs are immutable once accepted, and `main` is protected.
 ## Security
 
 Do not open a public issue for a security concern. See [SECURITY.md](SECURITY.md).
+
+## Author
+
+Built by [Ayesiga Paul](https://ayesigapaul.vercel.app/).
 
 ## Licence
 

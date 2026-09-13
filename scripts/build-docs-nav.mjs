@@ -142,6 +142,16 @@ const config = {
     href: '/',
   },
   favicon: '/assets/logo/favicon.svg',
+  // The author's site, linked from the navbar and the footer, beside the repository.
+  navbar: {
+    links: [{ label: 'Author', href: 'https://ayesigapaul.vercel.app/' }],
+  },
+  footer: {
+    socials: {
+      website: 'https://ayesigapaul.vercel.app/',
+      github: 'https://github.com/ayesigapaul/orchestra',
+    },
+  },
   navigation: {
     tabs: [
       { tab: 'Documentation', groups: ordered },
