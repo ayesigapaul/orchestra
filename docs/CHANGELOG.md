@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.38.0
+version: 0.39.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,28 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.39.0] — 2026-09-13
+
+Which token carries a Principal and Tenant between services is decided.
+
+### Added
+
+- `adr/adr-0027-tenant-user-management-signs-principal-tokens.md` — Tenant User Management signs a
+  short-lived Principal Token for one callee, with registered JWT claim names. A grant it signed at
+  admission covers work that outlives the credential that started it.
+- `GLOSSARY.md` (0.10.0) — *Principal Token*.
+
+### Changed
+
+- `30-protocol/http-conventions.md` (0.4.0) — HC18 names the Principal Token, and section 9
+  registers the token's specification in place of the choice.
+- `10-architecture/identity-and-access.md` (0.14.0) — section 3 records the choice, and section 12
+  drops its row.
+- `30-protocol/credential-resolution.md` (0.3.0) — CR3 says how a resolved Principal travels on.
+- `adr/README.md` (0.29.0) — indexes ADR-0027.
 
 ---
 

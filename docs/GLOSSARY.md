@@ -1,7 +1,7 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -48,6 +48,11 @@ each belong to exactly one Membership, and a Tenant never sees a Person's Member
 **Session Token** — a short-lived, narrowly scoped credential minted by Orchestra at the
 request of the customer's backend and used by a client SDK. Never a tenant API key. Never present in
 a browser or mobile bundle.
+
+**Principal Token** — a short-lived token Tenant User Management signs for one Orchestra service,
+carrying one Principal and its Tenant on a call between services. The callee verifies it rather than
+trusting its caller, and no client ever holds one
+([ADR-0027](adr/adr-0027-tenant-user-management-signs-principal-tokens.md)).
 
 ---
 
