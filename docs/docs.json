@@ -172,6 +172,7 @@
               "adr/adr-0023-no-foreign-key-constraints",
               "adr/adr-0024-global-person-with-tenant-memberships",
               "adr/adr-0025-json-api-http-contract",
+              "adr/adr-0026-services-call-over-http-and-publish-through-an-outbox",
               "adr/adr-template"
             ]
           },
@@ -608,6 +609,10 @@
     {
       "source": "/adr/adr-0025-json-api-http-contract.md",
       "destination": "/adr/adr-0025-json-api-http-contract"
+    },
+    {
+      "source": "/adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md",
+      "destination": "/adr/adr-0026-services-call-over-http-and-publish-through-an-outbox"
     },
     {
       "source": "/adr/adr-template.md",

@@ -86,11 +86,14 @@ flowchart TD
   A23 --&gt; A24
   A6 --&gt; A25["ADR-0025&lt;br/&gt;JSON:API and OpenAPI"]
   A20 --&gt; A25
+  A17 --&gt; A26["ADR-0026&lt;br/&gt;HTTP between services, events by outbox"]
+  A20 --&gt; A26
+  A25 --&gt; A26
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;
 </pre></div>
@@ -131,11 +134,14 @@ flowchart TD
   A23 --&gt; A24
   A6 --&gt; A25["ADR-0025&lt;br/&gt;JSON:API and OpenAPI"]
   A20 --&gt; A25
+  A17 --&gt; A26["ADR-0026&lt;br/&gt;HTTP between services, events by outbox"]
+  A20 --&gt; A26
+  A25 --&gt; A26
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;</pre></details>
 </section>

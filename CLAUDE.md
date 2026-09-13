@@ -48,6 +48,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0023 | No foreign key constraints; row-level security write policies refuse cross-tenant references | Accepted |
 | 0024 | One global Person per human, a Membership per Tenant; person attributes only from the identity provider | Accepted |
 | 0025 | HTTP APIs speak JSON:API 1.1 with one error contract; each service's API is an OpenAPI document | Accepted |
+| 0026 | Services call each other over HTTP under that contract; facts leave through an outbox; gRPC is the named fallback | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -110,6 +111,12 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   in `docs/30-protocol/openapi/`, bundled by `scripts/build-openapi.mjs`, which also copies it into
   the service as `openapi.yaml` for contract tests that validate real responses against it. Document
   an operation and every code it returns before shipping it.
+- **Calls between services** — HTTP under the same contract, never gRPC without an ADR for a
+  measured need ([ADR-0026](docs/adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md),
+  `http-conventions.md` HC16 to HC21). Every call carries the calling service's own token and is
+  never trusted for where it came from. A service is never the Principal of an action, and a
+  Principal or Tenant comes only from a verified token. Retry only what `meta.retry` calls `safe`. A
+  fact another service reacts to leaves through an outbox written in the owner's transaction.
 
 ## Commands
 

@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.27.0
+version: 0.28.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -36,6 +36,7 @@ These are not open. They constrain everything below.
 | Tenants, Workspaces, Persons and Principals belong to the Tenant User Management service, and the Gateway resolves every credential through it; a Person is global, with a Membership per Tenant | [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) |
 | No table carries a foreign key constraint; a reference is an identifier, and a row-level security write policy refuses a reference to another Tenant's row | [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 | Every HTTP API exchanges JSON:API 1.1 documents with one error contract, and each service's API is an OpenAPI document | [ADR-0025](../adr/adr-0025-json-api-http-contract.md) |
+| Services call each other over HTTP under that contract, each call authenticated with the calling service's own credential; a fact another service reacts to leaves through a transactional outbox; gRPC is the named fallback, never the default | [ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 
