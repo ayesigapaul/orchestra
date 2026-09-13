@@ -44,7 +44,7 @@ three.
 incoming `traceparent`, and passes its own span to the Gateway as the parent; each service does the
 same for the calls it receives. Every span goes to `otel-collector` over OTLP/HTTP. Its debug
 exporter prints each one, so `make traces` shows a trace hop by hop, and it sends each span on to
-Tempo, which Grafana reads at http://localhost:3000
+Tempo, which Grafana reads on port 3000
 ([ADR-0028](../../docs/adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)). Grafana has no
 login, so its port is published on this machine alone. The edge's access log is one JSON line per
 request, carrying its trace and span under the names the services log with. Every line, the edge's
