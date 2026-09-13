@@ -31,6 +31,14 @@ invalid input, a failed credential or an unhandled fault — leaves through
 **Identity is never taken from the edge.** APISIX checks the token first, but a header it adds is
 never read; the tests forge one and prove it is ignored ([ADR-0018](../../docs/adr/adr-0018-apisix-at-the-edge.md)).
 
+**Every request is traced** ([`http-conventions.md`](../../docs/30-protocol/http-conventions.md)
+HC12). `src/orchestra_gateway/tracing.py` serves each request in an OpenTelemetry server span whose
+parent is a valid incoming `traceparent`, and makes the call to Tenant User Management and the token
+request in client spans whose context those calls carry. It logs each request once, as a JSON line
+with the trace, the span, the request identifier and, once the credential resolves, the Tenant, but
+never the Principal. `tests/test_tracing.py` checks each of these, and which headers start a new
+trace instead.
+
 ## Working on it
 
 This is an independent project ([ADR-0020](../../docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md)):
@@ -47,4 +55,5 @@ Configuration comes from the environment, and the service refuses to start witho
 credentials it verifies need `ORCHESTRA_GATEWAY_ISSUER`, `ORCHESTRA_GATEWAY_JWKS_URL` and
 `ORCHESTRA_GATEWAY_AUDIENCE`. Resolving them needs `ORCHESTRA_GATEWAY_TENANT_USER_MANAGEMENT_URL`,
 `ORCHESTRA_GATEWAY_TOKEN_URL`, `ORCHESTRA_GATEWAY_CLIENT_ID` and `ORCHESTRA_GATEWAY_CLIENT_SECRET`,
-and `ORCHESTRA_GATEWAY_RESOLUTION_DEADLINE_SECONDS` defaults to 5.
+and `ORCHESTRA_GATEWAY_RESOLUTION_DEADLINE_SECONDS` defaults to 5. Spans are exported over OTLP/HTTP
+to `OTEL_EXPORTER_OTLP_ENDPOINT`, the variable OpenTelemetry specifies, when it is set.

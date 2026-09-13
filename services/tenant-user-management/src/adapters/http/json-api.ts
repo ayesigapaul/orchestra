@@ -146,8 +146,9 @@ export class ApiError extends Error {
   }
 }
 
-/** Where a failure is logged. Only the composition root knows the logger. */
+/** Where requests and failures are logged. Only the composition root knows the logger. */
 export interface Log {
+  info(details: object, message: string): void;
   warn(details: object, message: string): void;
   error(details: object, message: string): void;
 }
@@ -157,6 +158,8 @@ export interface JsonApiEnv {
     requestId: string;
     /** Set while an operation that never takes effect runs (Operation.changesNothing). */
     changesNothing?: boolean;
+    /** The Tenant the request concerns, once it is known. Its span and log line carry it (I1). */
+    tenantId?: string;
   };
 }
 

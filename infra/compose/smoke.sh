@@ -95,6 +95,112 @@ assert attributes["principal_kind"] == "platform-user"
 ' || fail_resolution "valid credential: expected dev's Platform User in the local Tenant, got: $body"
 echo "✓ a verified credential crosses the edge and resolves to one Principal in one Tenant: $body"
 
+# W3C Trace Context (http-conventions.md HC12). A trace the caller starts continues across the edge,
+# the Gateway and Tenant User Management, each serving its part in a span whose parent is the span
+# that called it, and each logs the request once, carrying the trace.
+fail_trace() {
+  echo "✗ $1"
+  docker compose logs --tail 60 otel-collector apisix gateway tenant-user-management
+  exit 1
+}
+trace_id=$(python3 -c 'import secrets; print(secrets.token_hex(16))')
+caller_span=$(python3 -c 'import secrets; print(secrets.token_hex(8))')
+call -H "Authorization: Bearer ${token}" -H "traceparent: 00-${trace_id}-${caller_span}-01" "$PROBE"
+[ "$status" = "200" ] || fail_trace "traced request: expected 200, got $status: $body"
+traced_request=$(awk -F': ' 'tolower($1) == "orchestra-request-id" { print $2 }' <<<"$headers")
+
+# spans_continue: every hop's span of the trace has reached the collector, each naming the span that
+# called it as its parent. Otherwise it says what is missing. Spans are exported in batches, so the
+# check is repeated until they arrive.
+spans_continue() {
+  local printed
+  printed=$(docker compose logs --no-log-prefix otel-collector 2>&1)
+  TRACE=$trace_id CALLER=$caller_span python3 -c '
+import os, re, sys
+
+spans, service, span = [], None, None
+for line in sys.stdin:
+    resource = re.search(r"-> service\.name: Str\((.*)\)", line)
+    field = re.match(r"\s*(Trace ID|Parent ID|ID|Name|Kind)\s*:(.*)$", line)
+    if resource:
+        service = resource.group(1)
+    elif field and field.group(1) == "Trace ID":
+        span = {"service": service, "Trace ID": field.group(2).strip()}
+        spans.append(span)
+    elif field and span is not None:
+        span[field.group(1)] = field.group(2).strip()
+
+def one(service, kind, name=None):
+    found = [s for s in spans if s["Trace ID"] == os.environ["TRACE"] and s["service"] == service
+             and s.get("Kind") == kind and name in (None, s.get("Name"))]
+    if len(found) != 1:
+        sys.exit(f"{len(found)} {kind} spans of the trace from {service}, not one")
+    return found[0]
+
+edge = one("apisix", "Server")
+gateway = one("gateway", "Server", "GET /_probe/identity")
+call = one("gateway", "Client", "POST /credential-resolutions")
+callee = one("tenant-user-management", "Server", "POST /credential-resolutions")
+for child, parent, what in [
+    (edge, {"ID": os.environ["CALLER"]}, "the edge span does not name the caller span as its parent"),
+    (gateway, edge, "the Gateway span does not name the edge span as its parent"),
+    (call, gateway, "the call to Tenant User Management is not made in the Gateway span"),
+    (callee, call, "the Tenant User Management span does not name the Gateway call as its parent"),
+]:
+    if child["Parent ID"] != parent["ID"]:
+        sys.exit(what)
+' <<<"$printed"
+}
+trace_problem="no span of the trace reached the collector"
+for _ in $(seq 1 30); do
+  if trace_problem=$(spans_continue 2>&1); then break; fi
+  sleep 1
+done
+spans_continue >/dev/null 2>&1 || fail_trace "the trace did not continue across every hop: $trace_problem"
+echo "✓ a trace the caller starts continues across the edge, the Gateway and Tenant User Management"
+
+logs_dir=$(mktemp -d)
+for service in apisix gateway tenant-user-management; do
+  docker compose logs --no-log-prefix "$service" >"$logs_dir/$service" 2>&1
+done
+DIR=$logs_dir TRACE=$trace_id REQUEST_ID=$traced_request TENANT=$LOCAL_TENANT python3 -c '
+import json, os, sys
+
+def served(service, message):
+    found = []
+    with open(os.path.join(os.environ["DIR"], service)) as lines:
+        for raw in lines:
+            try:
+                line = json.loads(raw)
+            except ValueError:
+                continue
+            if isinstance(line, dict) and line.get(message) == "request served" \
+                    and line.get("trace_id") == os.environ["TRACE"]:
+                found.append(line)
+    if len(found) != 1:
+        sys.exit(f"{len(found)} lines from {service} log the traced request, not one")
+    return found[0]
+
+edge, gateway = served("apisix", "message"), served("gateway", "message")
+callee = served("tenant-user-management", "msg")
+for passed, what in [
+    (edge["request_id"] == gateway["request_id"] == os.environ["REQUEST_ID"],
+     "the edge and the Gateway do not log the request identifier the caller was given"),
+    (edge["http.response.status_code"] == gateway["http.response.status_code"] == 200,
+     "a request line does not record the 200 the caller got"),
+    (gateway.get("tenant_id") == callee.get("tenant_id") == os.environ["TENANT"],
+     "the Gateway and Tenant User Management do not log the Tenant the request resolved to"),
+    (len({edge["span_id"], gateway["span_id"], callee["span_id"]}) == 3,
+     "two hops logged the same span"),
+    (not any("principal" in json.dumps(line) for line in (edge, gateway, callee)),
+     "a request line carries a Principal, which telemetry never does"),
+]:
+    if not passed:
+        sys.exit(what)
+' || fail_trace "the request lines do not carry the trace as they should"
+rm -rf "$logs_dir"
+echo "✓ each hop logs the request once, with the trace, a span of its own, the request identifier and the Tenant"
+
 outsider=$(user_credential outsider outsider-local-only organization) \
   || fail "could not obtain the outsider's credential"
 unscoped=$(user_credential dev dev-local-only) \

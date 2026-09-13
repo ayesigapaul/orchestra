@@ -1,7 +1,7 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.5.0
+version: 0.6.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -174,9 +174,12 @@ same one.
 ## 5. Headers
 
 **HC12 — Every response carries `Orchestra-Request-Id`**, equal to the `id` of any error it contains.
-A request carrying a W3C `traceparent` has its trace continued, not replaced. `WWW-Authenticate`
-accompanies 401, `Allow` accompanies 405, `Retry-After` accompanies 429 and may accompany 503, and
-`Location` accompanies 201.
+`WWW-Authenticate` accompanies 401, `Allow` accompanies 405, `Retry-After` accompanies 429 and may
+accompany 503, and `Location` accompanies 201. A request carrying a valid
+[W3C Trace Context](https://www.w3.org/TR/trace-context/) `traceparent` has its trace continued, not
+replaced: the edge and each service serve it in a span of their own whose parent is the caller's
+span, and every call they make carries a `traceparent` naming the span it is made in, with the
+`tracestate` they received. A missing or invalid `traceparent` starts a new trace.
 
 ## 6. Error handling in a service
 

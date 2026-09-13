@@ -14,7 +14,7 @@ from typing import Annotated, Any
 import httpx2
 from fastapi import Depends, FastAPI, Request
 
-from orchestra_gateway import jsonapi
+from orchestra_gateway import jsonapi, tracing
 from orchestra_gateway.auth import TokenVerifier, Unauthenticated
 from orchestra_gateway.jsonapi import (
     UNAUTHENTICATED,
@@ -30,7 +30,7 @@ from orchestra_gateway.resolution import (
     Resolver,
     ServiceTokens,
 )
-from orchestra_gateway.settings import get_settings
+from orchestra_gateway.settings import get_settings, get_telemetry_settings
 
 logger = logging.getLogger("orchestra_gateway.auth")
 
@@ -75,12 +75,17 @@ def create_app(verifier: TokenVerifier | None = None, resolver: Resolver | None 
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
+        tracing.configure_logging()
+        provider = tracing.configure_tracing(get_telemetry_settings().otlp_endpoint)
         # Fail at startup, not on the first request, when configuration is missing.
         get_verifier()
         get_resolver()
         yield
         if state["client"] is not None:
             state["client"].close()
+        if provider is not None:
+            # Spans still queued are exported before the process ends.
+            provider.shutdown()
 
     app = FastAPI(
         title="Orchestra Gateway",
@@ -90,6 +95,9 @@ def create_app(verifier: TokenVerifier | None = None, resolver: Resolver | None 
         openapi_url=None,
     )
     jsonapi.install(app)
+    # Added last, so it is the outermost: every request is served and logged in a span of its own,
+    # refusals included.
+    app.add_middleware(tracing.TraceContextMiddleware)
 
     def verified_credential(
         request: Request, token_verifier: Annotated[TokenVerifier, Depends(get_verifier)]
@@ -110,6 +118,7 @@ def create_app(verifier: TokenVerifier | None = None, resolver: Resolver | None 
         return token
 
     def resolved_identity(
+        request: Request,
         credential: Annotated[str, Depends(verified_credential)],
         credential_resolver: Annotated[Resolver, Depends(get_resolver)],
     ) -> Identity:
@@ -117,13 +126,16 @@ def create_app(verifier: TokenVerifier | None = None, resolver: Resolver | None 
         # resolve is refused like one that fails verification, and a resolution that cannot
         # complete fails closed, never as a pass (credential-resolution.md CR7).
         try:
-            return credential_resolver.resolve(credential)
+            identity = credential_resolver.resolve(credential)
         except Rejected:
             logger.warning("credential did not resolve to a Principal")
             raise ApiError(UNAUTHENTICATED, headers=INVALID_TOKEN) from None
         except ResolutionUnavailable as exc:
             logger.error("credential resolution unavailable: %s", exc, exc_info=exc)
             raise ApiError(UPSTREAM_UNAVAILABLE) from None
+        # The request's span and log line carry its Tenant (invariant I1), and never its Principal.
+        request.state.tenant_id = identity.tenant_id
+        return identity
 
     @app.api_route("/healthz", methods=READ)
     def healthz() -> JsonApiResponse:

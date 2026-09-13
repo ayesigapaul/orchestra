@@ -4,7 +4,7 @@ import { rejected } from '../../../src/application/resolve-principal.ts';
 import { expectDocumented, expectErrorDocument } from './contract.ts';
 
 const JSON_API = 'application/vnd.api+json';
-const silent = { warn: () => {}, error: () => {} };
+const silent = { info: () => {}, warn: () => {}, error: () => {} };
 
 // These tests are about the contract around every operation, so resolution here admits no caller.
 const appWith = (dependencies: Partial<HttpDependencies> = {}) =>
@@ -27,7 +27,7 @@ describe('HTTP adapter', () => {
   });
 
   it('answers 503 when its database cannot be reached, and says why only to the log', async () => {
-    const log = { warn: vi.fn(), error: vi.fn() };
+    const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const unreachable = () => Promise.reject(new Error('connect ECONNREFUSED pgbouncer:6432'));
     const res = await appWith({ log, ready: unreachable }).request('/healthz');
     expect(res.status).toBe(503);
@@ -106,7 +106,7 @@ describe('HTTP adapter', () => {
     ['GET', 'safe'],
     ['POST', 'indeterminate'],
   ] as const)('logs a fault on %s and never describes it, with retry %s', async (method, retry) => {
-    const log = { warn: vi.fn(), error: vi.fn() };
+    const log = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const app = appWith({ log });
     app.on(method, '/_test/fault', () => {
       throw new Error('connection to db.internal:5432 refused');

@@ -3,6 +3,7 @@ import { serve } from '@hono/node-server';
 import pino from 'pino';
 import { z } from 'zod';
 import { createApp } from './adapters/http/app.ts';
+import { traceLogFields } from './adapters/http/trace-context.ts';
 import {
   IdentityProviderCallerAuthenticator,
   IdentityProviderCredentialVerifier,
@@ -10,6 +11,7 @@ import {
 } from './adapters/identity-provider/tokens.ts';
 import { connect } from './adapters/postgres/database.ts';
 import { PostgresTenancy, PostgresTenantDirectory } from './adapters/postgres/tenancy.ts';
+import { startTracing } from './adapters/telemetry/tracing.ts';
 import { resolveCredential } from './application/resolve-credential.ts';
 
 const config = z
@@ -30,10 +32,23 @@ const config = z
       .string()
       .default('orchestra-gateway')
       .transform((value) => value.split(',').map((client) => client.trim()).filter((client) => client !== '')),
+    // Where spans are exported over OTLP/HTTP, under the variable OpenTelemetry specifies. Unset, spans
+    // are still made, so traces continue and log lines carry them, but none is exported.
+    OTEL_EXPORTER_OTLP_ENDPOINT: z.url().optional(),
   })
   .parse(process.env);
 
-const log = pino({ name: 'tenant-user-management' });
+const tracing = startTracing({
+  serviceName: 'tenant-user-management',
+  otlpEndpoint: config.OTEL_EXPORTER_OTLP_ENDPOINT,
+});
+
+// Timestamps in RFC 3339, and every line logged inside a request carries its W3C trace.
+const log = pino({
+  name: 'tenant-user-management',
+  timestamp: pino.stdTimeFunctions.isoTime,
+  mixin: traceLogFields,
+});
 const database = connect(config.DATABASE_URL, {
   onIdleConnectionError: (error) => log.error({ err: error }, 'a pooled database connection failed while idle'),
 });
@@ -63,6 +78,10 @@ const server = serve({ fetch: app.fetch, port: config.PORT }, (info) => {
   log.info({ port: info.port }, 'listening');
 });
 
+// Spans still queued are exported before the process ends, and a failure to export them keeps it
+// from ending no more than a database that will not close.
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.on(signal, () => server.close(() => void database.close().finally(() => process.exit(0))));
+  process.on(signal, () =>
+    server.close(() => void Promise.allSettled([database.close(), tracing.shutdown()]).finally(() => process.exit(0))),
+  );
 }
