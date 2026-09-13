@@ -274,6 +274,46 @@ components:
                 title: The resource's state forbids this operation
                 meta: { retry: unsafe }
 
+    ContentTooLarge:
+      description: >-
+        The request content is larger than the edge accepts (RFC 9110, 413 Content Too Large). Send
+        smaller content; the same request will be refused again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: <request-id>
+                status: '413'
+                code: request.content_too_large
+                title: The request content is too large
+                meta: { retry: unsafe }
+
+    UriTooLong:
+      description: >-
+        The request target is longer than the edge accepts (RFC 9110, 414 URI Too Long). Shorten the
+        path or query; the same request will be refused again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: <request-id>
+                status: '414'
+                code: request.uri_too_long
+                title: The request URI is too long
+                meta: { retry: unsafe }
+
     UnsupportedMediaType:
       description: The Content-Type is not the JSON:API media type, or carries unsupported parameters.
       headers:
@@ -332,6 +372,27 @@ components:
                 code: quota.exceeded
                 title: A limit was reached
                 meta: { retry: safe }
+
+    HeaderFieldsTooLarge:
+      description: >-
+        A request header field, or all of them together, is larger than the edge accepts (RFC 6585,
+        431 Request Header Fields Too Large). Send smaller header fields; the same request will be
+        refused again.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi: { version: '1.1' }
+            errors:
+              - id: <request-id>
+                status: '431'
+                code: request.header_fields_too_large
+                title: The request header fields are too large
+                meta: { retry: unsafe }
 
     InternalError:
       description: An unhandled fault. The detail is generic by design.

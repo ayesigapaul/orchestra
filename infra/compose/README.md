@@ -22,8 +22,14 @@ services use. `apisix/orchestra/apisix/plugins/orchestra-json-api.lua` runs as a
 reshapes what APISIX refuses itself — a missing, malformed or refused credential above all — and
 drops the reason a token failed from `WWW-Authenticate`, because that reason belongs in the log.
 Errors nginx raises before any plugin runs, such as a request with no `Host`, reach the same code
-through a named location in `apisix/config.yaml`, which also loads only the plugins the routes use.
+through locations in `apisix/config.yaml`, which also loads only the plugins the routes use.
 `smoke.sh` checks both paths.
+
+**The edge limits request sizes.** Content over 1 MiB is refused with 413 by the `client-control`
+global rule, before any credential is checked. A request line or a header field over 8 KiB is
+refused by nginx with 414 or 431, and nginx's own 494 for an oversized header field is answered as
+the 431 of RFC 6585. Each is a JSON:API error with its registered code, and `smoke.sh` sends all
+three.
 
 **PgBouncer is built, not pulled.** The PgBouncer project publishes no container image, and the
 widely pulled `pgbouncer/pgbouncer` belongs to a third party, so `pgbouncer/Dockerfile` installs the

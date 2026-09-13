@@ -1,7 +1,7 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.4.0
+version: 0.5.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -154,6 +154,9 @@ same one.
 | `request.method_not_allowed` | 405 | `unsafe` | This method is not allowed on this path | The path exists but not for this method; `Allow` lists the methods it accepts |
 | `request.not_acceptable` | 406 | `unsafe` | No acceptable representation | HC1 |
 | `request.unsupported_media_type` | 415 | `unsafe` | Unsupported media type | HC1 |
+| `request.content_too_large` | 413 | `unsafe` | The request content is too large | The request content is over the edge's limit; send less (RFC 9110, Content Too Large) |
+| `request.uri_too_long` | 414 | `unsafe` | The request URI is too long | The request line is over the edge's limit; shorten the path or query (RFC 9110, URI Too Long) |
+| `request.header_fields_too_large` | 431 | `unsafe` | The request header fields are too large | A header field, or all of them together, is over the edge's limit (RFC 6585, Request Header Fields Too Large) |
 | `request.idempotency_conflict` | 409 | `unsafe` | This Idempotency-Key was used for a different request | An `Idempotency-Key` was reused with a different request |
 | `auth.unauthenticated` | 401 | `unsafe` | A valid credential is required | No credential, or one that failed verification; `WWW-Authenticate` accompanies it |
 | `auth.forbidden` | 403 | `unsafe` | This operation needs a grant the caller does not hold | Authenticated, but without the administrative grant the operation needs |
@@ -244,6 +247,6 @@ transactional outbox, and each event type is a wire contract in [`schemas/`](sch
 | Pagination details — page size limits, and whether a JSON:API cursor profile is adopted | The first collection endpoint, with this document | No |
 | Whether any JSON:API extension or profile is adopted, such as atomic operations | A use case that needs one | No — additive under JSON:API 1.1 |
 | Whether `links.type` resolves to a published page per code, and on what host | Domain registration, which also governs schema `$id`s ([`../VERSIONING.md`](../VERSIONING.md) section 6) | No |
-| The codes for the edge's size limits — 413, 414 and 431 — which no configured limit produces yet | The first request size limit set at the edge, with this document's section 4 | No |
+| The edge's size limits — 1 MiB of request content, and 8 KiB for the request line and for each header field — which were set with no customer requirement to size them | A design partner's largest legitimate request, set in the edge's configuration in `infra/compose/apisix/` | No — the codes stay whatever the values become |
 | The Principal Token's specification: its explicit type, claims, issuance and exchange operations, header, grant for resumed work, and key set (HC18) | A document in this directory, before the first internal operation that acts for a Principal | No — [ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) decides the mechanism |
 | The framing of a stream between services, such as Server-Sent Events (HC21) | The first stream between services, with this document | No |

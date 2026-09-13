@@ -1,7 +1,7 @@
 openapi: 3.1.2
 info:
   title: Orchestra Gateway
-  version: 0.2.0
+  version: 0.3.0
   summary: The public HTTP boundary, reached through the edge.
   description: |
     Every response is a JSON:API 1.1 document, and every failure an error document with a registered
@@ -46,8 +46,14 @@ paths:
           $ref: './json-api.yaml#/components/responses/Unauthenticated'
         '406':
           $ref: './json-api.yaml#/components/responses/NotAcceptable'
+        '413':
+          $ref: './json-api.yaml#/components/responses/ContentTooLarge'
+        '414':
+          $ref: './json-api.yaml#/components/responses/UriTooLong'
         '415':
           $ref: './json-api.yaml#/components/responses/UnsupportedMediaType'
+        '431':
+          $ref: './json-api.yaml#/components/responses/HeaderFieldsTooLarge'
         '500':
           $ref: './json-api.yaml#/components/responses/InternalError'
         '502':
@@ -88,8 +94,14 @@ paths:
           $ref: './json-api.yaml#/components/responses/Unauthenticated'
         '406':
           $ref: './json-api.yaml#/components/responses/NotAcceptable'
+        '413':
+          $ref: './json-api.yaml#/components/responses/ContentTooLarge'
+        '414':
+          $ref: './json-api.yaml#/components/responses/UriTooLong'
         '415':
           $ref: './json-api.yaml#/components/responses/UnsupportedMediaType'
+        '431':
+          $ref: './json-api.yaml#/components/responses/HeaderFieldsTooLarge'
         '500':
           $ref: './json-api.yaml#/components/responses/InternalError'
         '503':

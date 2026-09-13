@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.40.0
+version: 0.41.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,21 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.41.0] — 2026-09-13
+
+The edge refuses oversized requests as JSON:API errors.
+
+### Changed
+
+- `30-protocol/http-conventions.md` (0.5.0) — section 4 registers `request.content_too_large`
+  (413), `request.uri_too_long` (414) and `request.header_fields_too_large` (431), with titles taken
+  from the RFC status names. Section 9 now registers the limits' provisional values in place of the
+  missing codes.
+- `30-protocol/openapi/` — the shared JSON:API components gain the three responses, and the
+  Gateway's document (0.3.0) lists them on both operations.
 
 ---
 

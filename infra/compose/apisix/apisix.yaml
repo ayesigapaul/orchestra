@@ -1,8 +1,13 @@
-# Every refusal the edge makes is a JSON:API error document, whichever route is matched or none.
+# Every refusal the edge makes is a JSON:API error document, whichever route is matched or none, and
+# no request content over 1 MiB is accepted.
 global_rules:
   - id: json-api
     plugins:
       orchestra-json-api: {}
+      # Refuses content over the limit with 413 before any credential is checked, and bounds what
+      # nginx reads of a body that declares no length (http-conventions.md section 4).
+      client-control:
+        max_body_size: 1048576
 
 routes:
   - id: gateway

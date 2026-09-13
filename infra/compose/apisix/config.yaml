@@ -12,15 +12,34 @@ deployment:
 # Only the plugins the routes use are loaded, so a plugin nobody configured is not attack surface.
 plugins:
   - orchestra-json-api
+  - client-control
   - openid-connect
 
 nginx_config:
-  # Errors nginx raises itself, such as an upstream it cannot reach, never pass through a plugin.
-  # They are answered with the same JSON:API error documents (ADR-0025, HC13).
+  # Errors nginx raises itself, such as an upstream it cannot reach or a request over a size limit,
+  # never pass through a plugin. They are answered with the same JSON:API error documents (ADR-0025,
+  # HC13). A request line or header field longer than 8 KiB is refused with 414 or 431. The limit on
+  # request content is client-control's, in apisix.yaml, because it refuses before authentication.
   http_server_configuration_snippet: |
-    error_page 400 500 502 503 504 @orchestra_error;
+    large_client_header_buffers 4 8k;
+    error_page 400 413 500 502 503 504 @orchestra_error;
+    # A request line nginx could not read has no URI yet, and a named location needs one.
+    error_page 414 /.orchestra/uri-too-long;
+    # nginx reports oversized header fields as 400, so the 431 of RFC 6585 is given explicitly.
+    error_page 494 @orchestra_header_fields_too_large;
     location @orchestra_error {
         content_by_lua_block {
             require("apisix.plugins.orchestra-json-api").error_page()
+        }
+    }
+    location @orchestra_header_fields_too_large {
+        content_by_lua_block {
+            require("apisix.plugins.orchestra-json-api").error_page(431)
+        }
+    }
+    location = /.orchestra/uri-too-long {
+        internal;
+        content_by_lua_block {
+            require("apisix.plugins.orchestra-json-api").error_page(414)
         }
     }

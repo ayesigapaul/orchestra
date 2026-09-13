@@ -29,6 +29,12 @@ local REFUSALS = {
              title = "The resource does not exist", retry = "unsafe"},
     [405] = {status = 405, code = "request.method_not_allowed",
              title = "This method is not allowed on this path", retry = "unsafe"},
+    [413] = {status = 413, code = "request.content_too_large",
+             title = "The request content is too large", retry = "unsafe"},
+    [414] = {status = 414, code = "request.uri_too_long",
+             title = "The request URI is too long", retry = "unsafe"},
+    [431] = {status = 431, code = "request.header_fields_too_large",
+             title = "The request header fields are too large", retry = "unsafe"},
     [429] = {status = 429, code = "quota.exceeded",
              title = "A limit was reached", retry = "safe"},
     [502] = {status = 502, code = "upstream.outcome_unknown",
@@ -145,9 +151,10 @@ function _M.rewrite(_conf, _ctx)
 end
 
 
--- Content for the named location nginx's own errors are sent to. $status is the original status.
-function _M.error_page()
-    local refusal, retry = refusal_for(tonumber(ngx.var.status) or 500)
+-- Content for the locations nginx's own errors are sent to. $status is the original status, except
+-- where nginx does not report the real one, and config.yaml passes it instead.
+function _M.error_page(status)
+    local refusal, retry = refusal_for(status or tonumber(ngx.var.status) or 500)
     refusal, retry = refusal or INTERNAL, retry or "indeterminate"
     local request_id, document = error_document(refusal, retry)
     ngx.status = refusal.status

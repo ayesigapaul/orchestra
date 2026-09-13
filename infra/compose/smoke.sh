@@ -119,6 +119,18 @@ call -H "Host:" "$EDGE/healthz"
 expect_error 400 request.malformed
 echo "✓ errors nginx raises itself are JSON:API errors too"
 
+# The edge's size limits (http-conventions.md section 4). Each is refused before a credential is
+# looked at, as a JSON:API error with the status the HTTP standards name for it.
+oversized=$(python3 -c 'print("a" * 9000)')
+call -X POST -H "Content-Type: application/vnd.api+json" \
+  --data-binary @<(python3 -c 'import sys; sys.stdout.write("x" * 1100000)') "$PROBE"
+expect_error 413 request.content_too_large
+call "$EDGE/$oversized"
+expect_error 414 request.uri_too_long
+call -H "X-Oversized: $oversized" "$EDGE/healthz"
+expect_error 431 request.header_fields_too_large
+echo "✓ requests over the edge's size limits are refused as JSON:API errors, with their standard statuses"
+
 # ADR-0021: tenant context is set with SET LOCAL because the pool is in transaction mode. Each call
 # below is a separate client, and the probe pool holds a single server connection, so every client
 # is handed the same one — which is exactly the case isolation has to survive.
