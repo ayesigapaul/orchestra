@@ -31,8 +31,8 @@ imported from another service.
 - **No way to attach a Person by identifier.** The `PersonLinker` port creates or reuses a Person and
   gives one Tenant a Membership, mirroring the database functions ADR-0024 specifies.
 - **No foreign key constraints** ([ADR-0023](../../docs/adr/adr-0023-no-foreign-key-constraints.md)).
-  References are identifiers; mismatched references are refused by the domain and, once the
-  PostgreSQL adapter lands, by the database.
+  References are identifiers. A mismatched reference is refused by the domain, and in the
+  database by a write policy or by the linking functions.
 - **Resolution fails closed.** Anything short of one Principal and one Tenant is a rejection, and a
   rejection's reason is for logs, never for the caller.
 - **No endpoint before its contract.** Only `/healthz` is served until the resolution contract is
@@ -70,11 +70,15 @@ enforces `erasableSyntaxOnly`, which rejects the syntax Node cannot strip, such 
 ```bash
 pnpm install --frozen-lockfile
 pnpm typecheck
-pnpm test
-pnpm start          # PORT defaults to 8080
+pnpm test           # unit and adapter tests, the in-memory tenancy adapter among them
+pnpm start          # needs DATABASE_URL, the service's role through the pool; PORT defaults to 8080
 ```
+
+`pnpm test:integration` runs the same tenancy contract against PostgreSQL, through PgBouncer, as the
+service's own roles. It needs the local stack's network, so `infra/compose/smoke.sh` runs it in a
+container built from `test/integration.Dockerfile`. Without its connection strings it fails rather
+than skipping.
 
 ## Not yet here
 
-The PostgreSQL adapter, with its schema, roles, forced row-level security and linking functions; the
-identity-sync path; the resolution contract and endpoint; and the Keycloak adapter.
+The identity-sync path and its Keycloak adapter, and the credential-resolution contract and endpoint.

@@ -50,6 +50,12 @@ export const codes = {
     title: 'The resource does not exist',
     retry: 'unsafe',
   },
+  unavailable: {
+    name: 'server.unavailable',
+    status: 503,
+    title: 'The service is not ready',
+    retry: 'safe',
+  },
   // The registry leaves this code's retry safety to HC10, which decides it per request.
   internal: {
     name: 'server.internal',

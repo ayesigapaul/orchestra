@@ -3,15 +3,30 @@
 // endpoint shipped before its contract becomes the contract by accident. What is decided already
 // applies: every response is a JSON:API document, through ./json-api.ts (ADR-0025).
 import { Hono } from 'hono';
-import { type JsonApiEnv, type Log, install, resource, respond } from './json-api.ts';
+import { ApiError, codes, install, type JsonApiEnv, type Log, resource, respond } from './json-api.ts';
 
 export interface HttpDependencies {
   readonly log: Log;
+  /** Resolves when the service can serve, and rejects when a dependency it needs cannot be reached. */
+  readonly ready: () => Promise<void>;
 }
 
-export function createApp({ log }: HttpDependencies): Hono<JsonApiEnv> {
+export function createApp({ log, ready }: HttpDependencies): Hono<JsonApiEnv> {
   const app = new Hono<JsonApiEnv>();
   install(app, log);
-  resource(app, '/healthz', { get: { handle: (c) => respond(c, { meta: { status: 'ok' } }) } });
+  resource(app, '/healthz', {
+    get: {
+      handle: async (c) => {
+        try {
+          await ready();
+        } catch (error) {
+          // Why is for the log; the caller learns only that the service is not ready (HC11).
+          log.error({ err: error, requestId: c.get('requestId') }, 'not ready');
+          throw new ApiError(codes.unavailable);
+        }
+        return respond(c, { meta: { status: 'ok' } });
+      },
+    },
+  });
   return app;
 }

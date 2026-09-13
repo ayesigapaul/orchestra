@@ -5,12 +5,23 @@ import { expectDocumented, expectErrorDocument } from './contract.ts';
 const JSON_API = 'application/vnd.api+json';
 const silent = { error: () => {} };
 const request = (path: string, init?: RequestInit) =>
-  createApp({ log: silent }).request(path, init);
+  createApp({ log: silent, ready: async () => {} }).request(path, init);
 
 describe('HTTP adapter', () => {
   it('reports health as a meta document', async () => {
     const body = await expectDocumented(await request('/healthz'), '/healthz', 'GET');
     expect(body).toEqual({ jsonapi: { version: '1.1' }, meta: { status: 'ok' } });
+  });
+
+  it('answers 503 when its database cannot be reached, and says why only to the log', async () => {
+    const log = { error: vi.fn() };
+    const unreachable = () => Promise.reject(new Error('connect ECONNREFUSED pgbouncer:6432'));
+    const res = await createApp({ log, ready: unreachable }).request('/healthz');
+    expect(res.status).toBe(503);
+    expect(await res.clone().text()).not.toContain('pgbouncer');
+    const body = await expectDocumented(res, '/healthz', 'GET');
+    expect(body.errors?.[0]).toMatchObject({ code: 'server.unavailable', meta: { retry: 'safe' } });
+    expect(log.error).toHaveBeenCalledOnce();
   });
 
   it('answers HEAD wherever it answers GET', async () => {
@@ -83,7 +94,7 @@ describe('HTTP adapter', () => {
     ['POST', 'indeterminate'],
   ] as const)('logs a fault on %s and never describes it, with retry %s', async (method, retry) => {
     const log = { error: vi.fn() };
-    const app = createApp({ log });
+    const app = createApp({ log, ready: async () => {} });
     app.on(method, '/_test/fault', () => {
       throw new Error('connection to db.internal:5432 refused');
     });

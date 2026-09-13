@@ -111,4 +111,26 @@ echo "✓ Tenant User Management serves once its migrations have run"
 
 ./tenant-isolation.sh
 
+docker compose --profile test run --rm --build tenant-user-management-integration \
+  || fail "Tenant User Management's integration suite failed"
+echo "✓ both tenancy adapters pass one contract, the PostgreSQL one through the pool"
+
+# A lost dependency is a 503, never a crash, and the service recovers when the dependency returns.
+tum_status() {
+  docker compose exec -T tenant-user-management node -e \
+    "fetch('http://127.0.0.1:8080/healthz').then((r) => console.log(r.status), () => console.log('unreachable'))" \
+    2>/dev/null || echo "not running"
+}
+docker compose stop pgbouncer >/dev/null 2>&1
+status=$(tum_status)
+[ "$status" = "503" ] || fail "with the pool stopped, Tenant User Management should answer 503; got '$status'"
+docker compose start pgbouncer >/dev/null 2>&1
+for _ in $(seq 1 30); do
+  status=$(tum_status)
+  [ "$status" = "200" ] && break
+  sleep 1
+done
+[ "$status" = "200" ] || fail "Tenant User Management did not recover when the pool returned; got '$status'"
+echo "✓ Tenant User Management answers 503 while its database is unreachable, and recovers when it returns"
+
 echo "Local stack passes."

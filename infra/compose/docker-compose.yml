@@ -51,14 +51,34 @@ services:
       postgres:
         condition: service_healthy
 
-  # Starts only once its schema is current. No published port: services reach it on this network
-  # (ADR-0026), and nothing outside the stack does.
+  # Starts only once its schema is current, and connects as its own role through the pool. No
+  # published port: services reach it on this network (ADR-0026), and nothing outside the stack does.
   tenant-user-management:
     build: ../../services/tenant-user-management
     image: orchestra-local/tenant-user-management:0.1.0
+    environment:
+      DATABASE_URL: postgresql://tenant_user_management_app:tenant-user-management-app-local-dev@pgbouncer:6432/orchestra
     depends_on:
+      pgbouncer:
+        condition: service_healthy
       tenant-user-management-migrate:
         condition: service_completed_successfully
+
+  # The service's integration suite, on this network and through the pool, as the service's own
+  # roles. `up` does not start it; smoke.sh runs it.
+  tenant-user-management-integration:
+    profiles: [test]
+    build:
+      context: ../../services/tenant-user-management
+      dockerfile: test/integration.Dockerfile
+    image: orchestra-local/tenant-user-management-integration:0.1.0
+    environment:
+      DATABASE_URL: postgresql://tenant_user_management_app:tenant-user-management-app-local-dev@pgbouncer:6432/orchestra
+      IDENTITY_SYNC_DATABASE_URL: postgresql://tenant_user_management_identity_sync:tenant-user-management-identity-sync-local-dev@pgbouncer:6432/orchestra
+      OWNER_DATABASE_URL: postgresql://tenant_user_management_owner:tenant-user-management-owner-local-dev@postgres:5432/orchestra
+    depends_on:
+      tenant-user-management:
+        condition: service_healthy
 
   keycloak:
     build: ./keycloak
