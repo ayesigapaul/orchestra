@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -157,9 +157,11 @@ issues that token through the OAuth 2.0 client credentials grant, for the servic
 credential says which service is calling and nothing more. It is never the accountable Principal of
 an action, and it is not a Service Account, which is a Tenant's machine caller into the Gateway. A
 callee that acts for a Principal in a Tenant takes both from a signed token it verifies. Three
-candidates exist for that token: the original credential relayed and resolved again, a token
+candidates existed for that token: the original credential relayed and resolved again, a token
 exchanged at the identity provider, or a token signed by the service that resolved the credential.
-The choice is registered in section 12.
+[ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) chooses the third: a
+Principal Token that Tenant User Management signs for one callee. It is the only candidate that
+covers every Principal subtype, and work that outlives the credential that started it.
 
 ## 4. Tenant and Workspace are scope, not isolation
 
@@ -415,7 +417,10 @@ Token (section 3); and which component authenticates each subtype, mints and val
 Token, and reads the tenant directory (section 3). That discharges eight of the twelve register rows
 naming this document in full. The other four are discharged in part: the Service Account halves of
 `containers.md`, `system-context.md` and the domain model land in the credential-class row below,
-and `threat-model.md`'s lifetimes row is below unchanged.
+and `threat-model.md`'s lifetimes row is below unchanged. Which signed token carries a Principal
+and Tenant between services is settled by
+[ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) (section 3), so its
+row is gone too.
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
@@ -433,5 +438,4 @@ and `threat-model.md`'s lifetimes row is below unchanged.
 | Which normative document carries the cancellation authorization rule of section 7 | `gateway-api.md` in [`../30-protocol/`](../30-protocol/) while cancellation is an ordinary operation on a public contract, or [`../40-governance/policy-model.md`](../40-governance/policy-model.md) if a later document adds an enforcement point there | No — unless it becomes an enforcement point, which changes E1's minimum |
 | Whether a Service Account consumes a seat, given ADR-0009 counts Principals authenticating to the Control Plane and carries no Service Account dimension | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), where [`../00-overview/personas.md`](../00-overview/personas.md) section 5 registers it | No — its classification, repeated |
 | GLOSSARY entries for *capability grant* and *administrative grant*, neither of which has one | [`../GLOSSARY.md`](../GLOSSARY.md), joining the entry [`../20-domain/domain-model.md`](../20-domain/domain-model.md) already registers for the first | No |
-| Which signed token carries the originating Principal and Tenant on a call between services, and who signs it: the original credential relayed and resolved again, a token exchanged at the identity provider, or a token the resolving service signs | A security review of the three candidates in section 3, before the first internal operation that acts for a Principal ([ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md)) | **ADR** — a trust boundary between services, and costly to reverse once services rely on it |
 | When identity sync runs — on a schedule, on the identity provider's events, or at sign-in — and so how long a Person's name and email may lag behind the identity provider | [`control-plane.md`](control-plane.md), which owns deprovisioning, with a design partner's expectations of how soon a change must show | No |

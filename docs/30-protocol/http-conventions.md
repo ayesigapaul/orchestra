@@ -1,11 +1,11 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.3.0
+version: 0.4.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
-depends_on: [ADR-0025, ADR-0026]
+depends_on: [ADR-0025, ADR-0026, ADR-0027]
 ---
 
 # HTTP Conventions
@@ -214,8 +214,9 @@ range is not a credential. Outside the local stack, every hop MUST be encrypted.
 **HC18 — A service is never the Principal of an action.** A service's credential authenticates the
 calling service and nothing more. A callee that acts for a Principal in a Tenant MUST take both from
 a signed token it verifies, and MUST NOT take either from a header or body member on the caller's
-word. Which token that is, and who signs it, is registered in section 9. An operation that needs it
-does not ship before that is decided.
+word. That token is a Principal Token, which Tenant User Management signs for one callee
+([ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md)). An operation that
+needs one does not ship before the token is specified, as section 9 registers.
 
 **HC19 — Deadlines and retries follow `meta.retry`.** Every call has a deadline. A caller MAY repeat
 a failed call only when the error's `meta.retry` is `safe`, after `Retry-After` when one is present.
@@ -244,5 +245,5 @@ transactional outbox, and each event type is a wire contract in [`schemas/`](sch
 | Whether any JSON:API extension or profile is adopted, such as atomic operations | A use case that needs one | No — additive under JSON:API 1.1 |
 | Whether `links.type` resolves to a published page per code, and on what host | Domain registration, which also governs schema `$id`s ([`../VERSIONING.md`](../VERSIONING.md) section 6) | No |
 | The codes for the edge's size limits — 413, 414 and 431 — which no configured limit produces yet | The first request size limit set at the edge, with this document's section 4 | No |
-| Which signed token carries the originating Principal and Tenant on a call between services, and who signs it (HC18) | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md), before the first internal operation that acts for a Principal | **Yes** — its classification, repeated |
+| The Principal Token's specification: its explicit type, claims, issuance and exchange operations, header, grant for resumed work, and key set (HC18) | A document in this directory, before the first internal operation that acts for a Principal | No — [ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) decides the mechanism |
 | The framing of a stream between services, such as Server-Sent Events (HC21) | The first stream between services, with this document | No |

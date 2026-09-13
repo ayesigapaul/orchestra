@@ -1,11 +1,11 @@
 ---
 title: Credential Resolution
 doc_id: DOC-098
-version: 0.2.0
+version: 0.3.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
-depends_on: [ADR-0017, ADR-0018, ADR-0024, ADR-0025, ADR-0026]
+depends_on: [ADR-0017, ADR-0018, ADR-0024, ADR-0025, ADR-0026, ADR-0027]
 ---
 
 # Credential Resolution
@@ -70,10 +70,10 @@ document:
 Tenant User Management MUST verify the credential's signature, issuer, audience and lifetime against
 the identity provider's signing keys itself. It MUST NOT take a subject or an organization from the
 caller instead. A compromised caller then cannot resolve a Principal whose credential it does not
-hold. The credential MUST NOT be logged, stored or echoed. This rule governs resolution only: how an
-established Principal and Tenant travel on later calls between services remains ADR-required
-([`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section
-12).
+hold. The credential MUST NOT be logged, stored or echoed. This rule governs resolution only. An
+established Principal and Tenant travel on later calls between services in a Principal Token, which
+Tenant User Management signs starting from a credential resolved as this document specifies
+([ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md)).
 
 **CR4 — The Tenant comes from the credential's organization.** Each Tenant maps to one identity
 provider Organization ([ADR-0017](../adr/adr-0017-keycloak-for-identity.md)), recorded in the tenant

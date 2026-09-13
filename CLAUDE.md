@@ -49,6 +49,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0024 | One global Person per human, a Membership per Tenant; person attributes only from the identity provider | Accepted |
 | 0025 | HTTP APIs speak JSON:API 1.1 with one error contract; each service's API is an OpenAPI document | Accepted |
 | 0026 | Services call each other over HTTP under that contract; facts leave through an outbox; gRPC is the named fallback | Accepted |
+| 0027 | Tenant User Management signs the Principal Token that carries a Principal and Tenant between services | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
