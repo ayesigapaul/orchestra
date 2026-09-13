@@ -189,6 +189,8 @@
               "adr/adr-0025-json-api-http-contract",
               "adr/adr-0026-services-call-over-http-and-publish-through-an-outbox",
               "adr/adr-0027-tenant-user-management-signs-principal-tokens",
+              "adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack",
+              "adr/adr-0029-kafka-carries-facts-captured-by-debezium",
               "adr/adr-template"
             ]
           },
@@ -637,6 +639,14 @@
     {
       "source": "/adr/adr-0027-tenant-user-management-signs-principal-tokens.md",
       "destination": "/adr/adr-0027-tenant-user-management-signs-principal-tokens"
+    },
+    {
+      "source": "/adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md",
+      "destination": "/adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack"
+    },
+    {
+      "source": "/adr/adr-0029-kafka-carries-facts-captured-by-debezium.md",
+      "destination": "/adr/adr-0029-kafka-carries-facts-captured-by-debezium"
     },
     {
       "source": "/adr/adr-template.md",

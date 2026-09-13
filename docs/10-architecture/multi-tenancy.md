@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -280,7 +280,8 @@ What is implied today by decisions already taken, with what remains open:
 | Credential and key custody | [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) | Per-tenant data keys — scoped by key, not by row | Custody path owned by [`identity-and-access.md`](identity-and-access.md) |
 | Meter records | [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) | Tenant-scoped by I1; reconcilable against audit | The correlating value is open in [`../40-governance/audit-model.md`](../40-governance/audit-model.md) |
 | Event delivery stream | Delivery only; audit is the system of record | Tenant in the partition or subject key | Rests on [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md), **Proposed** |
-| Logs, traces and telemetry | I1 requires a tenant identifier on every log line | Tenant as a first-class field | Owned by [`../60-operations/`](../60-operations/) |
+| Facts between services, as Kafka topics | [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) | The tenant identifier as every record's key, and as a CloudEvents attribute | Built with the first event type and its consumer; retention is registered in [`containers.md`](containers.md) section 12 |
+| Logs, traces and telemetry | I1 requires a tenant identifier on every log line | Tenant as a first-class field, and the Nil UUID for work that belongs to no Tenant ([ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)) | Owned by [`../60-operations/`](../60-operations/), and held in the Grafana stack ADR-0028 chooses |
 | Large-payload object storage | Only if Evidence Sets are materialised by value | Tenant as a path prefix | By value or by reference is open in [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) |
 | Connector-side local state | [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed** | Single-tenant by deployment | Planned `connector.md`; not settled architecture |
 

@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.42.0
+version: 0.43.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,39 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.43.0] — 2026-09-13
+
+Telemetry's backend, sampling and tenant field are decided, and so is the transport that carries
+facts between services.
+
+### Added
+
+- `adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md` — telemetry goes to a self-hosted
+  Grafana stack. Every trace is kept until volume demands tail sampling, with the edge deciding, and
+  work with no Tenant carries the Nil UUID of RFC 9562.
+- `adr/adr-0029-kafka-carries-facts-captured-by-debezium.md` — Kafka carries facts between services
+  as CloudEvents keyed by Tenant, captured from each outbox by Debezium, and is built with the first
+  event type and its consumer.
+
+### Changed
+
+- `20-domain/domain-model.md` (0.10.0) — I1 gives telemetry for work with no Tenant the Nil UUID.
+- `60-operations/observability.md` (0.13.0) — section 8 records the tenant field and sampling.
+  Section 9 discharges two rows, and narrows the sampling row to its figures and the Agent Run
+  question.
+- `10-architecture/multi-tenancy.md` (0.14.0) — section 8 records the Nil UUID, and registers the
+  Kafka topics as a store.
+- `10-architecture/containers.md` (0.25.0) — section 1 names the transport, and section 12 replaces
+  its transport row with the topics' retention and the capture connector's lag bound.
+- `30-protocol/http-conventions.md` (0.7.0) — section 8 names the transport, and section 9 registers
+  the specification of facts between services.
+- `10-architecture/tech-stack.md` (0.35.0) — pins the telemetry backend, Kafka and Debezium. Section
+  1.1 allows a transitive pre-release that a stable pin requires, and section 3 records logical
+  decoding.
+- `adr/README.md` (0.30.0) — indexes ADR-0028 and ADR-0029.
 
 ---
 

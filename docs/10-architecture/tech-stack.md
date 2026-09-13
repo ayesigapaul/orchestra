@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.34.0
+version: 0.35.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -37,6 +37,8 @@ These are not open. They constrain everything below.
 | No table carries a foreign key constraint; a reference is an identifier, and a row-level security write policy refuses a reference to another Tenant's row | [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 | Every HTTP API exchanges JSON:API 1.1 documents with one error contract, and each service's API is an OpenAPI document | [ADR-0025](../adr/adr-0025-json-api-http-contract.md) |
 | Services call each other over HTTP under that contract, each call authenticated with the calling service's own credential; a fact another service reacts to leaves through a transactional outbox; gRPC is the named fallback, never the default | [ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) |
+| Telemetry leaves over OTLP for a self-hosted Grafana stack; the edge decides sampling, and every trace is kept until volume demands tail sampling; work with no Tenant carries the Nil UUID | [ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) |
+| Kafka carries facts between services as CloudEvents keyed by Tenant, captured from each outbox by Debezium through logical decoding | [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 
@@ -46,11 +48,13 @@ a dependency update change behaviour nobody reviewed. Upgrades are deliberate co
 
 Where a project publishes a long-term-support line, **latest stable means latest LTS** — the
 projects themselves mark non-LTS "current" lines as not for production. Node.js is the one affected
-today. Pre-releases, betas and release candidates are never used.
+today. Orchestra never chooses a pre-release, beta or release candidate. A transitive dependency
+that a stable, exactly pinned release pins itself may be one, and each is named in the table below.
 
 Versions below were read from the registries — endoflife.date, PyPI, npm and GitHub releases — on
 2026-09-12, and the contract-test validators, dbmate, node-postgres, httpx2 and jose on 2026-09-13,
-not from memory. Re-check them the same way before relying on this table; it is a snapshot, and it
+as were OpenTelemetry, the telemetry backend, Kafka and Debezium, not from memory. Re-check them
+the same way before relying on this table; it is a snapshot, and it
 goes stale on the next release.
 
 | Technology | Pinned | Channel note |
@@ -88,7 +92,11 @@ goes stale on the next release.
 | Keycloak | 26.7.3 | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) recorded 26.7.0, current on its date |
 | Apache APISIX | 3.18.0 | |
 | PgBouncer | 1.25.2 | |
-| OpenTelemetry | Python SDK 1.44.0, JavaScript SDK 2.11.0 with its OTLP exporter 0.222.0, Collector 0.160.0 | The edge uses the `opentelemetry` plugin bundled with APISIX. The Python SDK pins `opentelemetry-semantic-conventions` 0.65b0, which is published only as a beta, and the JavaScript OTLP exporter is marked experimental |
+| OpenTelemetry | Python SDK 1.44.0, JavaScript SDK 2.11.0 with its OTLP exporter 0.222.0, Collector 0.160.0 | The edge uses the `opentelemetry` plugin bundled with APISIX. The Python SDK pins `opentelemetry-semantic-conventions` 0.65b0, a transitive pre-release this section allows, because that package is published only as a beta. The JavaScript OTLP exporter is marked experimental |
+| Grafana | Grafana 13.2.1, Tempo 3.0.3, Loki 3.7.7 | The telemetry backend ([ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)). The local stack runs Grafana and Tempo |
+| Prometheus | 3.13.3 | The current LTS line, supported until 2027-07-31. Holds metrics under ADR-0028, once something emits them |
+| Apache Kafka | 4.3.1 | KRaft mode. Carries facts between services ([ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md)), from the first event type |
+| Debezium | 3.6.2 | Its PostgreSQL connector, on Kafka Connect, under ADR-0029. 3.7 is in beta |
 | Terraform | 1.16.2 | |
 | Testcontainers (Python) | 4.15.0 | |
 | Anthropic SDK | Python 1.5.0, TypeScript 0.125.0 | At the broker's edge only |
@@ -154,6 +162,14 @@ The choice is cheap to reverse, because the migrations are SQL that any tool can
 [pgTAP](https://pgtap.org/) or an equivalent for policy-level assertions. A single-tenant test passes
 under broken isolation, so the test is two tenants or it is not a test.
 
+**Facts leave through logical decoding.**
+[ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) has Debezium read each
+service's outbox from the write-ahead log, so PostgreSQL runs with `wal_level = logical`, each
+outbox has a publication of its own, and each capture connector holds a replication slot. The
+connector connects directly, because a replication connection cannot pass through transaction
+pooling. A stalled connector keeps write-ahead log from being removed until it resumes, so its lag
+is monitored and bounded.
+
 ## 4. The run supervisor
 
 **Start on PostgreSQL: `SELECT ... FOR UPDATE SKIP LOCKED` for the queue, a lease column with an
@@ -218,8 +234,10 @@ no plaintext in logs, traces or backups.
 traces and metrics APIs are stable across the SDKs; logs are less uniform and should be treated as the
 least settled leg. Export OTLP and keep the backend replaceable. The edge traces through the
 `opentelemetry` plugin bundled with APISIX and each service through its language's SDK, and every
-span leaves over OTLP/HTTP for a Collector. The local stack's Collector prints spans to its log,
-which chooses no backend.
+span leaves over OTLP/HTTP for a Collector.
+[ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) makes the backend a
+self-hosted Grafana stack: Tempo for traces, Loki for logs and Prometheus for metrics, read in
+Grafana. Only the Collector names it, so replacing a store changes nothing else.
 
 **Telemetry is not the audit trail, and the distinction is normative.**
 [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A6 forbids reconstructing an

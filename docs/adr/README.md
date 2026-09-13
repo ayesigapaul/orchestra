@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.29.0
+version: 0.30.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -54,6 +54,8 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0025](adr-0025-json-api-http-contract.md) | HTTP APIs speak JSON:API 1.1, and each is described in OpenAPI | Accepted | 2026-09-13 |
 | [0026](adr-0026-services-call-over-http-and-publish-through-an-outbox.md) | Services call each other over HTTP under the JSON:API contract, and publish facts through an outbox | Accepted | 2026-09-13 |
 | [0027](adr-0027-tenant-user-management-signs-principal-tokens.md) | Tenant User Management signs the Principal Token that carries a Principal and Tenant between services | Accepted | 2026-09-13 |
+| [0028](adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) | Telemetry goes to a self-hosted Grafana stack, keeps every trace until volume demands sampling, and gives work with no Tenant the Nil UUID | Accepted | 2026-09-13 |
+| [0029](adr-0029-kafka-carries-facts-captured-by-debezium.md) | Kafka carries facts between services, captured from each outbox by Debezium | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -100,11 +102,14 @@ flowchart TD
   A25 --> A26
   A24 --> A27["ADR-0027<br/>Principal Tokens between services"]
   A26 --> A27
+  A11 --> A28["ADR-0028<br/>Telemetry backend, sampling, Nil UUID"]
+  A26 --> A29["ADR-0029<br/>Kafka and Debezium carry facts"]
+  A21 --> A29
 
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;
 ```

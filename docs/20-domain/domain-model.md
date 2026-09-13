@@ -1,7 +1,7 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -37,7 +37,12 @@ These are normative. Every entity and relationship below is subject to them.
 **I1 — Tenant scoping is universal.** Every persisted record, every emitted event and every log line
 MUST carry a tenant identifier, with one exception: a Person is global, and a Tenant sees it only
 through its own Membership, under the same forced row-level security
-([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)). Isolation is enforced by
+([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)). A log line or span for work
+that belongs to no Tenant, such as a request before its credential resolves or a health check,
+carries the Nil UUID of [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#section-5.9) as its
+tenant identifier. That value names no Tenant, and it MUST NOT appear on a persisted record or an
+emitted event ([ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md)).
+Isolation is enforced by
 row-level security in the datastore, not by application code
 ([ADR-0001](../adr/adr-0001-product-shape-multi-tenant-saas.md),
 [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)): a missing tenant predicate in
