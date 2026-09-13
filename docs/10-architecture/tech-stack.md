@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.28.0
+version: 0.29.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -49,13 +49,15 @@ projects themselves mark non-LTS "current" lines as not for production. Node.js 
 today. Pre-releases, betas and release candidates are never used.
 
 Versions below were read from the registries — endoflife.date, PyPI, npm and GitHub releases — on
-2026-09-12, and the contract-test validators on 2026-09-13, not from memory. Re-check them the same
-way before relying on this table; it is a snapshot, and it goes stale on the next release.
+2026-09-12, and the contract-test validators and dbmate on 2026-09-13, not from memory. Re-check
+them the same way before relying on this table; it is a snapshot, and it goes stale on the next
+release.
 
 | Technology | Pinned | Channel note |
 | --- | --- | --- |
 | Python | 3.14.7 | 3.15 is at release candidate; not used until it is final |
 | PostgreSQL | 18.6 | 19 is in beta; not used until it is final |
+| dbmate | 2.35.1 | Applies each service's migrations to its own schema, as that schema's owner role |
 | Node.js | 24.21.0 | Active LTS. 26.8.2 is newer but not LTS until 2026-10-28, when it becomes the pin |
 | TypeScript | 7.0.2 | The first stable release on the native compiler, and the `tsc` that type-checks in CI. It has no compiler API until 7.1, so its release notes direct installing the TypeScript 6 API beside it as `typescript` (`@typescript/typescript6` 6.0.2, which carries TypeScript 6.0.3). typescript-eslint and `next build`'s own check still run on that |
 | ESLint | 9.39.5 | 10.10.0 is newer, but `eslint-config-next` 16.3.5 bundles `eslint-plugin-react` 7.37.5, whose latest release calls `context.getFilename`, which ESLint 10 removed. Moves to 10 when that plugin supports it |
@@ -125,6 +127,25 @@ with `SET LOCAL` inside an explicit transaction, which expires exactly when the 
 returned. [`../70-delivery/testing-strategy.md`](../70-delivery/testing-strategy.md) already names
 this as a guarantee that fails silently, and it is why the isolation test runs through the pooler
 rather than a direct connection.
+
+**Migrations: [dbmate](https://github.com/amacneil/dbmate), one schema per service.** Each service
+applies its own plain-SQL migrations to its own schema, as that schema's owner role, from its own
+directory. They are strictly ordered and runnable per database, as
+[`multi-tenancy.md`](multi-tenancy.md) section 7 requires for the promotion path. Creating a role
+needs a superuser, so provisioning creates each service's schema and roles, and the migrations
+create everything inside the schema. dbmate is a single binary that reads SQL and nothing else, so
+it serves a Python service and a TypeScript one without joining either's dependency graph.
+
+Four alternatives were weighed:
+
+- golang-migrate has the same shape, but records only the last version applied, so a migration
+  merged with an older timestamp is skipped silently.
+- Atlas's declarative diffing would turn row-level security policies and `SECURITY DEFINER`
+  functions into generated text rather than reviewed text.
+- Sqitch brings a Perl runtime to every service.
+- Flyway brings a Java runtime to every service.
+
+The choice is cheap to reverse, because the migrations are SQL that any tool can apply.
 
 **Testing it: real Postgres, two tenants, in CI.** Testcontainers for an ephemeral instance, and
 [pgTAP](https://pgtap.org/) or an equivalent for policy-level assertions. A single-tenant test passes

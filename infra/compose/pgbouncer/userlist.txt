@@ -1,1 +1,3 @@
 "pooler_probe" "pooler-probe-local-dev"
+"tenant_user_management_app" "tenant-user-management-app-local-dev"
+"tenant_user_management_identity_sync" "tenant-user-management-identity-sync-local-dev"

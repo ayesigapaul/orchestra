@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.29.0
+version: 0.30.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,19 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.30.0] — 2026-09-13
+
+The datastore has its first schema, and the migration tool is chosen.
+
+### Changed
+
+- `10-architecture/tech-stack.md` (0.29.0) — section 3 chooses dbmate for migrations: plain SQL,
+  strictly ordered, and applied to each service's own schema as its owner role, with provisioning
+  creating the roles. golang-migrate, Atlas, Sqitch and Flyway were weighed. Section 1.1 pins dbmate
+  2.35.1.
 
 ---
 
