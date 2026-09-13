@@ -61,6 +61,11 @@ Platform User in it. `smoke.sh` runs the seed before anything crosses the edge, 
 - **Failing closed.** While Tenant User Management is stopped, the Gateway answers 503 instead of
   letting a credential through.
 
+**Names follow international standards.** The realm's user profile gives each user a display name,
+kept in its own order and script, and requires neither a given nor a family name, because a mononym
+has no family name and some cultures put it first. Identity sync records that display name, or the
+username when there is none.
+
 **PostgreSQL's init scripts run only against an empty volume.** After changing `postgres/initdb/`,
 or when a stack predates it, recreate the stack with `down -v`.
 
