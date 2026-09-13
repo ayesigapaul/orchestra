@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.34.0
+version: 0.35.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,26 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.35.0] — 2026-09-13
+
+Credential resolution has its contract, ahead of its implementation.
+
+### Added
+
+- `30-protocol/credential-resolution.md` — how the Gateway turns a verified credential into exactly
+  one Principal and one Tenant, answered by Tenant User Management. The caller authenticates as
+  itself, and the service that resolves the credential verifies it again. A rejection is an answer
+  that never says why, and resolution fails closed.
+- `30-protocol/openapi/` — Tenant User Management's `resolveCredential` operation.
+
+### Changed
+
+- `30-protocol/gateway-api.md` (0.11.0) and `10-architecture/identity-and-access.md` (0.12.0) —
+  point to the resolution contract.
+- `30-protocol/README.md` (0.17.0) — lists it.
 
 ---
 

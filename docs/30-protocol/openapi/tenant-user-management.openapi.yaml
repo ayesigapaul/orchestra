@@ -11,10 +11,12 @@ info:
     registered code and a retry safety — see docs/30-protocol/http-conventions.md (ADR-0025).
 
     **Run it locally** with `pnpm start` in `services/tenant-user-management`; it listens on
-    `http://localhost:8080`.
+    `http://localhost:8080`. In the local stack it has no published port, and only other services
+    reach it.
 
-    Only health is served. The credential-resolution operation is added here when its contract is
-    written, and not before.
+    **Credential resolution** is specified normatively by docs/30-protocol/credential-resolution.md.
+    Its caller authenticates with its own access token (HC17). Locally, the Gateway obtains one from
+    the local Keycloak with the client credentials grant as client `orchestra-gateway`.
   license:
     name: Proprietary
     identifier: LicenseRef-Proprietary
@@ -25,6 +27,8 @@ security: []
 tags:
   - name: Health
     description: Whether the service is serving.
+  - name: Credential resolution
+    description: Turning a verified credential into exactly one Principal and one Tenant.
 paths:
   /healthz:
     get:
@@ -45,131 +49,103 @@ paths:
           $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/Unavailable'
+  /credential-resolutions:
+    post:
+      operationId: resolveCredential
+      tags:
+        - Credential resolution
+      summary: Resolve a verified credential to exactly one Principal and one Tenant
+      description: 'Nothing is stored, so sending the same request again is always safe. A rejection is an answer rather than an error: every reason a credential does not resolve answers 200 with outcome rejected, and the reason goes only to the service''s log. Only the Gateway may call it (credential-resolution.md CR2).'
+      security:
+        - serviceToken: []
+      requestBody:
+        required: true
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/CredentialResolutionRequest'
+            example:
+              data:
+                type: credential-resolutions
+                attributes:
+                  credential: <access-token>
+      responses:
+        '200':
+          description: The credential resolved to one Principal and one Tenant, or it did not.
+          headers:
+            Orchestra-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/CredentialResolutionDocument'
+              examples:
+                resolved:
+                  summary: The credential resolved
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    data:
+                      type: credential-resolutions
+                      id: <request-id>
+                      attributes:
+                        outcome: resolved
+                        tenant_id: <tenant-id>
+                        principal_id: <principal-id>
+                        principal_kind: platform-user
+                rejected:
+                  summary: The credential did not resolve; the reason is only logged
+                  value:
+                    jsonapi:
+                      version: '1.1'
+                    data:
+                      type: credential-resolutions
+                      id: <request-id>
+                      attributes:
+                        outcome: rejected
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/CallerForbidden'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableContent'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
-  headers:
-    RequestId:
-      description: This request's identifier. Equal to the `id` of any error in the body (HC12).
-      required: true
-      schema:
-        type: string
-    RetryAfter:
-      description: When the same request may be sent again, in seconds or as an HTTP date.
-      schema:
-        type: string
-  schemas:
-    JsonApiObject:
-      type: object
-      description: The JSON:API version this document follows.
-      required:
-        - version
-      properties:
-        version:
-          type: string
-          const: '1.1'
-    MetaDocument:
-      type: object
-      description: A JSON:API document carrying only metadata, such as a health report (HC6).
-      required:
-        - jsonapi
-        - meta
-      properties:
-        jsonapi:
-          $ref: '#/components/schemas/JsonApiObject'
-        meta:
-          type: object
-    HealthDocument:
-      allOf:
-        - $ref: '#/components/schemas/MetaDocument'
-        - type: object
-          properties:
-            meta:
-              type: object
-              required:
-                - status
-              properties:
-                status:
-                  type: string
-                  const: ok
-    ErrorObject:
-      type: object
-      description: One problem with the request (HC8). Programs branch on `code`, never on `detail`.
-      required:
-        - id
-        - status
-        - code
-        - title
-        - meta
-      properties:
-        id:
-          type: string
-          description: This occurrence's identifier; the request identifier.
-        links:
-          type: object
-          properties:
-            about:
-              type: string
-              format: uri-reference
-            type:
-              type: string
-              format: uri-reference
-              description: Documentation for this code.
-        status:
-          type: string
-          pattern: ^[45][0-9]{2}$
-        code:
-          type: string
-          description: A registered code, class.name. Classes are request, auth, governance, resource, quota, upstream and server; an unknown code is treated as its class (HC9).
-          pattern: ^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$
-        title:
-          type: string
-          description: The code's fixed summary.
-        detail:
-          type: string
-          description: This occurrence, for a person. Free to change; never parsed.
-        source:
-          type: object
-          properties:
-            pointer:
-              type: string
-              description: A JSON Pointer to the offending request member.
-            parameter:
-              type: string
-              description: The offending query parameter.
-            header:
-              type: string
-              description: The offending request header.
-        meta:
-          type: object
-          required:
-            - retry
-          properties:
-            retry:
-              type: string
-              enum:
-                - safe
-                - unsafe
-                - indeterminate
-              description: Whether sending the same request again is safe (HC10).
-            decision_ref:
-              type: string
-              description: For a governance refusal only, an opaque reference to the Policy Decision.
-    ErrorDocument:
-      type: object
-      description: Every failure's body (HC7). Never carries `data`.
-      required:
-        - jsonapi
-        - errors
-      properties:
-        jsonapi:
-          $ref: '#/components/schemas/JsonApiObject'
-        errors:
-          type: array
-          minItems: 1
-          items:
-            $ref: '#/components/schemas/ErrorObject'
-        meta:
-          type: object
+  securitySchemes:
+    serviceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: The calling service's own access token, from the client credentials grant, with tenant-user-management as its audience (HC17). Never an end user's credential.
   responses:
+    CallerForbidden:
+      description: The caller's token verified, but that caller may not resolve credentials.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: d6e7f809-1021-4324-8536-576879809102
+                status: '403'
+                code: auth.forbidden
+                title: This operation needs a grant the caller does not hold
+                meta:
+                  retry: unsafe
     Healthy:
       description: The service is healthy.
       headers:
@@ -288,3 +264,247 @@ components:
                 title: The service is not ready
                 meta:
                   retry: safe
+    Unauthenticated:
+      description: No credential, or one that failed verification. The reason is never disclosed.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        WWW-Authenticate:
+          $ref: '#/components/headers/WwwAuthenticate'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: 1d8e9a77-3b2c-4a41-8f0e-5c6d7e8f9a10
+                status: '401'
+                code: auth.unauthenticated
+                title: A valid credential is required
+                meta:
+                  retry: unsafe
+    UnprocessableContent:
+      description: A request member is missing or invalid. One error per problem, each pointing at its member.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: 708192a3-b4c5-4d67-8f80-910213243546
+                status: '422'
+                code: request.validation_failed
+                title: A request member is missing or invalid
+                detail: name must not be empty
+                source:
+                  pointer: /data/attributes/name
+                meta:
+                  retry: unsafe
+  schemas:
+    CredentialResolutionRequest:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - type
+            - attributes
+          properties:
+            type:
+              type: string
+              const: credential-resolutions
+            attributes:
+              type: object
+              required:
+                - credential
+              properties:
+                credential:
+                  type: string
+                  minLength: 1
+                  description: The access token to resolve. Never logged, stored or echoed (CR3).
+    CredentialResolutionDocument:
+      type: object
+      required:
+        - jsonapi
+        - data
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiObject'
+        data:
+          type: object
+          required:
+            - type
+            - id
+            - attributes
+          properties:
+            type:
+              type: string
+              const: credential-resolutions
+            id:
+              type: string
+              description: This request's identifier. A resolution is not stored, so it has no other.
+            attributes:
+              oneOf:
+                - type: object
+                  required:
+                    - outcome
+                    - tenant_id
+                    - principal_id
+                    - principal_kind
+                  properties:
+                    outcome:
+                      type: string
+                      const: resolved
+                    tenant_id:
+                      type: string
+                      format: uuid
+                    principal_id:
+                      type: string
+                      format: uuid
+                    principal_kind:
+                      type: string
+                      enum:
+                        - platform-user
+                - type: object
+                  required:
+                    - outcome
+                  properties:
+                    outcome:
+                      type: string
+                      const: rejected
+    JsonApiObject:
+      type: object
+      description: The JSON:API version this document follows.
+      required:
+        - version
+      properties:
+        version:
+          type: string
+          const: '1.1'
+    MetaDocument:
+      type: object
+      description: A JSON:API document carrying only metadata, such as a health report (HC6).
+      required:
+        - jsonapi
+        - meta
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiObject'
+        meta:
+          type: object
+    HealthDocument:
+      allOf:
+        - $ref: '#/components/schemas/MetaDocument'
+        - type: object
+          properties:
+            meta:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  const: ok
+    ErrorObject:
+      type: object
+      description: One problem with the request (HC8). Programs branch on `code`, never on `detail`.
+      required:
+        - id
+        - status
+        - code
+        - title
+        - meta
+      properties:
+        id:
+          type: string
+          description: This occurrence's identifier; the request identifier.
+        links:
+          type: object
+          properties:
+            about:
+              type: string
+              format: uri-reference
+            type:
+              type: string
+              format: uri-reference
+              description: Documentation for this code.
+        status:
+          type: string
+          pattern: ^[45][0-9]{2}$
+        code:
+          type: string
+          description: A registered code, class.name. Classes are request, auth, governance, resource, quota, upstream and server; an unknown code is treated as its class (HC9).
+          pattern: ^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$
+        title:
+          type: string
+          description: The code's fixed summary.
+        detail:
+          type: string
+          description: This occurrence, for a person. Free to change; never parsed.
+        source:
+          type: object
+          properties:
+            pointer:
+              type: string
+              description: A JSON Pointer to the offending request member.
+            parameter:
+              type: string
+              description: The offending query parameter.
+            header:
+              type: string
+              description: The offending request header.
+        meta:
+          type: object
+          required:
+            - retry
+          properties:
+            retry:
+              type: string
+              enum:
+                - safe
+                - unsafe
+                - indeterminate
+              description: Whether sending the same request again is safe (HC10).
+            decision_ref:
+              type: string
+              description: For a governance refusal only, an opaque reference to the Policy Decision.
+    ErrorDocument:
+      type: object
+      description: Every failure's body (HC7). Never carries `data`.
+      required:
+        - jsonapi
+        - errors
+      properties:
+        jsonapi:
+          $ref: '#/components/schemas/JsonApiObject'
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ErrorObject'
+        meta:
+          type: object
+  headers:
+    RequestId:
+      description: This request's identifier. Equal to the `id` of any error in the body (HC12).
+      required: true
+      schema:
+        type: string
+    RetryAfter:
+      description: When the same request may be sent again, in seconds or as an HTTP date.
+      schema:
+        type: string
+    WwwAuthenticate:
+      description: The authentication scheme the caller must use.
+      required: true
+      schema:
+        type: string

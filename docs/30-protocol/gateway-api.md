@@ -1,7 +1,7 @@
 ---
 title: Gateway API
 doc_id: DOC-043
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-09
 owners: [platform-architecture]
@@ -153,6 +153,7 @@ holding a live credential wherever idempotent responses are kept (section 9).
 set, in a path segment, query parameter, body field or header, MUST NOT exist on this contract.
 Where one appears in a representation it is an echo of what the credential established, never an
 input. A caller-supplied tenant is an isolation defect, not a convenience.
+[`credential-resolution.md`](credential-resolution.md) specifies the resolution.
 
 **G8 — Every persisted record, emitted event and log line carries a tenant identifier** (invariant
 I1, ADR-0011); isolation is enforced by row-level security in the datastore, and a missing tenant
