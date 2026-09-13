@@ -8,10 +8,11 @@ import type {
   PrincipalRepository,
   TenantDirectory,
   TenantDirectoryEntry,
+  VerifiedPersons,
 } from '../../src/application/ports.ts';
 import { PrincipalId, TenantId } from '../../src/domain/identifiers.ts';
 import type { Membership } from '../../src/domain/membership.ts';
-import type { IdentityProviderAttributes, Person } from '../../src/domain/person.ts';
+import { type Person, recordIdentityProviderAttributes } from '../../src/domain/person.ts';
 import type { PlatformUser } from '../../src/domain/principal.ts';
 
 /** The ports under test, and the fixture operations no port offers. */
@@ -19,9 +20,10 @@ export interface TenancyHarness {
   readonly linker: PersonLinker;
   readonly principals: PrincipalRepository;
   readonly directory: TenantDirectory;
+  /** As the identity-sync role reaches them. */
+  readonly verifiedPersons: VerifiedPersons;
   addTenant(entry: TenantDirectoryEntry): Promise<void>;
   addPlatformUser(membership: Membership, id: PrincipalId): Promise<PlatformUser>;
-  recordIdentityProviderAttributes(subject: string, attributes: IdentityProviderAttributes): Promise<void>;
   personsVisibleTo(tenantId: TenantId): Promise<Person[]>;
   membershipsVisibleTo(tenantId: TenantId): Promise<Membership[]>;
 }
@@ -80,7 +82,11 @@ export function describeTenancyAdapter(name: string, harness: () => TenancyHarne
       const b = newTenant();
       const ada = newSubject('ada');
       await h.linker.linkVerified(newTenant(), ada);
-      await h.recordIdentityProviderAttributes(ada, { displayName: 'Ada Lovelace', email: 'ada@example.com' });
+      const person = await h.verifiedPersons.findBySubject(ada);
+      if (person === undefined) throw new Error('identity sync found no verified Person for the subject');
+      await h.verifiedPersons.recordAttributes(
+        recordIdentityProviderAttributes(person, { displayName: 'Ada Lovelace', email: 'ada@example.com' }),
+      );
       await h.linker.linkVerified(b, ada);
       expect(await h.personsVisibleTo(b)).toEqual([
         expect.objectContaining({ displayName: 'Ada Lovelace', email: 'ada@example.com' }),
@@ -116,6 +122,22 @@ export function describeTenancyAdapter(name: string, harness: () => TenancyHarne
       await h.addTenant(entry);
       expect(await h.directory.findByIdentityProviderOrganization(entry.identityProviderOrganization)).toEqual(entry);
       expect(await h.directory.findByIdentityProviderOrganization(newSubject('org'))).toBeUndefined();
+    });
+
+    it('gives identity sync every verified Person, and never an asserted one', async () => {
+      const h = harness();
+      const ada = newSubject('ada');
+      const customer = newSubject('customer');
+      const verified = await h.linker.linkVerified(newTenant(), ada);
+      await h.linker.linkAsserted(newTenant(), customer);
+
+      expect(await h.verifiedPersons.findBySubject(ada)).toEqual(
+        expect.objectContaining({ id: verified.personId, subject: ada }),
+      );
+      expect(await h.verifiedPersons.findBySubject(customer)).toBeUndefined();
+      const subjects = await h.verifiedPersons.subjects();
+      expect(subjects).toContain(ada);
+      expect(subjects).not.toContain(customer);
     });
   });
 }

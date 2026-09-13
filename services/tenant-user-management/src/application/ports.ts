@@ -2,6 +2,7 @@
 // implement them; the core never imports an adapter.
 import type { TenantId } from '../domain/identifiers.ts';
 import type { Membership } from '../domain/membership.ts';
+import type { IdentityProviderAttributes, VerifiedPerson } from '../domain/person.ts';
 import type { PlatformUser } from '../domain/principal.ts';
 
 /**
@@ -66,4 +67,25 @@ export interface Caller {
  */
 export interface CallerAuthenticator {
   authenticate(token: string): Promise<Caller | undefined>;
+}
+
+/**
+ * What the identity provider holds about a user, read when a Person's attributes are synchronized
+ * (ADR-0017, ADR-0024). Undefined means the identity provider no longer knows the subject. When it
+ * cannot be reached, this throws DependencyUnavailable, so nothing is taken from it.
+ */
+export interface IdentityProviderUsers {
+  attributesOf(subject: string): Promise<IdentityProviderAttributes | undefined>;
+}
+
+/**
+ * Verified Persons as the identity-sync role reaches them: in every Tenant, and no other kind of
+ * Person. It records a Person's name and email and changes nothing else (ADR-0024).
+ */
+export interface VerifiedPersons {
+  findBySubject(subject: string): Promise<VerifiedPerson | undefined>;
+  /** The subject of every verified Person. */
+  subjects(): Promise<readonly string[]>;
+  /** Records the name and email a Person carries, as recordIdentityProviderAttributes produced them. */
+  recordAttributes(person: VerifiedPerson): Promise<void>;
 }

@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -112,7 +112,7 @@ Five role classes, separated because two of them can turn the mechanism off.
 | Migration/owner role | Schema migration only | Owns tables; forced policy still applies, but it can alter policy |
 | Operator role | Support, metering aggregation, incident response | Deliberately cross-tenant; boundary B6 of [`../40-governance/threat-model.md`](../40-governance/threat-model.md) |
 | Linking role | The functions that create Persons and Memberships, and nothing else ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) | Bypasses it by design; cannot log in and owns only those functions, so each function is as security-critical as a policy |
-| Identity-sync role | Recording a Person's name and email from the identity provider | Subject to it; may execute only the function that records Person attributes, which runs as the linking role |
+| Identity-sync role | Recording a Person's name and email from the identity provider | Subject to it, with no tenant context: its policies admit only Persons the identity provider verified, and its grants reach only their name and email |
 
 Forcing row-level security removes the ordinary owner exemption, but ownership still carries the
 right to change the policy. Ownership is therefore a privileged path in its own right, not a solved

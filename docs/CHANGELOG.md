@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.37.0
+version: 0.38.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,22 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.38.0] — 2026-09-13
+
+A Person's name and email reach it from the identity provider.
+
+### Changed
+
+- `10-architecture/identity-and-access.md` (0.13.0) — section 2 says how the identity provider's
+  attributes reach a Person: pulled by Tenant User Management's own client, which can only read
+  users, and recorded by the identity-sync role, with an email only once it is verified. Section 12
+  registers when the sync runs.
+- `10-architecture/multi-tenancy.md` (0.13.0) — the identity-sync role's row describes the role as
+  built: subject to row-level security with column grants, not a caller of a function that runs as
+  the linking role.
 
 ---
 

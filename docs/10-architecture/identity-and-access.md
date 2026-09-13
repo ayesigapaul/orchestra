@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -75,6 +75,15 @@ in different Tenants to one Person, and a Person's name and email come only from
 provider. An End User a customer's backend vouches for is a Person known to that Tenant alone. A
 Service Account and a Connector have no Person, and no Principal and no other service keeps a copy
 of a person's attributes.
+
+**How the identity provider's attributes reach a Person.** Tenant User Management pulls them.
+Its own client reads each user from the identity provider's admin API, holding one role that can
+read users and nothing else, and the identity-sync role records what it read. The name is the
+first and last name, or the username when neither is set. An email is recorded only once the
+identity provider has verified it, and cleared once it no longer holds one as verified. A subject
+the identity provider no longer knows is left as it is, because erasing a Person is its own design
+under [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md). When the sync runs is
+open (section 12).
 
 ## 3. Authentication, by subtype
 
@@ -425,3 +434,4 @@ and `threat-model.md`'s lifetimes row is below unchanged.
 | Whether a Service Account consumes a seat, given ADR-0009 counts Principals authenticating to the Control Plane and carries no Service Account dimension | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), where [`../00-overview/personas.md`](../00-overview/personas.md) section 5 registers it | No — its classification, repeated |
 | GLOSSARY entries for *capability grant* and *administrative grant*, neither of which has one | [`../GLOSSARY.md`](../GLOSSARY.md), joining the entry [`../20-domain/domain-model.md`](../20-domain/domain-model.md) already registers for the first | No |
 | Which signed token carries the originating Principal and Tenant on a call between services, and who signs it: the original credential relayed and resolved again, a token exchanged at the identity provider, or a token the resolving service signs | A security review of the three candidates in section 3, before the first internal operation that acts for a Principal ([ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md)) | **ADR** — a trust boundary between services, and costly to reverse once services rely on it |
+| When identity sync runs — on a schedule, on the identity provider's events, or at sign-in — and so how long a Person's name and email may lag behind the identity provider | [`control-plane.md`](control-plane.md), which owns deprovisioning, with a design partner's expectations of how soon a change must show | No |

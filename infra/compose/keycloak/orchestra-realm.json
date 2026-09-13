@@ -31,9 +31,13 @@
     {
       "clientId": "tenant-user-management",
       "name": "Tenant User Management",
-      "description": "The audience of the token a service presents when it calls Tenant User Management.",
+      "description": "The audience of the token a service presents when it calls Tenant User Management, and the service's own identity when identity sync reads users. Its service account holds view-users and nothing else.",
       "enabled": true,
-      "bearerOnly": true,
+      "publicClient": false,
+      "secret": "tenant-user-management-local-dev",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
       "protocol": "openid-connect"
     },
     {
@@ -89,6 +93,12 @@
       "firstName": "No",
       "lastName": "Organization",
       "credentials": [{ "type": "password", "value": "outsider-local-only", "temporary": false }]
+    },
+    {
+      "username": "service-account-tenant-user-management",
+      "enabled": true,
+      "serviceAccountClientId": "tenant-user-management",
+      "clientRoles": { "realm-management": ["view-users"] }
     }
   ],
   "organizations": [

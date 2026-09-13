@@ -39,8 +39,9 @@ linker that cannot log in. The one-shot `tenant-user-management-migrate` job the
 service's migrations from `services/tenant-user-management/db/` as the owner. The service itself
 starts only once that job has succeeded, with no published port. `smoke.sh` checks its health, runs
 `tenant-isolation.sh`, and runs the service's integration suite in a container on the stack's
-network. That script proves, through the pool and as the service's own roles, that two
-Tenants cannot see or reference each other's rows
+network, which also reads the realm's `dev` user through the Keycloak adapter and records it as the
+identity-sync role. `tenant-isolation.sh` proves, through the pool and as the service's own roles,
+that two Tenants cannot see or reference each other's rows
 ([ADR-0021](../../docs/adr/adr-0021-postgresql-is-the-datastore.md),
 [ADR-0023](../../docs/adr/adr-0023-no-foreign-key-constraints.md),
 [ADR-0024](../../docs/adr/adr-0024-global-person-with-tenant-memberships.md)).

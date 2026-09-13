@@ -12,7 +12,7 @@ service decision of ADR-0022 forward).
 | Domain | `src/domain/` | Nothing outside the domain — no framework, driver or SDK |
 | Application | `src/application/` | The domain; it defines the ports it needs |
 | Adapters | `src/adapters/` | The application and the domain, plus the libraries they wrap |
-| Composition root | `src/main.ts` | Everything; the only place configuration is read |
+| Composition roots | `src/main.ts` for the service, `src/sync-identities.ts` for identity sync | Everything; the only places configuration is read |
 
 Reuse happens inside the service. Across services, rule B5 of
 [ADR-0020](../../docs/adr/adr-0020-monorepo-with-enforced-service-boundaries.md) stands: nothing is
@@ -25,7 +25,9 @@ imported from another service.
   an End User vouched for by a customer's backend stays in the Tenant that asserted it.
 - **A Person's name and email come only from the identity provider.** The function that records them
   accepts a verified Person and nothing else, so setting them from a Tenant's assertion does not
-  compile.
+  compile. Identity sync reads each verified Person's user from Keycloak as this service's own
+  client, which can only read users, and records the name and a verified email as the
+  identity-sync role.
 - **Principals are built from a Membership and its Person**, never from bare identifiers, so they
   take the Membership's Tenant by construction. A Platform User needs a verified Person.
 - **No way to attach a Person by identifier.** The `PersonLinker` port creates or reuses a Person and
@@ -75,6 +77,7 @@ pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm test           # unit and adapter tests, the in-memory tenancy adapter among them
 pnpm start          # needs the configuration below; PORT defaults to 8080
+pnpm sync:identities # records the identity provider's attributes on every verified Person, then exits
 ```
 
 | Variable | What it is |
@@ -86,11 +89,24 @@ pnpm start          # needs the configuration below; PORT defaults to 8080
 | `SERVICE_AUDIENCE` | The audience a caller's own token must name; `tenant-user-management` by default |
 | `RESOLUTION_CALLERS` | The clients that may resolve credentials, comma-separated; `orchestra-gateway` by default |
 
+`pnpm sync:identities` reads its own configuration:
+
+| Variable | What it is |
+| --- | --- |
+| `IDENTITY_SYNC_DATABASE_URL` | The identity-sync role, through the pool |
+| `IDENTITY_PROVIDER_URL` | Where this service reaches Keycloak, such as `http://keycloak:8080` |
+| `IDENTITY_PROVIDER_REALM` | The realm whose users are read |
+| `IDENTITY_SYNC_CLIENT_ID` | This service's own client, which holds `view-users` and nothing else |
+| `IDENTITY_SYNC_CLIENT_SECRET` | That client's secret |
+
 `pnpm test:integration` runs the same tenancy contract against PostgreSQL, through PgBouncer, as the
-service's own roles. It needs the local stack's network, so `infra/compose/smoke.sh` runs it in a
+service's own roles, and identity sync against the local realm. It needs the local stack's network,
+so `infra/compose/smoke.sh` runs it in a
 container built from `test/integration.Dockerfile`. Without its connection strings it fails rather
 than skipping.
 
 ## Not yet here
 
-The identity-sync path and its Keycloak adapter.
+When identity sync runs, which
+[`identity-and-access.md`](../../docs/10-architecture/identity-and-access.md) section 12 registers as
+open.
