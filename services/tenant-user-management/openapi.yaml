@@ -45,11 +45,17 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '500':
           $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
 components:
   headers:
     RequestId:
       description: This request's identifier. Equal to the `id` of any error in the body (HC12).
       required: true
+      schema:
+        type: string
+    RetryAfter:
+      description: When the same request may be sent again, in seconds or as an HTTP date.
       schema:
         type: string
   schemas:
@@ -261,5 +267,26 @@ components:
                 code: server.internal
                 title: Something went wrong on our side
                 detail: The request could not be completed. Quote the request identifier when reporting it.
+                meta:
+                  retry: safe
+    Unavailable:
+      description: This service, or a dependency it needs, is not ready. Nothing took effect.
+      headers:
+        Orchestra-Request-Id:
+          $ref: '#/components/headers/RequestId'
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/ErrorDocument'
+          example:
+            jsonapi:
+              version: '1.1'
+            errors:
+              - id: a3b4c5d6-e7f8-4091-9203-243546576879
+                status: '503'
+                code: server.unavailable
+                title: The service is not ready
                 meta:
                   retry: safe

@@ -135,7 +135,7 @@ node scripts/check-service-boundaries.mjs # ADR-0020: no coupling between servic
 # Services — each tested alone, from its own lockfile, with its own pinned toolchain
 uvx uv@0.12.13 --directory services/gateway run pytest
 (cd services/tenant-user-management && pnpm install --frozen-lockfile && pnpm typecheck && pnpm test)
-infra/compose/smoke.sh                    # the local stack, end to end through the edge
+infra/compose/smoke.sh                    # the local stack end to end, with each service's integration suite
 
 # Mermaid parse check needs its dependencies present
 npm install --no-save mermaid@11.4.1 jsdom@25.0.1 && node scripts/check-mermaid.mjs

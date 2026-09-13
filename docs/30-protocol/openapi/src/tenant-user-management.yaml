@@ -40,3 +40,5 @@ paths:
           $ref: './json-api.yaml#/components/responses/UnsupportedMediaType'
         '500':
           $ref: './json-api.yaml#/components/responses/InternalError'
+        '503':
+          $ref: './json-api.yaml#/components/responses/Unavailable'

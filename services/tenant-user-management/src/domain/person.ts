@@ -32,14 +32,24 @@ export function verifiedPerson(id: PersonId, subject: string): VerifiedPerson {
   return {
     verification: 'identity-provider',
     id,
-    subject: requireSubject(subject),
+    subject: parseSubject(subject),
     displayName: undefined,
     email: undefined,
   };
 }
 
 export function assertedPerson(id: PersonId, assertingTenantId: TenantId, subject: string): AssertedPerson {
-  return { verification: 'tenant-asserted', id, subject: requireSubject(subject), assertingTenantId };
+  return { verification: 'tenant-asserted', id, subject: parseSubject(subject), assertingTenantId };
+}
+
+/**
+ * A subject in the form the domain stores it: trimmed, and never empty. Every adapter looks a Person
+ * up by this form, so two spellings of one subject cannot become two Persons.
+ */
+export function parseSubject(subject: string): string {
+  const trimmed = subject.trim();
+  if (trimmed.length === 0) throw new InvariantViolated('a Person needs a subject');
+  return trimmed;
 }
 
 export interface IdentityProviderAttributes {
@@ -66,10 +76,4 @@ export function recordIdentityProviderAttributes(
   }
 
   return { ...person, displayName, email };
-}
-
-function requireSubject(subject: string): string {
-  const trimmed = subject.trim();
-  if (trimmed.length === 0) throw new InvariantViolated('a Person needs a subject');
-  return trimmed;
 }

@@ -7,6 +7,7 @@ import { MembershipId, PersonId, type PrincipalId, type TenantId } from '../../d
 import { membershipFor, type Membership } from '../../domain/membership.ts';
 import {
   assertedPerson,
+  parseSubject,
   recordIdentityProviderAttributes,
   verifiedPerson,
   type IdentityProviderAttributes,
@@ -43,21 +44,24 @@ export class InMemoryTenancy implements PersonLinker, PrincipalRepository {
   }
 
   async linkVerified(tenantId: TenantId, verifiedSubject: string): Promise<Membership> {
-    const existing = this.#find((p) => p.verification === 'identity-provider' && p.subject === verifiedSubject);
-    return this.#join(existing ?? this.#store(verifiedPerson(PersonId(this.#newId()), verifiedSubject)), tenantId);
+    const subject = parseSubject(verifiedSubject);
+    const existing = this.#find((p) => p.verification === 'identity-provider' && p.subject === subject);
+    return this.#join(existing ?? this.#store(verifiedPerson(PersonId(this.#newId()), subject)), tenantId);
   }
 
   async linkAsserted(tenantId: TenantId, assertedSubject: string): Promise<Membership> {
+    const subject = parseSubject(assertedSubject);
     const existing = this.#find(
-      (p) => p.verification === 'tenant-asserted' && p.subject === assertedSubject && p.assertingTenantId === tenantId,
+      (p) => p.verification === 'tenant-asserted' && p.subject === subject && p.assertingTenantId === tenantId,
     );
-    const person = existing ?? this.#store(assertedPerson(PersonId(this.#newId()), tenantId, assertedSubject));
+    const person = existing ?? this.#store(assertedPerson(PersonId(this.#newId()), tenantId, subject));
     return this.#join(person, tenantId);
   }
 
   /** The identity-sync path: the only way a Person gains a name or an email. */
   recordIdentityProviderAttributes(verifiedSubject: string, attributes: IdentityProviderAttributes): void {
-    const person = this.#find((p) => p.verification === 'identity-provider' && p.subject === verifiedSubject);
+    const subject = parseSubject(verifiedSubject);
+    const person = this.#find((p) => p.verification === 'identity-provider' && p.subject === subject);
     if (person?.verification !== 'identity-provider') return;
     this.#store(recordIdentityProviderAttributes(person, attributes));
   }
