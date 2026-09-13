@@ -129,6 +129,9 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
 
 ## Commands
 
+`make` lists shortcuts for the local stack (`make up`, `make probe`, `make reset`) and for the
+checks below (`make test`, `make check`). Each runs the commands given here.
+
 ```bash
 # Run exactly what CI runs, in the order CI runs it
 npx --yes markdownlint-cli2@0.23.2        # style — version must match .github/workflows/docs.yml
