@@ -1,9 +1,9 @@
 ---
 title: Scope and Non-Goals
 doc_id: DOC-014
-version: 0.14.0
+version: 0.14.1
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-13
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
 ---
@@ -437,7 +437,6 @@ build toward it or promise it.
 | Whether the Connector survives that validation | ADR-0007's three validation steps, plus the reopener [`../80-reference/mcp-evaluation.md`](../80-reference/mcp-evaluation.md) section 3 recommends: a partner already running a vendor tunnel makes it build-or-integrate |
 | Whether the run supervisor is glue or a substantial distributed runtime | The sizing exercise [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) names as its first follow-on, before an MVP is committed to |
 | Whether the MVP's first vertical slice can be committed to | Its contents are settled by [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) — one Workflow whose every consequential step is provably governed, not a connectivity demonstration — but that document declines to be a plan until the supervisor is sized |
-| Which datastore engine backs the platform | An architecture decision, constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) to an engine that enforces row-level security |
 | Whether BYOK means spend control or data non-egress | Design-partner validation, named in [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) and ADR-0007 |
 | Compensation semantics beyond the requirement to declare them | [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md), which also owns the Step Execution retry that job-level retry MUST NOT be conflated with |
 | Price points, tier boundaries and what a seat costs | Observed usage, once customers exist — [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) |

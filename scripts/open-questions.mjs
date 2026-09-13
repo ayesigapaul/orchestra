@@ -49,8 +49,16 @@ const cells = (line) =>
 const isSeparator = (line) => /^\s*\|[\s:|-]+\|\s*$/.test(line);
 
 /**
- * Extract every register row from one document. A register is the first markdown table appearing
- * under a heading matching "open questions"; some documents carry more than one table under it.
+ * A register sits under a heading that names it as one. Most read "Open questions"; a document may
+ * instead head the section "What this document does not decide", and a scope document heads its
+ * table of undecided scope "Undecided". A table of questions a document has already answered, such
+ * as "Questions assigned to this document, and their answers", is not a register.
+ */
+const REGISTER_HEADING = /open questions?|does not decide|^(\d+(\.\d+)*\.?\s+)?undecided\b/i;
+
+/**
+ * Extract every register row from one document. A register is a markdown table under a register
+ * heading; some documents carry more than one table under it.
  */
 function registerRows(file) {
   const lines = readFileSync(file, 'utf8').split('\n');
@@ -63,7 +71,7 @@ function registerRows(file) {
     const heading = line.match(/^(#{2,4})\s+(.*)$/);
     if (heading) {
       // A new heading of the same or higher level ends the register section.
-      inSection = /open questions?/i.test(heading[2]);
+      inSection = REGISTER_HEADING.test(heading[2]);
       header = null;
       continue;
     }
@@ -84,25 +92,29 @@ function registerRows(file) {
   return rows;
 }
 
-/** Which column carries what, resolved per table rather than assumed. */
+/**
+ * Which column carries what, resolved per table rather than assumed. The classification column is
+ * headed "ADR required?" in most registers and "Needs" in the rest.
+ */
 function roles(header) {
   const find = (re) => header.findIndex((h) => re.test(h));
-  const adrCol = find(/adr/);
+  const classCol = find(/adr|^needs$/);
   let deciderCol = find(/decid|would decide|owner|home/);
   if (deciderCol === -1) deciderCol = header.length - 1;
-  return { adrCol, deciderCol };
+  return { classCol, deciderCol };
 }
 
-const ADR_MARK = /\bADR\b/i;
-const YES_MARK = /^\s*(\*\*)?yes(\*\*)?\b/i;
+/**
+ * A classification cell leads with its verdict — "**Yes** — …", "**ADR** if …", "Document",
+ * "No — ADR-0004 exists" — so only the lead counts. An ADR the cell goes on to cite, as the reason
+ * or as the existing decider, does not make the question need a new one.
+ */
+const ADR_VERDICT = /^[\s*_]*(yes|adr)\b(?!-)/i;
 
 function needsAdr(row) {
-  const { adrCol } = roles(row.header);
-  if (adrCol !== -1) {
-    const v = row.cells[adrCol] || '';
-    return ADR_MARK.test(v) || YES_MARK.test(v);
-  }
-  // No dedicated column: a bolded ADR marker anywhere in the row counts.
+  const { classCol } = roles(row.header);
+  if (classCol !== -1) return ADR_VERDICT.test(row.cells[classCol] || '');
+  // No classification column: a bolded ADR marker anywhere in the row counts.
   return row.cells.some((c) => /\*\*ADR\*\*/i.test(c));
 }
 

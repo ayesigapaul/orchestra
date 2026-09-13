@@ -1,11 +1,11 @@
 ---
 title: Testing Strategy
 doc_id: DOC-083
-version: 0.17.0
+version: 0.17.1
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
-depends_on: [ADR-0005, ADR-0006, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
+depends_on: [ADR-0005, ADR-0006, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0020, ADR-0021]
 ---
 
 # Testing Strategy
@@ -80,9 +80,12 @@ appears here, because none is decided and a number invented in a testing documen
 authority quickly. What is stated is which guarantees must have a test at all — that is the part
 that follows from the decisions.
 
-The test framework, the runner, and where the suites live are implementation choices waiting on a
-datastore that is not yet selected, and on which side of the Python-to-TypeScript boundary the
-compiler sits — unmade, and registered in
+Where the suites live and what runs them is recorded elsewhere. Each service carries its own tests
+beside its own lockfile ([ADR-0020](../adr/adr-0020-monorepo-with-enforced-service-boundaries.md)),
+run by pytest in a Python service and by Vitest in a TypeScript one, at the versions
+[`../10-architecture/tech-stack.md`](../10-architecture/tech-stack.md) pins, and against PostgreSQL
+([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)). The compiler's tests wait on which
+side of the Python-to-TypeScript boundary it sits — unmade, and registered in
 [`../10-architecture/data-plane.md`](../10-architecture/data-plane.md). The languages themselves
 are recorded: [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md) carries
 forward ADR-0005's Python runtime and TypeScript control plane unchanged.
