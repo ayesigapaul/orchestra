@@ -1,7 +1,7 @@
 name: ADR proposal
 description: Propose an architecturally significant decision.
 title: "ADR: "
-labels: ["adr", "decision", "triage"]
+labels: ["kind/adr", "status/triage"]
 body:
   - type: markdown
     attributes:

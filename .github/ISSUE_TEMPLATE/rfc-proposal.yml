@@ -1,7 +1,7 @@
 name: RFC proposal
 description: Open a design proposal for discussion before it becomes a decision.
 title: "RFC: "
-labels: ["rfc", "triage"]
+labels: ["kind/rfc", "status/triage"]
 body:
   - type: textarea
     id: problem
