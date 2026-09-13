@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.26.0
+version: 0.27.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -48,8 +48,8 @@ projects themselves mark non-LTS "current" lines as not for production. Node.js 
 today. Pre-releases, betas and release candidates are never used.
 
 Versions below were read from the registries — endoflife.date, PyPI, npm and GitHub releases — on
-2026-09-12, not from memory. Re-check them the same way before relying on this table; it is a
-snapshot, and it goes stale on the next release.
+2026-09-12, and the contract-test validators on 2026-09-13, not from memory. Re-check them the same
+way before relying on this table; it is a snapshot, and it goes stale on the next release.
 
 | Technology | Pinned | Channel note |
 | --- | --- | --- |
@@ -66,6 +66,7 @@ snapshot, and it goes stale on the next release.
 | Zod | 4.6.2 | |
 | Pino | 10.3.1 | |
 | Vitest | 5.0.0 | |
+| Ajv | 8.20.0, with `yaml` 2.9.1 | TypeScript services' contract tests validate real responses against their OpenAPI documents |
 | JSON:API | 1.1 | Every HTTP document ([ADR-0025](../adr/adr-0025-json-api-http-contract.md)). 1.2 is still in development |
 | OpenAPI | 3.1.2 | 3.2.1 is newer, but Postman imports only 2.0, 3.0 and 3.1 and Mintlify renders only 3.0 and 3.1. Moves to 3.2 when both read it |
 | Redocly CLI | 2.52.1 | Bundles and lints the OpenAPI documents |
@@ -75,6 +76,7 @@ snapshot, and it goes stale on the next release.
 | uv | 0.12.13 | |
 | ruff | 0.16.7 | |
 | pytest | 9.1.1 | |
+| jsonschema | 4.26.0, with `referencing` 0.37.0 and PyYAML 6.0.3 | Python services' contract tests validate real responses against their OpenAPI documents |
 | LangGraph | `langgraph` 1.2.11, `langgraph-checkpoint` 4.2.0, `langgraph-checkpoint-postgres` 3.1.2 | MIT packages only ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)) |
 | psycopg | 3.3.5 | |
 | Keycloak | 26.7.3 | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) recorded 26.7.0, current on its date |

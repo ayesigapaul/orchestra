@@ -1,7 +1,7 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.1.0
+version: 0.2.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -141,29 +141,30 @@ exactly as a reference to one that does not exist, with 404 `resource.not_found`
 ## 4. The code registry
 
 Codes are registered here as endpoints need them. A code appears in an OpenAPI document only after it
-appears in this table.
+appears in this table. The title is registered with the code, so every service and the edge send the
+same one.
 
-| Code | Status | `meta.retry` | When |
-| --- | --- | --- | --- |
-| `request.malformed` | 400 | `unsafe` | The body is not JSON, or not a JSON:API document |
-| `request.invalid_parameter` | 400 | `unsafe` | A query parameter is unknown or malformed; `source.parameter` names it |
-| `request.validation_failed` | 422 | `unsafe` | A member is missing or invalid; `source.pointer` names it |
-| `request.method_not_allowed` | 405 | `unsafe` | The path exists but not for this method; `Allow` lists the methods it accepts |
-| `request.not_acceptable` | 406 | `unsafe` | HC1 |
-| `request.unsupported_media_type` | 415 | `unsafe` | HC1 |
-| `request.idempotency_conflict` | 409 | `unsafe` | An `Idempotency-Key` was reused with a different request |
-| `auth.unauthenticated` | 401 | `unsafe` | No credential, or one that failed verification; `WWW-Authenticate` accompanies it |
-| `auth.forbidden` | 403 | `unsafe` | Authenticated, but without the administrative grant the operation needs |
-| `governance.policy_denied` | 403 | `unsafe` | A Policy refused the action; `meta.decision_ref` may accompany it |
-| `governance.precondition_denied` | 403 | `unsafe` | No Tool Catalog registration or no capability grant; names no Policy |
-| `resource.not_found` | 404 | `unsafe` | No such resource, or none this caller may know exists — including an unknown path |
-| `resource.conflict` | 409 | `unsafe` | The resource is in a state that forbids the operation |
-| `quota.exceeded` | 429 | `safe` | A limit was reached; `Retry-After` says when to try again |
-| `upstream.unavailable` | 503 | `safe` | A dependency refused or was unreachable before anything took effect |
-| `upstream.outcome_unknown` | 502 | `indeterminate` | A dependency may have acted before the failure |
-| `server.decision_not_durable` | 503 | `safe` | A Policy Decision could not be recorded, so the action did not proceed (ADR-0013) |
-| `server.unavailable` | 503 | `safe` | This service is not ready to serve |
-| `server.internal` | 500 | HC10 | An unhandled fault |
+| Code | Status | `meta.retry` | Title | When |
+| --- | --- | --- | --- | --- |
+| `request.malformed` | 400 | `unsafe` | The request is malformed | The body is not JSON or not a JSON:API document, or the request is not well-formed HTTP |
+| `request.invalid_parameter` | 400 | `unsafe` | A query parameter is unknown or malformed | A query parameter is unknown or malformed; `source.parameter` names it |
+| `request.validation_failed` | 422 | `unsafe` | A request member is missing or invalid | A member is missing or invalid; `source.pointer` names it |
+| `request.method_not_allowed` | 405 | `unsafe` | This method is not allowed on this path | The path exists but not for this method; `Allow` lists the methods it accepts |
+| `request.not_acceptable` | 406 | `unsafe` | No acceptable representation | HC1 |
+| `request.unsupported_media_type` | 415 | `unsafe` | Unsupported media type | HC1 |
+| `request.idempotency_conflict` | 409 | `unsafe` | This Idempotency-Key was used for a different request | An `Idempotency-Key` was reused with a different request |
+| `auth.unauthenticated` | 401 | `unsafe` | A valid credential is required | No credential, or one that failed verification; `WWW-Authenticate` accompanies it |
+| `auth.forbidden` | 403 | `unsafe` | This operation needs a grant the caller does not hold | Authenticated, but without the administrative grant the operation needs |
+| `governance.policy_denied` | 403 | `unsafe` | A Policy refused this action | A Policy refused the action; `meta.decision_ref` may accompany it |
+| `governance.precondition_denied` | 403 | `unsafe` | This action is not registered or not granted | No Tool Catalog registration or no capability grant; names no Policy |
+| `resource.not_found` | 404 | `unsafe` | The resource does not exist | No such resource, or none this caller may know exists — including an unknown path |
+| `resource.conflict` | 409 | `unsafe` | The resource's state forbids this operation | The resource is in a state that forbids the operation |
+| `quota.exceeded` | 429 | `safe` | A limit was reached | A limit was reached; `Retry-After` says when to try again |
+| `upstream.unavailable` | 503 | `safe` | A dependency is unavailable | A dependency refused or was unreachable before anything took effect |
+| `upstream.outcome_unknown` | 502 | `indeterminate` | A dependency failed, and whether it acted is unknown | A dependency may have acted before the failure |
+| `server.decision_not_durable` | 503 | `safe` | The decision could not be recorded, so nothing proceeded | A Policy Decision could not be recorded, so the action did not proceed (ADR-0013) |
+| `server.unavailable` | 503 | `safe` | The service is not ready | This service is not ready to serve |
+| `server.internal` | 500 | HC10 | Something went wrong on our side | An unhandled fault |
 
 ## 5. Headers
 
@@ -199,3 +200,4 @@ document, including an unknown route, a wrong method and an unacceptable media t
 | Pagination details — page size limits, and whether a JSON:API cursor profile is adopted | The first collection endpoint, with this document | No |
 | Whether any JSON:API extension or profile is adopted, such as atomic operations | A use case that needs one | No — additive under JSON:API 1.1 |
 | Whether `links.type` resolves to a published page per code, and on what host | Domain registration, which also governs schema `$id`s ([`../VERSIONING.md`](../VERSIONING.md) section 6) | No |
+| The codes for the edge's size limits — 413, 414 and 431 — which no configured limit produces yet | The first request size limit set at the edge, with this document's section 4 | No |

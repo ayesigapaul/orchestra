@@ -3,3 +3,4 @@
 # directory. A build context is uploaded by the client, so this works wherever Docker runs.
 FROM apache/apisix:3.18.0-debian
 COPY config.yaml apisix.yaml /usr/local/apisix/conf/
+COPY orchestra /usr/local/apisix/orchestra

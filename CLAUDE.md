@@ -104,9 +104,12 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
 - **HTTP APIs** — every body is a JSON:API 1.1 document, and every failure an error document with a
   registered `code` and a `meta.retry`
   ([ADR-0025](docs/adr/adr-0025-json-api-http-contract.md),
-  [`http-conventions.md`](docs/30-protocol/http-conventions.md)). Each service's API is an OpenAPI
-  document in `docs/30-protocol/openapi/`, bundled by `scripts/build-openapi.mjs`. Document an
-  operation and every code it returns before shipping it.
+  [`http-conventions.md`](docs/30-protocol/http-conventions.md)). Each service maps every failure in
+  one error layer, and the edge shapes its own refusals the same way through the
+  `orchestra-json-api` plugin in `infra/compose/apisix/`. Each service's API is an OpenAPI document
+  in `docs/30-protocol/openapi/`, bundled by `scripts/build-openapi.mjs`, which also copies it into
+  the service as `openapi.yaml` for contract tests that validate real responses against it. Document
+  an operation and every code it returns before shipping it.
 
 ## Commands
 
@@ -118,7 +121,7 @@ node scripts/open-questions.mjs --check   # every register defers to a document 
 node scripts/validate-schemas.mjs         # wire schemas, against VERSIONING.md §6
 node scripts/build-diagrams.mjs --check   # HTML diagram pages match the Mermaid; drop --check to rebuild
 node scripts/build-docs-nav.mjs --check   # docs/docs.json matches the tree; drop --check to rebuild
-node scripts/build-openapi.mjs --check    # OpenAPI bundles match openapi/src and lint; drop --check to rebuild
+node scripts/build-openapi.mjs --check    # OpenAPI bundles and service copies match openapi/src, and lint; drop --check to rebuild
 npx --yes lychee --config lychee.toml .   # external links
 node scripts/check-service-boundaries.mjs # ADR-0020: no coupling between services
 

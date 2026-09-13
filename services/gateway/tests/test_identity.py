@@ -3,52 +3,11 @@
 import base64
 import json
 import time
-from types import SimpleNamespace
 
-import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from fastapi.testclient import TestClient
 
-from orchestra_gateway.app import create_app
-from orchestra_gateway.auth import TokenVerifier
-
-ISSUER = "http://idp.test/realms/orchestra"
-AUDIENCE = "orchestra-gateway"
 PROBE = "/_probe/identity"
-
-
-@pytest.fixture(scope="module")
-def signing_key():
-    return rsa.generate_private_key(public_exponent=65537, key_size=2048)
-
-
-class StaticKeys:
-    """Stands in for the JWKS endpoint: hands back one public key, whatever the token says."""
-
-    def __init__(self, public_key):
-        self._key = SimpleNamespace(key=public_key)
-
-    def get_signing_key_from_jwt(self, _token):
-        return self._key
-
-
-@pytest.fixture
-def client(signing_key):
-    verifier = TokenVerifier(
-        issuer=ISSUER,
-        jwks_url="http://unused.test",
-        audience=AUDIENCE,
-        jwks_client=StaticKeys(signing_key.public_key()),
-    )
-    return TestClient(create_app(verifier=verifier))
-
-
-def make_token(key, algorithm="RS256", **overrides):
-    now = int(time.time())
-    claims = {"iss": ISSUER, "aud": AUDIENCE, "sub": "user-123", "iat": now, "exp": now + 300}
-    claims.update(overrides)
-    return jwt.encode(claims, key, algorithm=algorithm)
 
 
 def bearer(token):
@@ -59,24 +18,20 @@ def forged_userinfo(subject):
     return base64.b64encode(json.dumps({"sub": subject}).encode()).decode()
 
 
-def test_health_needs_no_credential(client):
-    assert client.get("/healthz").json() == {"status": "ok"}
-
-
 def test_missing_credential_is_rejected(client):
     response = client.get(PROBE)
     assert response.status_code == 401
     assert response.headers["www-authenticate"].startswith("Bearer")
 
 
-def test_valid_credential_is_accepted(client, signing_key):
-    response = client.get(PROBE, headers=bearer(make_token(signing_key)))
+def test_valid_credential_is_accepted(client, mint, issuer):
+    response = client.get(PROBE, headers=bearer(mint()))
     assert response.status_code == 200
-    assert response.json() == {"subject": "user-123", "issuer": ISSUER}
+    assert response.json()["data"]["attributes"] == {"subject": "user-123", "issuer": issuer}
 
 
 @pytest.mark.parametrize(
-    "overrides",
+    "claims",
     [
         {"iss": "http://someone-else.test/realms/orchestra"},
         {"aud": "another-service"},
@@ -84,19 +39,17 @@ def test_valid_credential_is_accepted(client, signing_key):
     ],
     ids=["wrong-issuer", "wrong-audience", "expired"],
 )
-def test_credential_not_issued_for_this_gateway_is_rejected(client, signing_key, overrides):
-    assert (
-        client.get(PROBE, headers=bearer(make_token(signing_key, **overrides))).status_code == 401
-    )
+def test_credential_not_issued_for_this_gateway_is_rejected(client, mint, claims):
+    assert client.get(PROBE, headers=bearer(mint(**claims))).status_code == 401
 
 
-def test_credential_signed_by_another_key_is_rejected(client):
+def test_credential_signed_by_another_key_is_rejected(client, mint):
     other = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    assert client.get(PROBE, headers=bearer(make_token(other))).status_code == 401
+    assert client.get(PROBE, headers=bearer(mint(key=other))).status_code == 401
 
 
-def test_unsigned_credential_is_rejected(client):
-    unsigned = make_token(None, algorithm="none")
+def test_unsigned_credential_is_rejected(client, mint):
+    unsigned = mint(key=None, algorithm="none")
     assert client.get(PROBE, headers=bearer(unsigned)).status_code == 401
 
 
@@ -106,15 +59,15 @@ def test_edge_asserted_identity_is_not_a_credential(client):
     assert response.status_code == 401
 
 
-def test_edge_asserted_identity_never_overrides_the_credential(client, signing_key):
-    headers = bearer(make_token(signing_key)) | {"X-Userinfo": forged_userinfo("attacker")}
-    assert client.get(PROBE, headers=headers).json()["subject"] == "user-123"
+def test_edge_asserted_identity_never_overrides_the_credential(client, mint):
+    headers = bearer(mint()) | {"X-Userinfo": forged_userinfo("attacker")}
+    assert client.get(PROBE, headers=headers).json()["data"]["attributes"]["subject"] == "user-123"
 
 
-def test_rejection_reason_is_logged_and_never_returned(client, caplog):
+def test_rejection_reason_is_logged_and_never_returned(client, mint, caplog):
     other = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     with caplog.at_level("WARNING", logger="orchestra_gateway.auth"):
-        response = client.get(PROBE, headers=bearer(make_token(other)))
+        response = client.get(PROBE, headers=bearer(mint(key=other)))
     assert response.status_code == 401
     assert "credential rejected" in caplog.text
     assert "signature" not in response.text.lower()

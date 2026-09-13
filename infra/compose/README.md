@@ -16,6 +16,15 @@ docker compose -f infra/compose/docker-compose.yml down -v   # tear it down, dat
 
 **Configuration is baked into images, never bind-mounted.** The Keycloak realm and the APISIX routes are copied in at build time, because a bind mount arrives empty when the Docker daemon's VM does not share this directory — which an external drive often is not. After editing either, rebuild; `smoke.sh` always does.
 
+**Every refusal the edge makes is a JSON:API error document**
+([ADR-0025](../../docs/adr/adr-0025-json-api-http-contract.md)), with the codes and titles the
+services use. `apisix/orchestra/apisix/plugins/orchestra-json-api.lua` runs as a global rule and
+reshapes what APISIX refuses itself — a missing, malformed or refused credential above all — and
+drops the reason a token failed from `WWW-Authenticate`, because that reason belongs in the log.
+Errors nginx raises before any plugin runs, such as a request with no `Host`, reach the same code
+through a named location in `apisix/config.yaml`, which also loads only the plugins the routes use.
+`smoke.sh` checks both paths.
+
 **PgBouncer is built, not pulled.** The PgBouncer project publishes no container image, and the
 widely pulled `pgbouncer/pgbouncer` belongs to a third party, so `pgbouncer/Dockerfile` installs the
 pinned release from apt.postgresql.org and refuses to build unless the repository key matches its

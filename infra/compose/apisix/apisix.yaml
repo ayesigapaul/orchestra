@@ -1,3 +1,9 @@
+# Every refusal the edge makes is a JSON:API error document, whichever route is matched or none.
+global_rules:
+  - id: json-api
+    plugins:
+      orchestra-json-api: {}
+
 routes:
   - id: gateway
     uri: /*

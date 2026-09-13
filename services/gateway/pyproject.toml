@@ -14,7 +14,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff==0.16.7", "pytest==9.1.1"]
+dev = [
+    "ruff==0.16.7",
+    "pytest==9.1.1",
+    "jsonschema==4.26.0",
+    "pyyaml==6.0.3",
+    "referencing==0.37.0",
+]
 
 [tool.uv]
 # This service is an application, not a library: nothing installs it, so it has no build backend.

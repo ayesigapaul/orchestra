@@ -10,7 +10,7 @@ const config = z
 
 const log = pino({ name: 'tenant-user-management' });
 
-const server = serve({ fetch: createApp().fetch, port: config.PORT }, (info) => {
+const server = serve({ fetch: createApp({ log }).fetch, port: config.PORT }, (info) => {
   log.info({ port: info.port }, 'listening');
 });
 
