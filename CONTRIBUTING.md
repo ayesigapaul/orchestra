@@ -127,6 +127,9 @@ node scripts/validate-docs.mjs              # front matter, ADR index, doc ids, 
 npx --yes lychee --config lychee.toml .     # external links
 ```
 
+`make check` runs every documentation and repository check CI runs except the external links, and
+`make test` runs both services' tests. `make` on its own lists the rest, the local stack included.
+
 ## Releases
 
 The documentation set is versioned in `docs/README.md` front matter and changelogged in

@@ -5,9 +5,15 @@ PostgreSQL, PgBouncer, Keycloak, Apache APISIX, the Gateway, Tenant User Managem
 versions pinned in [`docs/10-architecture/tech-stack.md`](../../docs/10-architecture/tech-stack.md).
 
 ```bash
-infra/compose/smoke.sh                                  # bring it up and prove the path end to end
-docker compose -f infra/compose/docker-compose.yml down -v   # tear it down, data included
+make up      # build, start and seed the stack, waiting until it is healthy
+make probe   # call the identity probe through the edge as the dev user, in a new trace
+make smoke   # bring it up and prove the path end to end, as CI does
+make down    # stop it and keep its data; make reset deletes the data and starts again
 ```
+
+`make` on its own lists every target, among them `make logs SERVICE=gateway` and `make traces`. Each
+runs the commands this directory documents, so `infra/compose/smoke.sh` and
+`docker compose -f infra/compose/docker-compose.yml` work just as well without it.
 
 | Port | What |
 | --- | --- |
