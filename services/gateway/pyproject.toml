@@ -10,6 +10,7 @@ dependencies = [
     "pyjwt==2.14.0",
     "cryptography==50.0.1",
     "pydantic-settings==2.15.0",
+    "httpx2==2.12.0",
 ]
 
 [dependency-groups]
@@ -19,7 +20,6 @@ dev = [
     "jsonschema==4.26.0",
     "pyyaml==6.0.3",
     "referencing==0.37.0",
-    "httpx2==2.12.0",
 ]
 
 [tool.uv]

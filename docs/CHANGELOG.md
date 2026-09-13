@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.35.0
+version: 0.37.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -18,6 +18,20 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.37.0] — 2026-09-13
+
+The Gateway resolves every credential it verifies, and fails closed.
+
+### Changed
+
+- `30-protocol/openapi/` — the Gateway's document (0.2.0). The identity probe answers with the
+  Principal and Tenant a credential resolved to, and documents its 400, 415 and 503. The local
+  security scheme requests the `organization` scope.
+- `10-architecture/tech-stack.md` (0.33.0) — httpx2 is now a runtime dependency of the Gateway,
+  which calls Tenant User Management with it.
 
 ---
 

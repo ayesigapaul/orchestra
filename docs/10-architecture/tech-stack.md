@@ -1,7 +1,7 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.32.0
+version: 0.33.0
 status: Draft
 last_updated: 2026-09-13
 owners: [platform-architecture]
@@ -82,7 +82,7 @@ goes stale on the next release.
 | ruff | 0.16.7 | |
 | pytest | 9.1.1 | |
 | jsonschema | 4.26.0, with `referencing` 0.37.0 and PyYAML 6.0.3 | Python services' contract tests validate real responses against their OpenAPI documents |
-| httpx2 | 2.12.0 | The client Starlette's test client uses; a development dependency of the Python services, never a runtime one |
+| httpx2 | 2.12.0 | The HTTP client of the Python services: the Gateway calls Tenant User Management with it, and Starlette's test client uses it |
 | LangGraph | `langgraph` 1.2.11, `langgraph-checkpoint` 4.2.0, `langgraph-checkpoint-postgres` 3.1.2 | MIT packages only ([ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md)) |
 | psycopg | 3.3.5 | |
 | Keycloak | 26.7.3 | [ADR-0017](../adr/adr-0017-keycloak-for-identity.md) recorded 26.7.0, current on its date |

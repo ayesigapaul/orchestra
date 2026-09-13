@@ -54,6 +54,7 @@ UNSUPPORTED_MEDIA_TYPE = Code(
 )
 UNAUTHENTICATED = Code("auth.unauthenticated", 401, "A valid credential is required", "unsafe")
 NOT_FOUND = Code("resource.not_found", 404, "The resource does not exist", "unsafe")
+UPSTREAM_UNAVAILABLE = Code("upstream.unavailable", 503, "A dependency is unavailable", "safe")
 # The registry leaves this code's retry safety to HC10, which decides it per request.
 INTERNAL = Code("server.internal", 500, "Something went wrong on our side", "indeterminate")
 
