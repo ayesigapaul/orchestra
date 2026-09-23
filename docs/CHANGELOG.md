@@ -116,6 +116,12 @@ URL layout, where a Policy Decision commits, and the language Policies and Workf
 - `CLAUDE.md` records ADR-0030 to ADR-0035, and `infra/compose/seed-local-tenant.sh` says what
   replaces its owner-role write.
 
+### Fixed
+
+- `80-reference/ag-ui-evaluation.md` (0.7.0) and `adr/adr-0004-adopt-ag-ui-event-protocol.md` — the
+  AG-UI draft schema's own URL stopped resolving, so both now point at the draft specification that
+  publishes it, which the link check reaches.
+
 ---
 
 ## [0.44.1] — 2026-09-13

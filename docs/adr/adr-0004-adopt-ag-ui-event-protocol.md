@@ -191,5 +191,5 @@ interoperability argument that survives everything else in this record.
 - [AG-UI documentation](https://docs.ag-ui.com/)
 - [AG-UI draft specification: versioning and compatibility](https://docs.ag-ui.com/spec/draft/basic/versioning)
 - [AG-UI repository](https://github.com/ag-ui-protocol/ag-ui)
-- [AG-UI draft JSON Schema](https://ag-ui.com/spec/draft/schema.json)
+- [AG-UI draft specification](https://docs.ag-ui.com/spec/draft), which publishes the draft JSON Schema
 - [Generative UI on Amazon Bedrock AgentCore with AG-UI](https://aws.amazon.com/blogs/machine-learning/build-generative-ui-for-ai-agents-on-amazon-bedrock-agentcore-with-the-ag-ui-protocol/)

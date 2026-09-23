@@ -57,9 +57,9 @@ ADR-0017 also forbids Keycloak roles from standing in for Orchestra's authorizat
   [`policy-model.md`](../40-governance/policy-model.md) section 8 leaves undecided.
 - A scope that narrows to a Workspace and never widens beyond the Tenant.
 - A customer's own directory drives joiners, movers and leavers, without deciding a grant.
-- Established vocabulary: role-based access control as
-  [INCITS 359-2012](https://webstore.ansi.org/standards/incits/incits3592012) models it, and the
-  `groups` and `roles` attributes of SCIM.
+- Established vocabulary: role-based access control as INCITS 359-2012 models it
+  ([NIST RBAC](https://csrc.nist.gov/projects/role-based-access-control)), and the `groups` and
+  `roles` attributes of SCIM.
 - The reversible direction first (working rule 8): a closed set can open later, and an open one
   cannot close.
 
@@ -257,8 +257,8 @@ Reopen this decision in any of these cases:
   `auth.forbidden`
 - [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A4 and section 3: the basis
   of a record, and the enumeration of audited acts
-- [INCITS 359-2012](https://webstore.ansi.org/standards/incits/incits3592012): role-based access
-  control
+- INCITS 359-2012, role-based access control, described by
+  [NIST's RBAC project](https://csrc.nist.gov/projects/role-based-access-control)
 - [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643#section-4.1.2) section 4.1.2 and
   [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644): SCIM's `groups` and `roles`, and its protocol
 - [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068#section-2.2.3.1) section 2.2.3.1: `groups` and

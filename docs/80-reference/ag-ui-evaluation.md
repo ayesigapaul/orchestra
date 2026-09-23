@@ -1,9 +1,9 @@
 ---
 title: AG-UI Evaluation
 doc_id: DOC-091
-version: 0.6.0
+version: 0.7.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005]
 ---
@@ -178,7 +178,7 @@ protocol-legal, not unrecognised material: the processing model never strips the
 `ag-ui` key is reserved, every other key is application space, and producers SHOULD vendor-prefix.
 
 This was tested, not assumed, and reproduced by the verification pass — `jsonschema` 4.25.1 against
-the [published Draft 2020-12 schema](https://docs.ag-ui.com/spec/draft/schema.json), on a `CUSTOM`
+the [published Draft 2020-12 schema](https://docs.ag-ui.com/spec/draft), on a `CUSTOM`
 event and a `TEXT_MESSAGE_CONTENT` event:
 
 | Carriage | Result |
