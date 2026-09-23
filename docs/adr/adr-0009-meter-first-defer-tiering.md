@@ -1,9 +1,13 @@
 ---
 title: "ADR-0009: Meter from day one, defer tiering"
 adr_id: ADR-0009
-status: Accepted
+status: Superseded
 date: 2026-09-08
 deciders: [product-owner, platform-architecture]
+consulted: []
+informed: []
+supersedes: []
+superseded_by: [ADR-0039]
 tags: [commercial, metering, data-model]
 depends_on: [ADR-0001, ADR-0002]
 ---
@@ -12,7 +16,14 @@ depends_on: [ADR-0001, ADR-0002]
 
 ## Status
 
-Accepted
+**Superseded by [ADR-0039](adr-0039-seats-count-platform-users.md).**
+
+Metering from day one, the deferred tier builder and self-serve packaging, the hand-priced first
+contracts and the meter-record rules below are all carried forward unchanged. What ADR-0039 replaces
+is one dimension's wording: the *Platform Users* dimension, defined below as "distinct Principals
+authenticating to the Control Plane", counts Platform Users and nothing else, so a seat is a
+Platform User. ADR-0039 also adds a tenth dimension, *Service Accounts*, measured and never billed.
+The text below is retained unedited.
 
 ## Context
 

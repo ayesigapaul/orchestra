@@ -1,7 +1,7 @@
 ---
 title: Compliance Roadmap
 doc_id: DOC-084
-version: 0.15.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -96,4 +96,3 @@ because the alternative is discovering a calendar constraint after it has alread
 | Whether frameworks beyond SOC 2 are needed — ISO 27001, sector-specific regimes | The first enterprise conversations | No |
 | The audit-retention period, which a compliance obligation may fix rather than leave to design | [`../40-governance/audit-model.md`](../40-governance/audit-model.md), which registers it as ADR-required | **Yes** |
 | Data residency, which is a third axis distinct from topology and from the ADR-0011 promotion path | [`../10-architecture/deployment-topologies.md`](../10-architecture/deployment-topologies.md) | **Yes** |
-| Whether per-tenant encryption keys extend beyond credentials to data at rest | [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)'s follow-on | **Yes** |

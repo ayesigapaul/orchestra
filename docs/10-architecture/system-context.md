@@ -1,7 +1,7 @@
 ---
 title: System Context
 doc_id: DOC-021
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -183,9 +183,11 @@ Level 1 can answer it, and handed on precisely otherwise.
 **The shape and scope of the egress allow-list**
 ([`../40-governance/threat-model.md`](../40-governance/threat-model.md) T6). The posture is not the
 open part: T6 is normative, it derives default-deny from its own analysis rather than inheriting it,
-and this view is bound by it. What remains open is the list's shape, which needs an ADR because it
-spans the Model Broker, Tool invocation and the Connector — the threat model classifies it that
-way, and this document repeats that classification.
+and this view is bound by it. The shape is no longer open either, for R5 and R6:
+[ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) puts a per-tenant list
+derived from Model Binding endpoints and registered Tool origins behind an egress proxy that is the
+Model Broker's and Tool Invocation's one outbound route. What remains is the Connector's share,
+which cannot close while ADR-0007 is Proposed.
 
 What this view contributes is a snapshot of what such a list has to cover. Today's diagram carries
 three outbound destination classes on tenant-supplied input — R5, R5' and R6 — and R7 is not
@@ -214,7 +216,7 @@ prose. Where another document owns a question, its classification is repeated ra
 | --- | --- | --- |
 | Whether a hybrid topology exists — hosted Control Plane, customer-deployed Data Plane — which would move the Orchestra box across the network boundary and rewrite this diagram | Design-partner validation first; then `deployment-topologies.md`, planned in [`README.md`](README.md) | **ADR required** — it is ADR-0001's own revisit criterion and would supersede part of it |
 | Whether "BYOK" means spend control or means data must not egress the customer perimeter, which decides whether the question above is hypothetical | ADR-0002 follow-on and ADR-0007 validation step 3; a design-partner conversation, not a document | **ADR required** if it forces the hybrid topology; otherwise closed by evidence |
-| The shape and scope of the egress allow-list. The default-deny posture is not in question: [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T6 makes it normative and binding | Connector and model-broker designs in this section; see section 6 | **ADR required** — that document's classification |
+| The Connector's share of the egress allow-list. The default-deny posture is not in question: [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T6 makes it normative and binding, and [ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) settles the shape for R5 and R6 | The Connector design in this section, after ADR-0007 binds; see section 6 | **ADR required** — it extends ADR-0038 to the Connector's edge; void if ADR-0007 is rejected |
 | Whether an internal Deployment Surface inside the customer network is reachable at all on R5', or only through the Connector | `connector.md`, planned in [`README.md`](README.md), with the Model Broker design and ADR-0007's validation | **ADR required** if reaching it needs the Connector, which extends ADR-0007 from Tool traffic to model traffic; otherwise the Model Broker design closes it |
 | Whether model traffic may be proxied through the Connector so BYOK credentials never leave the customer perimeter, adding an edge this diagram does not carry | `connector.md`, planned in [`README.md`](README.md), with the Model Broker design; void if ADR-0007 is rejected | **ADR required** — it relocates credential custody, which ADR-0002 places with Orchestra |
 | How an approver is reached, which is an Orchestra-initiated outbound edge to a notification channel that this diagram cannot yet draw | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md); a product decision, per its register | Later document |

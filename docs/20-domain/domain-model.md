@@ -1,7 +1,7 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -356,8 +356,8 @@ The table this document exists to make unambiguous.
 | Data isolation, billing, configuration and audit scope | Tenant | GLOSSARY, ADR-0001, ADR-0011 |
 | Delegated administration | Workspace | GLOSSARY |
 | Attribution of any action | Principal | GLOSSARY, invariant I2 |
-| Seat billing | Platform User | ADR-0009 |
-| Measured but explicitly not seat-billed | End User | ADR-0009 |
+| Seat billing | Platform User | [ADR-0039](../adr/adr-0039-seats-count-platform-users.md) |
+| Measured but explicitly not seat-billed | End User, and a Service Account on a dimension of its own | [ADR-0039](../adr/adr-0039-seats-count-platform-users.md) |
 | Execution, observability, billing and audit | Run | GLOSSARY |
 | Definition-version pinning | Run | ADR-0008, VERSIONING section 8 |
 | Policy-version pinning at admission | Run | ADR-0012, invariant I3 |

@@ -197,6 +197,10 @@
               "adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created",
               "adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox",
               "adr/adr-0035-cel-profile-for-policies-and-workflow-expressions",
+              "adr/adr-0036-signed-merkle-checkpoints-over-audit",
+              "adr/adr-0037-per-tenant-keys-for-protected-content",
+              "adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list",
+              "adr/adr-0039-seats-count-platform-users",
               "adr/adr-template"
             ]
           },
@@ -677,6 +681,22 @@
     {
       "source": "/adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md",
       "destination": "/adr/adr-0035-cel-profile-for-policies-and-workflow-expressions"
+    },
+    {
+      "source": "/adr/adr-0036-signed-merkle-checkpoints-over-audit.md",
+      "destination": "/adr/adr-0036-signed-merkle-checkpoints-over-audit"
+    },
+    {
+      "source": "/adr/adr-0037-per-tenant-keys-for-protected-content.md",
+      "destination": "/adr/adr-0037-per-tenant-keys-for-protected-content"
+    },
+    {
+      "source": "/adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md",
+      "destination": "/adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list"
+    },
+    {
+      "source": "/adr/adr-0039-seats-count-platform-users.md",
+      "destination": "/adr/adr-0039-seats-count-platform-users"
     },
     {
       "source": "/adr/adr-template.md",

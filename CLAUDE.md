@@ -31,7 +31,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0006 | Model layer is a credential and endpoint broker, not a router | Accepted |
 | 0007 | Outbound connector for enterprise tool reachability | Proposed |
 | 0008 | Customer workflows are declarative and compiled, not interpreted | Superseded by 0014 |
-| 0009 | Meter from day one; defer tiering | Accepted |
+| 0009 | Meter from day one; defer tiering | Superseded by 0039 |
 | 0010 | A2UI as GenUI interchange, deferred | Proposed |
 | 0011 | Tenant isolation: shared schema with row-level security | Accepted |
 | 0012 | Policy Decisions are a class of Audit Record over versioned Policies | Accepted |
@@ -58,6 +58,10 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0033 | The Gateway's paths follow JSON:API's recommended layout under `/v1`; a command is a resource that is created | Accepted |
 | 0034 | A Policy Decision commits in the enforcing service's own transaction and reaches the audit store through its outbox | Accepted |
 | 0035 | Policies and Workflow expressions are CEL behind an Orchestra profile; matching Policies combine by verdict, never by order; aggregates are platform-defined | Accepted |
+| 0036 | Audit immutability is also cryptographic: periodic signed Merkle checkpoints per Tenant, carried in exports | Accepted |
+| 0037 | Per-tenant data keys extend beyond credentials to protected content — Evidence Sets, Tool results, retrieved context and Messages | Accepted |
+| 0038 | Tenant-configured egress leaves through one proxy, on a per-tenant allow-list derived from Model Bindings and registered Tool origins | Accepted |
+| 0039 | A seat is a Platform User; Service Accounts are measured and never billed, and a Platform Operator is never a seat | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

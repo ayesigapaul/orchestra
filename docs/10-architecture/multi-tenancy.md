@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.15.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -277,6 +277,7 @@ What is implied today by decisions already taken, with what remains open:
 | --- | --- | --- | --- |
 | Durable run state (Checkpoint) | [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md); runtime-supplied, never public | Tenant in the addressing key if it is not the same datastore | Whether it is separate is undecided |
 | Credential and key custody | [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) | Per-tenant data keys — scoped by key, not by row | Custody path owned by [`identity-and-access.md`](identity-and-access.md) |
+| Protected content — Evidence Sets, Tool results, retrieved context and Messages | [ADR-0037](../adr/adr-0037-per-tenant-keys-for-protected-content.md) | The same per-tenant data keys, on ADR-0002's hierarchy — scoped by key as well as by row, wherever the content is held | Encrypted by the service that produces it, before it reaches any store; identifiers stay in plaintext and stay queryable |
 | Meter records | [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) | Tenant-scoped by I1; reconcilable against audit | The correlating value is open in [`../40-governance/audit-model.md`](../40-governance/audit-model.md) |
 | Event delivery stream | Delivery only; audit is the system of record | Tenant in the partition or subject key | Rests on [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md), **Proposed** |
 | Facts between services, as Kafka topics | [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) | The tenant identifier as every record's key, and as a CloudEvents attribute | Built with the first event type and its consumer; retention is registered in [`containers.md`](containers.md) section 12 |
@@ -310,7 +311,6 @@ the Kafka topics registered above ([`data-plane.md`](data-plane.md) section 6).
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | Per-tenant deletion for erasure requests under a shared schema, against audit-retention obligations | ADR-0011's follow-on, with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) and legal input | **Yes** — it spans retention, the definition lifecycle and metering |
-| Whether per-tenant encryption keys extend beyond credentials to data at rest | Left open by ADR-0011; ADR-0002 covers only credentials | **Yes** — a storage and key-management commitment |
 | The complete inventory of stores outside the datastore; section 8 fixes the scoping rule and the registry, not the list | [`containers.md`](containers.md) and [`data-plane.md`](data-plane.md) as each store is introduced; the planned `connector.md` for the connector's own | No — the rule holds on any inventory |
 | By what structure a cross-tenant grant is kept out of the datastore, given that row-level security filters rather than forbids — answered in section 6 by write policies that require the referent to exist in the same Tenant, with no foreign key constraint, recorded here so the choice is traceable rather than resident in prose | This document, which [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule TA2 assigns it to | Decided by [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 | Whether a surface identifier is globally unique as well as tenant-qualified, and the identifier shape | Schema work after the datastore decision; constrained by [`../VERSIONING.md`](../VERSIONING.md) once an identifier appears in a public contract | No |

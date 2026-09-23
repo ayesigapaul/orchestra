@@ -1,7 +1,7 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -160,9 +160,20 @@ requires, derived from policy.
 reconstruct who did what, when, on what basis, and under which Policy version. Audit is a product
 surface, not a log level.
 
+**Audit Checkpoint** — a signed statement about one Tenant's audit log at a moment: the number of
+records it holds, the root hash of the Merkle tree over them in arrival order, and when it was
+produced. Carried in an export so a recipient can verify that nothing was altered or omitted. Not an
+Audit Record, because nothing acted
+([ADR-0036](adr/adr-0036-signed-merkle-checkpoints-over-audit.md)).
+
 **Evidence Set** — the exact inputs an Agent relied upon when proposing an action: tool results,
 retrieved context, prior messages. Attached to Approval Requests so a human approves on the same
 information the model had, and retained for audit.
+
+**Protected Content** — content of one of four classes — Evidence Sets, Tool results, retrieved
+context and Messages — encrypted at the application level under its own Tenant's data key wherever it
+is held, and never by the datastore. Identifiers, references and state stay in plaintext and stay
+queryable ([ADR-0037](adr/adr-0037-per-tenant-keys-for-protected-content.md)).
 
 ---
 

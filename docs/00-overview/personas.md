@@ -1,7 +1,7 @@
 ---
 title: Personas
 doc_id: DOC-013
-version: 0.14.0
+version: 0.15.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -40,7 +40,7 @@ would reopen exactly that ambiguity.
 | Persona | Identity type | Seat-billable? | What their refusal blocks | Written for them |
 | --- | --- | --- | --- | --- |
 | Platform administrator | Platform User | Yes | Everything downstream: no Tenant configuration, no Model Binding, no registered Tool | [`10-architecture/`](../10-architecture/), [`60-operations/`](../60-operations/) |
-| Developer | Platform User; their backend service is a Service Account | Only when they authenticate to the Control Plane | Integration: the platform is configured but nothing is built against it | [`20-domain/`](../20-domain/), [`30-protocol/`](../30-protocol/), [`50-workflows/`](../50-workflows/) |
+| Developer | Platform User; their backend service is a Service Account | Only as a Platform User, when they authenticate to the Control Plane; their Service Account never consumes a seat ([ADR-0039](../adr/adr-0039-seats-count-platform-users.md)) | Integration: the platform is configured but nothing is built against it | [`20-domain/`](../20-domain/), [`30-protocol/`](../30-protocol/), [`50-workflows/`](../50-workflows/) |
 | Approver | Platform User | Yes | Throughput: every Run that reaches a `require_approval` verdict waits on them | The approval surface itself, not a document |
 | Auditor | Platform User | Yes | Procurement — security and compliance hold the veto, see section 3 | [`40-governance/`](../40-governance/) |
 | End user | End User | No — measured, never seat-billed | Nothing structurally; the Agent simply has no one to serve | Nothing — see section 4 |
@@ -237,10 +237,6 @@ each were an administrator.
   a set of **Principals**, which does not exclude an End User. Approving from inside the customer's
   application rather than the Control Plane is unspecified, and it touches the seat definition, so
   it needs the approval-workflows document or an ADR — not an assumption.
-- **Whether a Service Account authenticating to the Control Plane consumes a seat.** ADR-0009's
-  metering table counts distinct Principals authenticating to the Control Plane, while the glossary
-  names the Platform User as the seat-billable identity. The counting rule needs to be made precise
-  in the planned quotas-and-metering document.
 - **How an approver is reached.** No ADR names a notification or delivery channel.
 - **Whether these five are the right five.** They come from the section README and the ADR set, not
   from research. Procurement, legal, and the operator who runs the Connector inside the customer's
