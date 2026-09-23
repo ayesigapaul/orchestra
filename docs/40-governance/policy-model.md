@@ -1,7 +1,7 @@
 ---
 title: Policy Model
 doc_id: DOC-051
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -248,12 +248,13 @@ Policy MAY match on any of them.
 | The Agent or Workflow, and the version the Run pinned | Domain model I3; ADR-0041 | The definition in force, not the current one. Inside an `agent` or `subworkflow` Step, also each version on the path from the Run's version to the one executing, as pinned at publication |
 | The Policy versions the Run pinned at admission | ADR-0012, P6 | The versions in force at admission, never the current ones |
 | The Step and its type, at a Step boundary | GLOSSARY, ADR-0008 | Absent in an Agent Run — see E4 |
-| **Side-Effect Class** | GLOSSARY | A **primary** input; never a precondition for evaluation |
+| **Side-Effect Class** | GLOSSARY, [ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md) | A **primary** input; never a precondition for evaluation. Derived, never authored: at an `agent` or `subworkflow` Step's boundary it is the *set* of classes the delegation can reach, and a single value everywhere else |
 | The Tool | GLOSSARY | Present at the Tool PEP |
 | The Tool schema major version the Run's definition version pins | VERSIONING W5 | Agent and Workflow versions both pin one for each Tool they declare; an origin that no longer serves it fails a precondition — see A4 |
 | **Tool Catalog registration state** for that Tool | GLOSSARY, domain model I5 | Present at the Tool PEP. An input to the evaluation, never a gate in front of it — see A4 |
 | **The Tools the pinned version declares, and the capability grants naming its definition** | GLOSSARY, domain model I5, ADR-0042 | Present at the Tool PEP, on the same terms. A grant counts only if it stood at admission and still stands — see A2 |
 | The proposed action, including its arguments | GLOSSARY, ADR-0003 | The object of judgement — see section 7 |
+| **The origin labels** of the proposed action's arguments and of the data it references | GLOSSARY, [ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md) | Where each value came from: admission input, definition literal, Tool result, retrieved content, model output or UI Action text. A value carries a set, never a single origin. Model output is untrusted by construction (S1) |
 | The enforcement point itself | E1 | Admission, Step boundary or Tool invocation |
 | The Run | GLOSSARY | Every Policy Decision references it |
 
@@ -398,6 +399,11 @@ weight at a PEP.
 **S2 — The proposed action is model-produced, and it is an input.** The distinction S1 turns on is
 between judging content and believing it. A Policy MAY match on the arguments of a proposed Tool
 call — a payee, an amount, a target record, a recipient — because those are the object of judgement.
+A rule MAY also match on where each argument came from: every value in a Run's data carries a
+set of origin labels, and they are an evaluation input under N1
+([ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md)). *This payee came from a Tool result* is
+a fact the platform observed and the model did not assert, which is exactly the distinction this
+rule turns on.
 A Policy MUST NOT treat model-produced content as an assertion about whether the action is
 permitted. Arguments are evidence about *what is being attempted*, never testimony about *whether it
 is allowed*. Where a rule discriminates on such an argument, an absent, malformed or unverifiable
@@ -430,6 +436,13 @@ above a threshold the verdict is `require_approval` however persuasive the argum
 value appears here or anywhere in this repository. A threshold is a CEL predicate under the
 Expression Profile, over the proposed action's arguments, or over a platform-defined aggregate for a
 rate or a window (ADR-0035).
+
+The remittance account in that invoice is also *labelled*: it carries the origin label of the
+content it was lifted from, through every reference and every `transform` that moved it, and the
+label reaches this evaluation under N1
+([ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md)). So a Tenant can write the narrower
+rule — *a payment whose payee came from a supplier's document requires a human* — and it holds
+without anyone trusting the model to have preserved a marking.
 
 ## 8. Why the language is an ADR, not a later document
 
@@ -473,7 +486,7 @@ normative document suffices.
 | How a `require_approval` rule names its Approval Chain, and how one Approval Request records the chains of several matching rules, `approval-request.v1` carrying one chain with one mode | **ADR** | [`approval-workflows.md`](approval-workflows.md) section 5, with the decision on what satisfies a chain that its register marks **ADR** |
 | How the Expression Profile is versioned, and where VERSIONING records it | Document | [`../VERSIONING.md`](../VERSIONING.md), with the profile's specification; ADR-0035 fixes that a published version keeps its profile major |
 | Retention of Audit Records, Policy Decisions included | **ADR** | [`audit-model.md`](audit-model.md), adopting its classification. ADR-0012 makes this one question rather than two |
-| Whether untrusted content carries provenance inside the model context | **ADR** if it reaches a public contract, else Document | Jointly with [`../30-protocol/`](../30-protocol/); assigned here by [`threat-model.md`](threat-model.md) section 14 |
+| How an origin label is represented, at what grain a value carries one, and how a rule matches on a set of them | Document | The Expression Profile's specification in [`../30-protocol/`](../30-protocol/), with the type system [`../50-workflows/workflow-dsl.md`](../50-workflows/workflow-dsl.md) section 11 registers. [ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md) fixes that the labels exist, propagate and reach N1; marking inside the model context is defence in depth and never a control |
 | How a rule discriminating on a model-authored argument selects the restrictive branch on a value that is present and well formed but unverifiable — an absent or malformed value being settled by S2 under ADR-0035 | Document | With the provenance row above; assigned here by [`threat-model.md`](threat-model.md) section 14. See S2 |
 | Whether the Step-boundary and Tool PEPs collapse into one evaluation for a `tool` Step | Document | A later revision of this document, with [`../50-workflows/`](../50-workflows/) |
 | What a Policy Decision references for a Tool call inside an Agent Run | Document | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), or an ADR |

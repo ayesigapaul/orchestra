@@ -58,7 +58,7 @@ flowchart TD
   K --&gt;|"condition, parallel, transform"| INTERNAL["Only data inside the Run. Nothing leaves"]
   K --&gt;|"approval"| GATE["A human decision. The Run suspends before the gated action"]
   K --&gt;|"wait"| TIME["Elapsed time. Resumption has no acting Principal — audit-model section 9"]
-  EFFECT &amp; DELEG &amp; NEST --&gt; COMP["Side effect possible: compensation MUST be declared for write, destructive, financial"]
+  EFFECT &amp; DELEG &amp; NEST --&gt; COMP["Side effect possible: every write, destructive or financial Tool invocation has a compensating action, from the Step or from the Tool's registration (ADR-0046)"]
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">flowchart TD
   PEP["Policy Enforcement Point at every Step boundary, compiler-emitted (policy-model E1, E2, E3)"]
@@ -69,7 +69,7 @@ flowchart TD
   K --&gt;|"condition, parallel, transform"| INTERNAL["Only data inside the Run. Nothing leaves"]
   K --&gt;|"approval"| GATE["A human decision. The Run suspends before the gated action"]
   K --&gt;|"wait"| TIME["Elapsed time. Resumption has no acting Principal — audit-model section 9"]
-  EFFECT &amp; DELEG &amp; NEST --&gt; COMP["Side effect possible: compensation MUST be declared for write, destructive, financial"]</pre></details>
+  EFFECT &amp; DELEG &amp; NEST --&gt; COMP["Side effect possible: every write, destructive or financial Tool invocation has a compensating action, from the Step or from the Tool's registration (ADR-0046)"]</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

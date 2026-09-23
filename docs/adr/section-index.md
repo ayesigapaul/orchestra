@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.33.0
+version: 0.34.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -70,6 +70,9 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0041](adr-0041-nested-versions-execute-inside-the-parent-run.md) | A nested Agent or Workflow version executes inside its parent Run, pinned when the parent version is published | Accepted | 2026-09-13 |
 | [0042](adr-0042-declared-tools-and-capability-grants.md) | Versions declare the Tools they may call, and capability grants are separate acts, read at every invocation and revocable at once | Accepted | 2026-09-13 |
 | [0043](adr-0043-approval-chains-and-separation-of-duties.md) | An Approval Chain is satisfied position by position by Platform Users other than the human who initiated the Run, is reassigned only by hand, and expires only at a deadline its Policy declares | Accepted | 2026-09-13 |
+| [0044](adr-0044-origin-labels-on-run-data.md) | Every value in a Run's data carries origin labels, they propagate through references and transforms, and Policy reads them | Accepted | 2026-09-13 |
+| [0045](adr-0045-the-compiler-derives-a-steps-side-effect-class.md) | The compiler derives a Step's Side-Effect Class, and a delegating Step carries the set of classes its delegation can reach | Accepted | 2026-09-13 |
+| [0046](adr-0046-compensation-is-declared-on-the-tool-registration.md) | A Tool declares its compensating Tool when it is registered, and a Step's own declaration overrides it | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -152,10 +155,17 @@ flowchart TD
   A30 --> A43
   A40 --> A43
 
+  A35 --> A44["ADR-0044<br/>Origin labels on Run data"]
+  A15 --> A44
+  A42 --> A45["ADR-0045<br/>The compiler derives a Step's class"]
+  A41 --> A45
+  A40 --> A46["ADR-0046<br/>Compensation on the Tool registration"]
+  A42 --> A46
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43,A44,A45,A46 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A9,A22 superseded;
 ```

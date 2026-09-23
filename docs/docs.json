@@ -205,6 +205,9 @@
               "adr/adr-0041-nested-versions-execute-inside-the-parent-run",
               "adr/adr-0042-declared-tools-and-capability-grants",
               "adr/adr-0043-approval-chains-and-separation-of-duties",
+              "adr/adr-0044-origin-labels-on-run-data",
+              "adr/adr-0045-the-compiler-derives-a-steps-side-effect-class",
+              "adr/adr-0046-compensation-is-declared-on-the-tool-registration",
               "adr/adr-template"
             ]
           },
@@ -717,6 +720,18 @@
     {
       "source": "/adr/adr-0043-approval-chains-and-separation-of-duties.md",
       "destination": "/adr/adr-0043-approval-chains-and-separation-of-duties"
+    },
+    {
+      "source": "/adr/adr-0044-origin-labels-on-run-data.md",
+      "destination": "/adr/adr-0044-origin-labels-on-run-data"
+    },
+    {
+      "source": "/adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md",
+      "destination": "/adr/adr-0045-the-compiler-derives-a-steps-side-effect-class"
+    },
+    {
+      "source": "/adr/adr-0046-compensation-is-declared-on-the-tool-registration.md",
+      "destination": "/adr/adr-0046-compensation-is-declared-on-the-tool-registration"
     },
     {
       "source": "/adr/adr-template.md",

@@ -1,7 +1,7 @@
 ---
 title: Versioning & Compatibility Policy
 doc_id: DOC-001
-version: 0.16.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -208,6 +208,10 @@ Schemas are the source of truth for wire contracts and live in
 ## 7. Client SDKs
 
 `@orchestra/react`, `@orchestra/react-native`, `@orchestra/core` — versioned independently, SemVer.
+
+`@orchestra/react-native` is scoped to the Run event stream and text, and renders no UI Surface:
+Orchestra builds no React Native renderer, and the approval surface is presented to Platform Users
+on the web ([`30-protocol/ui-protocol.md`](30-protocol/ui-protocol.md) section 4).
 
 An SDK declares the API revision and event-profile range it supports in its metadata, and the
 gateway rejects an unsupported combination at session establishment with a precise error rather than

@@ -1,7 +1,7 @@
 ---
 title: Threat Model
 doc_id: DOC-055
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -80,7 +80,7 @@ Controls referenced by more than one threat, stated once. Each is a derivation f
 | C1 | Capability authorization is deny-by-default. Registration in the Tool Catalog grants nothing, and neither does a version declaring a Tool; an Agent's or a Workflow's permission to call a Tool is a capability grant, a separate, separately audited act, whose revocation stops the next invocation of a Run in flight. Registration, declaration and grant are inputs to the enforcement point rather than gates in front of it, and a failed precondition yields a recorded `deny` naming no Policy | Invariant I5, [`policy-model.md`](policy-model.md) A2 and A4, [`tool-authorization.md`](tool-authorization.md) TA6 and TA19 to TA22 |
 | C2 | A Policy Enforcement Point is crossed at Run admission, before every Tool invocation, and at every Workflow Step boundary. The compiler emits the Step-boundary one, so no way of writing a definition omits it; admission and the Tool PEP sit on the platform path, which a definition cannot reach either | ADR-0005, ADR-0008, [`policy-model.md`](policy-model.md) E1–E4 |
 | C3 | The Agent's justification, urgency claim and self-declared classification MUST NOT be policy inputs. Validated arguments are inputs — they are the object of judgement; the model's account of them is not | ADR-0003, [`policy-model.md`](policy-model.md) S1, S2 |
-| C4 | Every Tool and Step declares a Side-Effect Class, and it is a primary policy input | GLOSSARY |
+| C4 | Every Tool declares a Side-Effect Class at registration and every Step carries one the compiler derives, and it is a primary policy input | GLOSSARY; [ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md) |
 | C5 | Every tenant-scoped table carries a non-nullable tenant identifier; row-level security is enabled **and forced**; CI fails a table that lacks it | ADR-0011 |
 | C6 | Credentials are custodied under envelope encryption with per-tenant data keys, held by reference, with no plaintext in any store, log, trace or backup | ADR-0002, ADR-0006 |
 | C7 | Every Policy Decision is audited, allows included. A Policy Decision **is** a class of Audit Record, so append-only, immutable, tenant-scoped and attributable to exactly one Principal are true of it without restatement | ADR-0012, invariant I2, [`policy-model.md`](policy-model.md) D1 |
@@ -137,6 +137,14 @@ UI Surface that misstates what is about to happen.
   evaluation incomplete, and [`policy-model.md`](policy-model.md) A3 forbids `allow`
   ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). Whether an
   unverifiable value is marked as such is the provenance question section 14 registers.
+- Every value in a Run's data carries a set of origin labels — admission input, definition literal,
+  Tool result, retrieved content, model output, UI Action text — which propagate through data
+  references and `transform` bodies and reach every evaluation as an input
+  ([ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md),
+  [`policy-model.md`](policy-model.md) N1). A model's output carries *model output* and nothing else,
+  so passing a value through a model neither preserves nor launders its origin. Marking untrusted
+  content inside the model's context MAY be used as defence in depth and MUST NOT be relied upon or
+  recorded as the mitigating control, on the same terms as better prompting above.
 - The approver decides on the Agent's inputs rather than its summary of them, with the Agent's own
   argument labelled as model-generated (C8, and rules E1 to E3 of
   [`approval-workflows.md`](approval-workflows.md)). Separating agent-authored text from content
@@ -150,8 +158,12 @@ UI Surface that misstates what is about to happen.
 **Residual risk.** Everything the Agent may do without a gate is available to an injection: the
 residual is exactly the ungated capability set, which is what makes C1 and C4 load-bearing. A tenant
 gating only `financial` and `destructive` has left chaining open, and the platform will have
-enforced its policy correctly while the data leaves. Detection of injection is unsolved; no
-classifier is proposed and none should be recorded as a control.
+enforced its policy correctly while the data leaves. Origin labels make chaining *addressable* — a
+rule can gate an `external-communication` call whose arguments came from a Tool result — and they
+gate nothing on their own: a Tenant who writes no such rule is exactly where they were. A determined
+chain can also shed an origin by round-tripping a value through a permitted `write` Tool, whose
+result is labelled as that Tool's. Detection of injection is unsolved; no classifier is proposed and
+none should be recorded as a control.
 
 ## 6. T2 — Tool poisoning
 
@@ -261,10 +273,18 @@ provider account.
   backup (C6).
 - A credential MUST NOT be rendered in plaintext by any interface, support tool, export or error
   surface. That is C6 read as it stands — no plaintext in any store, log, trace or backup, and a
-  screen is not an exception to it. Whether custody is additionally **write-only**, so that no
-  read-back path exists for a tenant administrator, for support or for an Orchestra operator, is
-  **not decided**: ADR-0002's own mitigation names audited access paths, which presupposes access
-  that is audited rather than prohibited. Section 14 registers it.
+  screen is not an exception to it.
+- **Custody is write-only with respect to every Principal.** No path returns credential material to
+  a caller, rendered or otherwise: not to a tenant administrator, not to support, and not to an
+  Orchestra operator. **No break-glass decrypt exists**, and no emergency, incident or support case
+  creates one. The only decrypt is the Model Broker's use at invocation, which is what ADR-0002's
+  *audited access paths* mitigation refers to, and the Audit Record references the binding and the
+  Principal rather than the credential in any form.
+- The cost is stated rather than hidden: a customer who loses their own copy re-supplies it, and a
+  promotion path relocates ciphertext and per-tenant key references rather than exporting plaintext
+  ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)). A read-back would return the
+  customer what they already hold under BYOK while turning the custodian into a distribution point,
+  which is the concentration this threat names as its own residual.
 - Error, telemetry and trace paths MUST redact provider responses that can echo credential material,
   and an Audit Record MUST reference a credential, never contain it.
 - A Session Token is short-lived and narrowly scoped, minted at the request of the customer's
@@ -457,7 +477,7 @@ classification is the one repeated here.
 
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
-| Whether untrusted content carries provenance inside the model context, and whether that reaches the public event contract | [`policy-model.md`](policy-model.md), [`../30-protocol/`](../30-protocol/) | ADR if it changes a public contract |
+| Whether an origin label ever reaches a public contract — the event profile, the UI protocol or the approval surface | [`policy-model.md`](policy-model.md), [`../30-protocol/`](../30-protocol/) | ADR if it changes a public contract — [ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md) adds the labels as an evaluation input and to no contract, and adding one later is additive under R2 and R3 |
 | How a rule discriminating on a model-authored argument selects the restrictive branch on a value that is present and well formed but unverifiable — an absent or malformed value being settled by ADR-0035, where an expression that errors never allows | [`policy-model.md`](policy-model.md), with the provenance row above | Later document |
 | What happens when registered Tool metadata diverges from what the origin now serves — a precedence rule between registered and served metadata | [`tool-authorization.md`](tool-authorization.md), with the Tool registration specification in [`../10-architecture/`](../10-architecture/) | Later document |
 | Whether a Tool is invoked with the Agent's authority or with a delegated End User identity | [`tool-authorization.md`](tool-authorization.md) | **ADR required** — spans identity, connector and the origin contract |
@@ -466,5 +486,4 @@ classification is the one repeated here.
 | How Orchestra authorizes issuing a Platform Operator's administrative grant, and who may issue one — the grant always carrying an end time and a recorded support case or incident, with no consent from the Tenant ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 12, with this document | Later document — but before the first security review |
 | Credential and Session Token lifetimes and rotation intervals | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | Later document; a customer contract will force it first |
 | Audit and Evidence Set retention periods, which bound how long any record relied on here can be produced | [`audit-model.md`](audit-model.md) | **ADR required** — that document's classification; it spans storage, erasure, the definition lifecycle and metering |
-| Whether credential custody is write-only, or a read-back path exists on an audited access path | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/), constrained by ADR-0002 and C6 | Later document |
 | Whether Connector local audit is exported and reconciled with the platform trail | [`audit-model.md`](audit-model.md), `connector.md` in [`../10-architecture/`](../10-architecture/) | Later document; void if ADR-0007 is rejected |

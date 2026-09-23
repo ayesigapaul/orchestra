@@ -1,7 +1,7 @@
 ---
 title: Execution Semantics
 doc_id: DOC-063
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -266,16 +266,20 @@ what the audit grain is (`audit-model.md` section 7), and what ADR-0009 meters. 
 can be applied retroactively, which is an argument for naming it early and not an argument for
 naming it here.
 
-**What this does not settle, and where the same hole reappears.** A compensating action is declared
-on a Step (I4), and an Agent Run has no Step to carry one. Either the Tool's Catalog registration
-carries it or the Agent version declares it beside the Tool it declares — both change a permanent
-public contract, so section 11 marks it **ADR**. Until it lands, a `write`, `destructive` or
-`financial` Tool call in an Agent Run has nowhere to declare the compensating action X15 requires.
-The hole is reachable from inside a Workflow Run too: an `agent` Step *is* a Step, with its own
-Step Execution and its own boundary evaluation, but [`step-types.md`](step-types.md) section 5
-fixes that a definition constrains the delegation's declared class and not the order, count or
-arguments of the calls the model makes — so a model-chosen invocation inside it has no declaration
-of its own either. Section 11 registers that residual against the same question. Which invocations
+**Where the declaration lives, and where the same hole used to reappear.** A compensating action was
+declared on a Step (I4), and an Agent Run has no Step to carry one.
+[ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md) puts the
+declaration on the Tool's Catalog registration: a Tool whose class is `write`, `destructive` or
+`financial` names its compensating Tool and an argument mapping when it is registered, or records
+that it has none. The pairing is a property of the capability, so it covers a model-chosen
+invocation in an Agent Run, and one inside an `agent` Step, exactly as it covers a `tool` Step's —
+which is what X15 required and nothing supplied. The hole used to reappear inside a Workflow Run:
+an `agent` Step *is* a Step, with its own Step Execution and its own boundary evaluation, but
+[`step-types.md`](step-types.md) section 5 fixes that a definition constrains the delegation and
+not the order, count or arguments of the calls the model makes, so a model-chosen invocation inside
+it had no declaration of its own either. It now has the registered one. What is still unnamed is
+the invocation itself, and section 11 carries that where the domain model registered it. Which
+invocations
 are reachable at all is bounded by the Tools the Agent version declares, each still needing a
 capability grant naming the Agent that stood at the Run's admission and still stands
 ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)).
@@ -286,13 +290,26 @@ capability grant naming the Agent that stood at the Run's admission and still st
 after a side-effecting step triggers declared compensating actions and never a blind retry; I4 puts
 compensation at the Step Execution. Nothing below moves it to the Run.
 
-**X15 — Compensating actions MUST be declared for `write`, `destructive` and `financial` Steps** —
-ADR-0008's mitigation, noted because the scope matters: it does **not** reach
-`external-communication`, and a sent message has no undo. Whether that class must declare one, and
-what one would mean, is registered. The scope has a second soft edge, also not this document's:
-what a Side-Effect Class means on the seven types that reach no Tool of their own is unmade and
-ADR-required at [`step-types.md`](step-types.md) section 13, so until it settles the mandate is
-exact only for `tool` Steps and X21 says what the declaration then contains.
+**X15 — A compensating action MUST exist for every `write`, `destructive` and `financial` effect** —
+ADR-0008's mitigation, now exact at both grains. For a `tool` Step it is the action the Step declares
+under X21, or, where the Step declares none, the one the Tool's registration names
+([ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md)); a Step whose Tool
+is registered with no compensating action and which declares none of its own is rejected at
+publication. For a Tool invocation the model chooses, which no Step declares, it is the registered
+one. Both soft edges the rule used to carry are now closed.
+
+- **The type edge.** Only a `tool` Step carries one of the three classes at all, the compiler
+  deriving every Step's class
+  ([ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md)): `condition`,
+  `transform`, `wait`, `approval` and `parallel` carry `read`, and an `agent` or `subworkflow` Step
+  carries the set its delegation can reach and declares no compensating action — the effects its
+  delegation takes are compensated at the Tools that take them.
+- **The `external-communication` edge.** The mandate does **not** reach that class and no compensating
+  action is mandated for it. A sent message has no undo. A follow-up action — a correction, a
+  retraction notice — MAY be declared or registered, and it is never presented as an undo. Where a
+  Run needed such a message unsent, the effect is recorded `unresolved` in the Run's compensation
+  outcome (ADR-0040), which is the honest record and is better than a mandated action that pretends
+  to reverse it.
 
 **X16 — Compensation compensates; it does not roll back.** A compensating action is a new business
 action with its own Side-Effect Class, capability grant (`tool-authorization.md` TA5), enforcement
@@ -338,6 +355,17 @@ ordinary business action needs and nothing more.
 schema slot and the concrete syntax; whether the language admits a compensating action that is
 anything other than a Tool invocation stays there, and this rule is written to survive that
 answer.
+
+**A Step's declaration overrides the Tool's registered one, and a Step may declare none.** A Tool
+whose class is `write`, `destructive` or `financial` names its compensating Tool and an argument
+mapping at registration, or records that it has none
+([ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md)). One invocation
+has one compensating action: the Step's where it declares one, the registration's otherwise, and
+none of the arithmetic above changes. The registered pairing is what a Tool invocation the model
+chooses uses, having no Step. The compensating call needs a capability grant and a declaration by
+the Run's pinned version like any other invocation (X16, ADR-0042), and where it has neither, the
+effect is recorded `unresolved` (ADR-0040). X20 still holds of a registered pairing: the compensating
+Tool's own registered compensation is never attempted.
 
 ### 6.1 Is compensation a Run state, or confined to Step Execution?
 
@@ -596,9 +624,7 @@ question, its classification is repeated rather than revised.
 
 | Question | Needs | Decided by |
 | --- | --- | --- |
-| Where a compensating action is declared for a Tool invocation the model chooses — in an Agent Run, or inside an `agent` Step whose declaration sits on the delegation | **ADR** | Either candidate, the Tool's registration record or the Agent version, changes a permanent public contract; [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) with [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md), and [`step-types.md`](step-types.md) section 5 for the `agent` half |
 | What a Tool invocation in an Agent Run is called, and what its Policy Decision, its audit record, its meter record and an `unresolved` compensation outcome (X33) key on, an Agent Run having no Steps | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 registers it, cited by `policy-model.md` rule E4 and `audit-model.md` section 7; classification repeated, and neither compensation nor metering can be applied retroactively |
-| Whether `external-communication` Steps must declare a compensating action, and what one means for a sent message | **ADR** | An extension of ADR-0008's mandate, which names three classes; not a schema addition |
 | The audit-retention period bounding a retained definition, an Evidence Set and a Step Execution record | **ADR** | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 11; classification repeated |
 | What a `parallel` branch failure does to its siblings — cancel, complete, or compensate — and what satisfies the join | Document | A later revision of this document; [`step-types.md`](step-types.md) section 9 assigns both halves here and section 13 carries the classification, repeated. X19 fixes three constraints any answer must satisfy |
 | Whether a compensating action may be anything other than a Tool invocation, a `subworkflow` for instance | Document | [`workflow-dsl.md`](workflow-dsl.md), which owns what the language admits |

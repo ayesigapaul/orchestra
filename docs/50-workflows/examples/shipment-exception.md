@@ -1,7 +1,7 @@
 ---
 title: "Example: Shipment Exception"
 doc_id: DOC-067
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -29,22 +29,18 @@ entry: assess
 steps:
   assess:
     type: agent
-    side_effect_class: read
     agent: { name: delay-analyst, version: 1 }
     input: { shipment_id: "${inputs.shipment_id}" }
   respond:
     type: parallel
-    side_effect_class: read
   notify-customer:
     type: tool
-    side_effect_class: external-communication
     tool: { name: notify.email.send, schema_major: 1 }
     arguments:
       to: "${steps.assess.output.customer_email}"
       template: delay-notice
   rebook:
     type: tool
-    side_effect_class: write
     tool: { name: tms.booking.create, schema_major: 3 }
     arguments:
       shipment_id: "${inputs.shipment_id}"
@@ -54,11 +50,9 @@ steps:
       arguments: { booking_id: "${steps.rebook.output.booking_id}" }
   settle:
     type: wait
-    side_effect_class: read
     until: "<time condition — its form undecided, see workflow-dsl.md section 11>"
   update-order:
     type: tool
-    side_effect_class: write
     tool: { name: erp.sales_order.update, schema_major: 1 }
     arguments:
       shipment_id: "${inputs.shipment_id}"
@@ -150,6 +144,5 @@ condition that never becomes true.
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | What satisfies the join at `settle`, and what a failed `rebook` does to `notify-customer` | [`../execution-semantics.md`](../execution-semantics.md) section 6, assigned by [`../step-types.md`](../step-types.md) section 9 | As classified there |
-| Whether an `external-communication` Step must declare a compensating action, and what one would mean | [`../execution-semantics.md`](../execution-semantics.md) section 6 | As classified there |
 | Whether a `wait` may be released by an external signal, such as the carrier's confirmation | [`../step-types.md`](../step-types.md) section 10 | As classified there |
 | What bounds a wait whose condition never becomes true | [`lifecycle-state-machines.md`](../../20-domain/lifecycle-state-machines.md) section 2.4, which records that no maximum Run duration is decided | As classified there |

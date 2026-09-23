@@ -1,7 +1,7 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -89,7 +89,11 @@ each Agent and Workflow its Steps name
 [`50-workflows/`](50-workflows/).
 
 **Step** — one node in a Workflow. Typed: `agent`, `tool`, `approval`, `condition`, `parallel`,
-`wait`, `transform`, `subworkflow`. Every Step declares a Side-Effect Class.
+`wait`, `transform`, `subworkflow`. Every Step carries a Side-Effect Class, derived by the compiler
+at publication rather than authored: the Tool's registered class on a `tool` Step, `read` on the five
+types that take no effect, and on an `agent` or `subworkflow` Step the *set* of classes its
+delegation can reach
+([ADR-0045](adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md)).
 
 **Run** — one execution of an Agent or Workflow. The primary unit of execution, observability,
 billing and audit. Pins the definition version it started with, for its whole life. A version that
@@ -120,10 +124,15 @@ never exposed in a public contract.
 ## Capability and connectivity
 
 **Tool** — a single invocable business capability with a versioned typed schema, a Side-Effect Class,
-and an authorization binding. Exposed to Orchestra via MCP or a native adapter.
+an authorization binding and, where its class is `write`, `destructive` or `financial`, a
+compensating Tool with an argument mapping or an explicit *none*
+([ADR-0046](adr/adr-0046-compensation-is-declared-on-the-tool-registration.md)). Exposed to Orchestra
+via MCP or a native adapter.
 
-**Side-Effect Class** — the declared consequence class of a Tool or Step, and a primary input to
-policy: `read` · `write` · `destructive` · `financial` · `external-communication`.
+**Side-Effect Class** — the consequence class of a Tool or Step, and a primary input to policy:
+`read` · `write` · `destructive` · `financial` · `external-communication`. A Tool declares it at
+registration, and the registered value is authoritative at evaluation. A Step carries it, derived at
+publication ([ADR-0045](adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md)).
 
 **Tool Catalog** — the tenant-scoped registry of Tools available for binding to Agents and Workflows.
 Registration in the Catalog is an administrative act, distinct from the capability grant that
@@ -187,6 +196,13 @@ Audit Record, because nothing acted
 **Evidence Set** — the exact inputs an Agent relied upon when proposing an action: tool results,
 retrieved context, prior messages. Attached to Approval Requests so a human approves on the same
 information the model had, and retained for audit.
+
+**Origin label** — where a value in a Run's data came from: admission input · definition literal ·
+tool result · retrieved content · model output · UI Action text. A value carries a non-empty *set*
+of them, propagated through data references and `transform` bodies, and the set is an input to every
+Policy evaluation. A label records an origin and never asserts that a value is safe; model output is
+untrusted by construction. See
+[ADR-0044](adr/adr-0044-origin-labels-on-run-data.md).
 
 **Protected Content** — content of one of four classes — Evidence Sets, Tool results, retrieved
 context and Messages — encrypted at the application level under its own Tenant's data key wherever it

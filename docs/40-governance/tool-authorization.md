@@ -1,7 +1,7 @@
 ---
 title: Tool Authorization
 doc_id: DOC-053
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -108,6 +108,17 @@ through it. The domain model keeps reachability on a third axis precisely so the
 Every Tool declares a Side-Effect Class — `read`, `write`, `destructive`, `financial`,
 `external-communication` — and it is a primary input to Policy. It is an enumerated value, and
 adding one is a contract change under [`../VERSIONING.md`](../VERSIONING.md) rules R2 and R3.
+
+**A Tool classed `write`, `destructive` or `financial` also declares its compensation at
+registration**: one compensating Tool registered in the same Tenant's Catalog with an argument
+mapping over the compensated invocation's arguments and result, or an explicit *none*
+([ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md)). Compensation is
+a property of the capability, so the pairing covers every invocation — a `tool` Step's and a call the
+model chose alike — and a Workflow Step's own declaration overrides it
+([`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X15, X21). The
+compensating call is an ordinary invocation: it crosses its own enforcement point, needs its own
+capability grant, carries the compensating Tool's own registered class under TA9, and its own
+registered compensation is never attempted (X16, X20).
 
 **TA9.** The class is declared at registration, and the value recorded in the Catalog is
 authoritative at evaluation. It MUST NOT be supplied, overridden or influenced at invocation time

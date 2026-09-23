@@ -1,9 +1,9 @@
 ---
 title: A2UI Evaluation
 doc_id: DOC-092
-version: 0.6.0
+version: 0.7.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0010, ADR-0004]
 ---
@@ -227,7 +227,7 @@ renderer as defence in depth rather than as the enforcement point.
 ```mermaid
 flowchart LR
   A["Agent output<br/>declarative UI description"] --> P["Orchestra: validate against<br/>component catalog server-side"]
-  P -->|type not in catalog| D["Denied — never emitted<br/>Policy Decision audited"]
+  P -->|type not in catalog| D["Refused — never emitted<br/>recorded as an Audit Record"]
   P -->|valid| S["UI Surface on the Run event stream"]
   S --> R["Client renderer<br/>host-supplied catalog"]
   R -->|type absent| F["Fails closed: error notice"]
