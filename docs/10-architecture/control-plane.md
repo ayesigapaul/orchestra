@@ -1,7 +1,7 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -285,6 +285,14 @@ names the Agent or Workflow and one registered Tool, and a revocation made here 
 next Tool enforcement point, Runs in flight included. The surface therefore administers grants
 against definitions, never against versions. Grant syntax stays with the schema work
 [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 8 lists.
+
+**Registration records the compensation.** A Tool classed `write`, `destructive` or `financial`
+names its compensating Tool and an argument mapping when it is registered, or records an explicit
+*none* ([ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md)). The
+surface validates the mapping at registration, shows an author the effective compensating action
+for a Step — whether it came from the Step or from the registration — and warns where a version
+declares a Tool whose registered compensating Tool it does not itself declare. Changing the pairing
+is a re-registration producing a new record.
 
 **A registration is Tenant-scoped, and a Workspace narrows only which Tools a grant may name.** The
 Catalog is tenant-scoped ([`../GLOSSARY.md`](../GLOSSARY.md)), and a Tool registration carries no

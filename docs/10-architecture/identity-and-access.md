@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.17.0
+version: 0.18.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -388,9 +388,14 @@ Principal, never the credential in any form.
 
 The cost, stated rather than hidden: a customer who loses their own copy re-supplies it, and no path
 moves credential material out of Orchestra — so ADR-0011's promotion path must relocate ciphertext
-and per-tenant key references rather than export and re-import plaintext. One narrower question
-stays open: whether an operator break-glass decrypt exists at all, which is where a write-only claim
-would actually be tested.
+and per-tenant key references rather than export and re-import plaintext.
+
+**No operator break-glass decrypt exists**, which is where the write-only claim is actually tested.
+A two-person audited decrypt would be a read path to material ADR-0002 rates existential if
+compromised, built for an emergency nobody has met: under BYOK the customer holds the credential, so
+the emergency a decrypt would answer is one a re-supply answers without a read path existing at all.
+Adding one later is possible and would need its own decision; removing one people rely on is not.
+`threat-model.md` T5 carries the rule, and section 12 no longer registers the question.
 
 ## 11. Platform-operator access
 
@@ -451,7 +456,6 @@ of an administrative grant (section 5), and `gateway-api.md` G15 carries the can
 | --- | --- | --- |
 | Which roles the closed set of administrative grants holds, which administrative operations each permits, and how a role comes to permit an operation added later | This document, before the first operation that checks an administrative grant; [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) fixes the shape | No |
 | How a Platform Operator authenticates, which verified subjects Tenant User Management may resolve to one, and whether a Platform Operator Principal stands on a Membership | This document, before the first operation a Platform Operator performs; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) fixes the Principal, and ADR-0017 keeps the list of operators out of Keycloak roles | No — but before the first operator operation |
-| Whether an operator break-glass decrypt of a custodied credential exists | A security review, on the same test `approval-workflows.md` applies to break-glass | **ADR** — a deliberate hole in the control section 10 settles closed |
 | What a Session Token's scope may contain, which bounds the End User row in section 7 | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — its classification, repeated |
 | Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be | [`control-plane.md`](control-plane.md) with a design partner; that document accepts the assignment in its section 12 and carries the row in section 13. [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) decides that a group holds a role only through a mapping | No |
 | How a Platform User is deprovisioned, and what becomes of administrative grants held by a Principal who can no longer authenticate | [`control-plane.md`](control-plane.md), which accepts it in section 12 and carries the row in section 13; the domain model fixes that a Principal outlives its credentials, not what removes its authority | No |

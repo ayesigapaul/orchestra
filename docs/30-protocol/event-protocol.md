@@ -1,7 +1,7 @@
 ---
 title: Event Protocol
 doc_id: DOC-042
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -430,7 +430,7 @@ another document owns a row, its classification is repeated rather than revised.
 | Whether the profile enumerates `Compensating`, and what it emits while Step Executions compensate | This document, now that [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X22 settles that the Run carries the roll-up state | No — that document's section 11 classification, repeated. Admitting the state into the profile later is a **MAJOR** under C2, which is the cost of leaving it out today |
 | Whether a terminal Run lifecycle event carries the Run's compensation outcome, and the refusal a `Denied` Run records ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)) | This document, with the Run lifecycle family of section 3.2 | No — a member a consumer may ignore is additive under R2 |
 | The event names inside the reserved `orchestra.ui.*` family, and how a surface orders against the approval extension it accompanies | [`ui-protocol.md`](ui-protocol.md) UC1, which asks this profile to fix them and invents none; section 3.3 reserves the family and does not name its events | No — additive under R2 once a surface model exists, and both ADRs behind it are **Proposed** |
-| Whether untrusted content carries provenance inside the model context, and whether that marking reaches this contract — the profile carries none in v1 | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9, with this document; assigned by [`../40-governance/threat-model.md`](../40-governance/threat-model.md) section 14 | **ADR** if it changes a public contract — that document's classification, repeated |
+| Whether an origin label ever reaches this contract, the profile carrying none in v1 | This document, with [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9. [ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md) adds origin labels to Run data and to Policy evaluation, and deliberately to no public contract; admitting one here later is MINOR under R2 and must-ignore under R3 | **ADR** if it changes a public contract — that document's classification, repeated |
 | Whether Orchestra's resumption survives a frozen upstream version that makes the no-resumption rule normative for producers as well as consumers | The freeze, which has no announced date. Today the rule binds consumers only, so O4 is an addition rather than a contradiction | No — ADR-0004's revisit criteria already cover a divergence that forces a fork |
 | Whether the conformance suite tests against a fixture corpus of Orchestra's own making, and what "conformant client" admits | The suite, which does not exist. There is no upstream corpus to inherit ([`../80-reference/ag-ui-evaluation.md`](../80-reference/ag-ui-evaluation.md) section 7) | No |
 

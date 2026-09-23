@@ -1,7 +1,7 @@
 ---
 title: "Example: Invoice Payment"
 doc_id: DOC-065
-version: 0.19.0
+version: 0.20.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -26,22 +26,18 @@ entry: fetch-invoice
 steps:
   fetch-invoice:
     type: tool
-    side_effect_class: read
     tool: { name: documents.invoice.get, schema_major: 1 }
     arguments: { document_id: "${inputs.invoice_document_id}" }
   extract:
     type: agent
-    side_effect_class: read
     agent: { name: invoice-reader, version: 4 }
     input: { invoice: "${steps.fetch-invoice.output}" }
   match:
     type: tool
-    side_effect_class: read
     tool: { name: erp.purchase_order.match, schema_major: 1 }
     arguments: { invoice: "${steps.extract.output}" }
   pay:
     type: tool
-    side_effect_class: financial
     tool: { name: erp.payment.create, schema_major: 2 }
     arguments:
       supplier_id: "${steps.match.output.supplier_id}"
@@ -167,5 +163,5 @@ criteria in [`mvp-definition.md`](../../70-delivery/mvp-definition.md) require.
 | --- | --- | --- |
 | How the threshold in the Policy above is written, as a CEL predicate over the payment's amount, once the Expression Profile names its inputs and how an amount is represented | [`policy-model.md`](../../40-governance/policy-model.md) section 9, under [ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) | No — the language is decided |
 | Whether the evaluation before `erp.payment.create` receives the approval resolution as an input, or collapses into the Step-boundary evaluation. Without one or the other an approved payment re-raises its own gate | [`policy-model.md`](../../40-governance/policy-model.md), which owns the collapse question [`../step-types.md`](../step-types.md) section 6 registers | As classified there — **new here** as a consequence |
-| Whether `pay_to_account`, taken from content the Agent read, is still marked untrusted when it reaches a Tool | [`../step-types.md`](../step-types.md) section 13, which registers provenance through the platform | As classified there |
+| Whether a Policy keyed on `pay_to_account`'s origin is the right control here, given that the value carries the origin label of the content it was extracted from all the way to the Tool enforcement point ([ADR-0044](../../adr/adr-0044-origin-labels-on-run-data.md)) | A Tenant's Policy, and the Expression Profile's specification in [`../../30-protocol/`](../../30-protocol/) | No — the label exists; what a rule does with it is the Tenant's |
 | Whether the approval surface shows the account on file beside the proposed one | [`../../30-protocol/ui-protocol.md`](../../30-protocol/ui-protocol.md), which owns the approval surface | No |

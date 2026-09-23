@@ -1,7 +1,7 @@
 ---
 title: UI Protocol
 doc_id: DOC-044
-version: 0.16.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -64,7 +64,7 @@ that the sentence is enforced somewhere Orchestra controls, rather than merely i
 | **US1** | An Agent MUST produce a UI Surface as a declarative description. It MUST NOT produce executable code, markup carrying executable content, a script or style reference the client fetches, or a component defined by the surface rather than registered by the host. |
 | **US2** | **Orchestra MUST validate every agent-produced surface server-side**, against the owning Tenant's registered component catalog, before the surface reaches the Run event stream. A component type absent from the catalog, or a property failing that type's registered schema, MUST cause the surface to be refused — in whole, and not in part. |
 | **US3** | **The renderer is defence in depth, never the enforcement point.** The external interchange's catalog enforcement is a property of renderer implementations rather than a normative requirement of the specification: a third-party renderer could conform by name and still render an uncatalogued component ([`../80-reference/a2ui-evaluation.md`](../80-reference/a2ui-evaluation.md), fourth finding). A boundary enforced solely in client code Orchestra does not ship is not a boundary, so Orchestra MUST NOT rely on the renderer as the only check — and a renderer Orchestra ships MUST additionally fail closed on an uncatalogued type. |
-| **US4** | A refused surface MUST be recorded and MUST be visible to the Tenant. An Agent emitting an uncatalogued component is a symptom of the surface injection [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T1 describes, so a silent drop discards the signal. Whether the check is itself a Policy Enforcement Point — and so whether the refusal is a Policy Decision ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)) or another class of Audit Record — is **not decided**; section 10. |
+| **US4** | A refused surface MUST be recorded and MUST be visible to the Tenant. An Agent emitting an uncatalogued component is a symptom of the surface injection [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T1 describes, so a silent drop discards the signal. **The check is a schema check, not a Policy Enforcement Point**: a component catalog is a registered document rather than a Policy, and validation against it yields a refusal, never a verdict. The refusal is therefore an ordinary Audit Record rather than a Policy Decision ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)), enumerated in [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3, and US2's refusal does not wait on it: the surface is never emitted, whether or not the record is yet durable. |
 | **US5** | No rail in the surface contract. Per CLAUDE.md working rule 2, [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md) and [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A8, the orchestration runtime's, a model provider's or the tool protocol's vocabulary MUST NOT appear in a UI Surface, a UI Action or a component catalog. A Tool named by a surface is named by its Tool Catalog identity and its Side-Effect Class, never by a protocol-native descriptor. |
 | **US6** | Every surface, action and catalog is tenant-scoped (invariant I1, [`../20-domain/domain-model.md`](../20-domain/domain-model.md), and [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)). A surface MUST be validated against the catalog of the Tenant that owns the Run, and a UI Action MUST resolve to that same Tenant. |
 
@@ -83,20 +83,23 @@ flowchart LR
 The left-hand check is Orchestra's and normative. The right-hand check is an implementation property
 of whichever renderer the client happens to run. They are not alternatives.
 
-**What US4's open classification costs.** If the check is a Policy Enforcement Point, then
+**What US4's classification costs.** Were the check a Policy Enforcement Point,
 [`../40-governance/policy-model.md`](../40-governance/policy-model.md) D1 and
-[ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) make *every* validation outcome a
-Policy Decision, allows included — so US4 MUST NOT be read as licence to record refusals only, and
-the volume warning in [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 4
-applies in full. The record is then fail-closed under
-[ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md): it MUST be durable before the
-surface is emitted. If the check is not an enforcement point, the write MAY degrade under that same
-ADR — and US4's tenant visibility is then only as strong as the classification, because a degraded
-write loses the injection signal as silently as the drop US4 forbids. Two smaller gaps rode along.
-Section 10 registers the one that remains: audit-model section 3 declares itself the enumeration of
-audited acts and has no row for a refused surface or for UA4's refused UI Action. The other is
-closed: a refusal no Principal caused, as a surface refused outside an enforcement point would be,
-records its cause and no Principal
+[ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) would make every validation
+outcome a Policy Decision, allows included, fail-closed under
+[ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) and at the volume
+[`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 4 warns of. It is a
+schema check instead, so a refusal is an ordinary Audit Record whose write MAY degrade under that
+same ADR (audit-model A6). Two things bound what the degradation costs. The refusal is fail-safe on
+its own account: US2 keeps the surface off the stream whether or not the record is yet durable, so
+no degraded write lets an invalid surface through. And a degraded write is not a silent one: the
+period is bracketed and recoverable from the trail, the bracket naming when it began and ended and
+the record classes, components and Tenants affected
+([`../60-operations/reliability.md`](../60-operations/reliability.md) F14). A refusal record lost
+inside such a period leaves US4 unmet for that surface, but as an attributable gap rather than a
+silent drop. One smaller gap rides along, and section 10 registers it: audit-model section 3 now
+enumerates a refused surface but has no row for UA4's refused UI Action. A refusal no Principal
+caused records its cause and no Principal
 ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 ## 3. What ships, and what is deferred
@@ -165,10 +168,14 @@ anywhere in this repository and none is invented here; section 10 registers both
 
 **Renderers.** A first-party web renderer exists, is permissively licensed and is actively
 maintained, so Orchestra would not write one for the web. **There is no React Native renderer,
-first-party or credible third-party, and none on the roadmap.**
-[`../VERSIONING.md`](../VERSIONING.md) section 7 already names `@orchestra/react-native` as a client
-SDK, so the gap is not hypothetical: **if any Orchestra surface is ever React Native, that renderer
-is Orchestra's to build and to maintain against a moving specification.**
+first-party or credible third-party, and Orchestra builds none**: one would be Orchestra's to
+maintain against a moving specification
+([`../80-reference/a2ui-evaluation.md`](../80-reference/a2ui-evaluation.md)), and nothing in scope
+needs it. The approval surface is presented to a Platform User on the web (sections 3 and 8), and
+generative UI — the general component catalog — stays deferred under ADR-0010, **Proposed**.
+`@orchestra/react-native`, which [`../VERSIONING.md`](../VERSIONING.md) section 7 names, is scoped
+accordingly: it carries the Run event stream and text and renders no UI Surface, which still serves
+an integrator building a mobile client on the stream.
 
 ## 5. The component catalog
 
@@ -278,7 +285,7 @@ repeats it with gateway-api's classification rather than closing another documen
 | **UA3** | Every UI Action resolves to exactly one Principal with the authenticated identity behind them (invariant I2, [`../20-domain/domain-model.md`](../20-domain/domain-model.md)). Where the actor is an End User, the Session Token is the authority and nothing else ([`gateway-api.md`](gateway-api.md) G4, on relationship R4 of [`../10-architecture/system-context.md`](../10-architecture/system-context.md)). |
 | **UA4** | A UI Action against a resolved Approval Request MUST be refused rather than applied, and the refusal recorded. A terminal request is permanently terminal (D3). |
 | **UA5** | A UI Action changes state, so the Gateway's rules for a state-changing request apply unchanged and are cited rather than restated: `Idempotency-Key` is request deduplication at the API boundary and MUST NOT be derived from, or mapped onto, a Step Execution's idempotency key ([`gateway-api.md`](gateway-api.md) G10, invariant I4); a replayed approval decision MUST NOT record a second decision (that document's G11, with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A3); and an idempotent replay is not a retry of a side effect, since returning a stored response is safe where re-attempting a partially executed Tool call is not, and the two MUST NOT share a code path (that document's G12). What is this document's to add: a replayed action MUST resolve to the same surface instance under UC4, so that a replay is recognisable as the same act on the same gate. |
-| **UA6** | Free text carried by a UI Action is untrusted content and MUST be treated as the object of an action, never as an instruction. Whether such content carries provenance inside the model context is undecided, registered jointly by [`../40-governance/policy-model.md`](../40-governance/policy-model.md) and the threat model, and repeated in section 10. |
+| **UA6** | Free text carried by a UI Action is untrusted content and MUST be treated as the object of an action, never as an instruction. It carries the *UI Action text* origin label inside the Run, which propagates through references and `transform` bodies and reaches every Policy evaluation as an input ([ADR-0044](../adr/adr-0044-origin-labels-on-run-data.md), [`../40-governance/policy-model.md`](../40-governance/policy-model.md) N1). No label reaches this contract, and marking such content inside the model's context is defence in depth and never a control. |
 
 **A vocabulary gap.** [`../GLOSSARY.md`](../GLOSSARY.md) defines a UI Action as raised by an **End
 User** and a UI Surface as **agent-produced**. The approval surface is neither: the platform
@@ -360,9 +367,7 @@ carry the owning document's classification unchanged and are not revised here.
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
 | Whether the external interchange is A2UI at all, and whether the approval surface is expressible in it without extension | ADR-0010 validation step 2, never attempted, against a pinned pre-1.0 version or deferred until 1.0 ships; the acceptance test is the published stability guarantee, not the version tag | No — [ADR-0010](../adr/adr-0010-a2ui-genui-interchange.md) exists |
-| Whether validating a surface against the catalog is a Policy Enforcement Point, and so whether a refusal is a Policy Decision | [`../40-governance/policy-model.md`](../40-governance/policy-model.md), whose enforcement-point rule states a minimum rather than a maximum; it changes the enforcement-point set, the record class of every refusal, whether that record is fail-closed under [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md), and what the event stream must carry | **Yes** |
 | Which web renderer path Orchestra takes — the first-party one or the other vendor's — given that renderer API drift is not contained by the adapter | A front-end platform decision when GenUI enters the roadmap; [`../80-reference/a2ui-evaluation.md`](../80-reference/a2ui-evaluation.md) records both paths and no ADR covers either | **Yes** — replacement cost rises with every surface built on the choice, and it is zero today |
-| Whether any Orchestra surface is ever React Native, given that no renderer exists and [`../VERSIONING.md`](../VERSIONING.md) section 7 already names the SDK | A product decision on mobile surfaces, with [`../../ui-template/README.md`](../../ui-template/README.md); a yes commits Orchestra to building and maintaining a renderer against a moving specification | **Yes** |
 | Whether R3 records the narrowing AS4 applies to it — a renderer failing closed only where a region AS1 requires is missing — and how the deprecation table treats a component type | [`../VERSIONING.md`](../VERSIONING.md), which owns both rules; section 9 states the reconciliation this document composes with, and it needs recording there | No |
 | Whether [`../GLOSSARY.md`](../GLOSSARY.md) widens *UI Surface* beyond agent-produced and *UI Action* beyond an End User, whether the approval surface gains its own entry, and whether *component catalog* and *surface definition* gain theirs | [`../GLOSSARY.md`](../GLOSSARY.md); section 7 names the gap and this document specifies on the wider reading meanwhile | No |
 | The accessibility conformance target for the approval surface, and who attests to it | [`../70-delivery/compliance-roadmap.md`](../70-delivery/compliance-roadmap.md) section 4, which states why no level is set: it is a procurement fact following from the buyer and the jurisdiction, and no customer exists. ADR-0004, **Proposed**, treats the absence as a procurement stop | No |
@@ -370,10 +375,9 @@ carry the owning document's classification unchanged and are not revised here.
 | Whether *request more information* is a state, given the lifecycle admits only Approved, Rejected, Expired and Withdrawn | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) | No — *repeated* |
 | Whether the Evidence Set is materialised by value or by reference | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 4; AS3 answers only the surface half | No — *repeated* |
 | How an approval transition reaches a client, and whether it survives disconnect and replay | ADR-0004 validation step 2, then [`event-protocol.md`](event-protocol.md) | No — ADR-0004 exists, *repeated* |
-| Whether untrusted content carries provenance inside the model context, of which UI Action free text is one source | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) jointly with this document, assigned by [`../40-governance/threat-model.md`](../40-governance/threat-model.md) | **Yes** if it reaches a public contract, else No — *repeated* |
 | Where the UI profile, a component catalog and a surface definition enter the artefacts that carry versions, and whether a Run pins its catalog version as invariant I3 pins the definition version it started with | [`../VERSIONING.md`](../VERSIONING.md), which enumerates those artefacts and carries none of the three; section 4 asserts the profile's version, CC6 records the catalog's and AS6 the surface definition's, and no enumeration admits them | No |
 | Whether declarative UI representations reach the Gateway contract at all, or only this document's | [`gateway-api.md`](gateway-api.md), on ADR-0010 validation step 2, **Proposed** and outstanding | No — *repeated* |
-| Which rows the audit enumeration needs for a refused UI Surface and a refused UI Action | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3, the enumeration by its own rule; a refusal no Principal caused records its cause and no Principal ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | No |
+| Which row the audit enumeration needs for UA4's refused UI Action | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3, the enumeration by its own rule, which now carries a refused UI Surface; a refusal no Principal caused records its cause and no Principal ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | No |
 | Whether an approval surface may ever be presented through a renderer Orchestra does not ship, and what conformance MUST be demonstrated first | The renderer-path decision above, with the front-end platform; AS4 binds where Orchestra ships the renderer, and section 3 defers every other case out of the first slice | No |
 
 Two questions assigned here are **answered rather than deferred**, and are absent above for that
@@ -383,3 +387,10 @@ reason. *Where the approval surface schema is specified*, assigned by
 assigned by [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md), is
 answered by section 6: a platform-composed surface class specified here. Only its glossary
 consequence survives, as one row above.
+
+Two questions registered here in the previous version have **left the register**. *Whether
+validating a surface against the catalog is a Policy Enforcement Point* is answered by US4: it is a
+schema check, a refusal is an ordinary Audit Record rather than a Policy Decision, and section 2
+states what that costs. *Whether any Orchestra surface is ever React Native* is answered by section
+4: Orchestra builds no React Native renderer, `@orchestra/react-native` is scoped to the event
+stream and text, and the approval surface is presented to a Platform User on the web.

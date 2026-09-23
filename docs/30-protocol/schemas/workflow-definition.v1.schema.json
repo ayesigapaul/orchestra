@@ -50,18 +50,14 @@
   "$defs": {
     "step": {
       "type": "object",
-      "description": "One declared Step. Every Step declares a type and a Side-Effect Class whatever else it carries.",
-      "$comment": "What each type declares beyond these two is deliberately unconstrained here. The tool object shape, how a document writes an expression, and the branch labels leaving a condition Step are notation in workflow-dsl.md's worked example and are NOT decided — sections 3 and 11 register them. The expressions themselves — a condition predicate, a data reference, a transform body — are Expression Profile expressions under ADR-0035, which workflow-dsl.md section 8 records; the compiler checks them at publication, and this schema does not. A compiler pass, not this schema, checks a Step body against the allow-list for its type. One rule about an agent or subworkflow Step is decided although the member carrying it is not: the Step names exactly one Agent or Workflow version, exact, published and not Archived, pinned when this version is published and never resolved again, and the compiler rejects any other reference (ADR-0041, VERSIONING W6, workflow-dsl.md section 5).",
-      "required": ["type", "side_effect_class"],
+      "description": "One declared Step. Every Step declares a type, and carries a Side-Effect Class the compiler derives at publication rather than one the author writes (ADR-0045).",
+      "$comment": "What each type declares beyond its type is deliberately unconstrained here, a compensating action included. The tool object shape, how a document writes an expression, and the branch labels leaving a condition Step are notation in workflow-dsl.md's worked example and are NOT decided — sections 3 and 11 register them. The expressions themselves — a condition predicate, a data reference, a transform body — are Expression Profile expressions under ADR-0035, which workflow-dsl.md section 8 records; the compiler checks them at publication, and this schema does not. A compiler pass, not this schema, checks a Step body against the allow-list for its type. One rule about an agent or subworkflow Step is decided although the member carrying it is not: the Step names exactly one Agent or Workflow version, exact, published and not Archived, pinned when this version is published and never resolved again, and the compiler rejects any other reference (ADR-0041, VERSIONING W6, workflow-dsl.md section 5).",
+      "required": ["type"],
       "properties": {
         "type": {
           "enum": ["agent", "tool", "approval", "condition", "parallel", "wait", "transform", "subworkflow"],
           "description": "The step type. The set is closed at eight.",
           "$comment": "step-types.md section 3 — a ninth type is denied by default. Only a tool Step names a Tool to invoke; every other type names none (L7). Naming a Tool, in a tool Step or in a compensating action declared on one, declares it for the Workflow version and grants nothing: a Run invokes it only under a capability grant naming the Workflow (ADR-0042, tool-authorization.md TA19 and TA20)."
-        },
-        "side_effect_class": {
-          "$ref": "#/$defs/side_effect_class",
-          "$comment": "L6 — a Step with no business effect declares a class too: the class is an input to Policy, never a precondition for evaluation (policy-model.md E3). On a tool Step the declaration is a restatement the compiler checks against the Tool Catalog registration, never an assertion it adopts; a mismatch is rejected. What a declared class constrains on the seven types that reach no Tool of their own is unmade — workflow-dsl.md section 11."
         }
       }
     },
@@ -83,7 +79,7 @@
     "side_effect_class": {
       "enum": ["read", "write", "destructive", "financial", "external-communication"],
       "description": "The declared consequence class of a Step or Tool, and a primary input to Policy.",
-      "$comment": "GLOSSARY.md, tool-authorization.md. Every Step is evaluated whatever its class (policy-model.md E3): narrowing enforcement by class would leave the platform unable to answer what an Agent read, and would make a declared class a self-issued exemption from the control that reads it."
+      "$comment": "GLOSSARY.md, tool-authorization.md. No authored member of this document references this enumeration: a Step's class is derived by the compiler at publication and carried by the compiled graph, never declared (ADR-0045). It is retained because it is the set the derived value draws from, and the set a Tool declares at registration. Every Step is evaluated whatever its class (policy-model.md E3): narrowing enforcement by class would leave the platform unable to answer what an Agent read, and would make a declared class a self-issued exemption from the control that reads it."
     }
   }
 }

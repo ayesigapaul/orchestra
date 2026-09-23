@@ -51,7 +51,7 @@ ul.docs li:first-child { border-top: 0; }
   <div class="frame"><pre class="mermaid">
 flowchart LR
   A["Agent output&lt;br/&gt;declarative UI description"] --&gt; P["Orchestra: validate against&lt;br/&gt;component catalog server-side"]
-  P --&gt;|type not in catalog| D["Denied — never emitted&lt;br/&gt;Policy Decision audited"]
+  P --&gt;|type not in catalog| D["Refused — never emitted&lt;br/&gt;recorded as an Audit Record"]
   P --&gt;|valid| S["UI Surface on the Run event stream"]
   S --&gt; R["Client renderer&lt;br/&gt;host-supplied catalog"]
   R --&gt;|type absent| F["Fails closed: error notice"]
@@ -59,7 +59,7 @@ flowchart LR
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">flowchart LR
   A["Agent output&lt;br/&gt;declarative UI description"] --&gt; P["Orchestra: validate against&lt;br/&gt;component catalog server-side"]
-  P --&gt;|type not in catalog| D["Denied — never emitted&lt;br/&gt;Policy Decision audited"]
+  P --&gt;|type not in catalog| D["Refused — never emitted&lt;br/&gt;recorded as an Audit Record"]
   P --&gt;|valid| S["UI Surface on the Run event stream"]
   S --&gt; R["Client renderer&lt;br/&gt;host-supplied catalog"]
   R --&gt;|type absent| F["Fails closed: error notice"]

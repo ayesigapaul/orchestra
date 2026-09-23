@@ -1,7 +1,7 @@
 ---
 title: Workflow Definition Language
 doc_id: DOC-061
-version: 0.19.0
+version: 0.20.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -87,17 +87,23 @@ never-reused rule covers Orchestra's own document, ADR and RFC identifiers, not 
 names — and for one reason: a definition is retained for the full audit-retention period (W4), so a
 reused name makes every audit reference to it ambiguous across that period.
 
-**L6 — Every Step declares an identifier unique within the version, a type, and a Side-Effect
-Class.** The identifier is authored, not generated, being the unit of traceability (C6) and the
-anchor of every diagnostic (C5). A Step with no business effect declares a class too: the class is
-an input to policy, never a precondition for evaluation (E3).
+**L6 — Every Step declares an identifier unique within the version and a type, and carries a
+Side-Effect Class the compiler derives.** The identifier is authored, not generated, being the unit
+of traceability (C6) and the anchor of every diagnostic (C5). The class is not authored at all: a
+Step carrying `side_effect_class` is rejected under L9, and the compiler derives the value at
+publication ([ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md)). A Step
+with no business effect carries one too, because the class is an input to policy and never a
+precondition for evaluation (E3).
 
-**On a `tool` Step the declaration is a restatement the compiler checks, never an assertion it
-adopts.** The authoritative value is the one the Tool Catalog recorded at registration
+**The derivation is fixed, and nothing in a definition moves it.** On a `tool` Step the value is the
+one the Tool Catalog recorded at registration
 ([`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA9,
-`step-types.md` S2), and section 5 rejects a mismatch rather than believing the definition. What the
-declared value constrains on the seven types that reach no Tool of their own is unmade, and is
-registered in section 11.
+`step-types.md` S2). On `condition`, `transform`, `wait`, `approval` and `parallel` it is `read` by
+rule. On an `agent` or `subworkflow` Step the Step carries the set of classes its delegation can
+reach, computed from the Tools the pinned version declares and the pinned versions it in turn names,
+and the Step's boundary evaluation receives that set. This is the constraint section 11 set on any
+answer — the value MUST NOT become a self-issued exemption — met by construction rather than by
+checking.
 
 **L7 — A `tool` Step names exactly one Tool to invoke; every other type names none**
 ([`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 5). It pins the MAJOR
@@ -115,8 +121,16 @@ the Tool's own (TA9). It therefore carries no Step identifier, declares no class
 boundary. It is governed where every Tool invocation is governed, at the enforcement point
 [`../40-governance/policy-model.md`](../40-governance/policy-model.md) E1 places before any Tool
 invocation — not by a Step boundary, there being no Step — and section 5 validates the Tool it names
-on the same terms as the one it compensates. Whether the language admits a compensating action that
-is anything other than a Tool invocation is open, assigned here by X21 and registered in section 11.
+on the same terms as the one it compensates.
+
+**A Step need not declare one, and its declaration overrides the Tool's.** A Tool whose class is
+`write`, `destructive` or `financial` names its compensating Tool and an argument mapping when it is
+registered, or records that it has none
+([ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md)). Where a `tool`
+Step declares a compensating action, that is what is attempted; where it does not, the registered
+one is; and a Step whose Tool is registered with none and which declares none is rejected at
+publication. Whether the language admits a compensating action that is anything other than a Tool
+invocation is open, assigned here by X21 and registered in section 11.
 
 **L8 — Control flow lives in `edges`, never inside a Step body.** The trade-off is real: an explicit
 edge list is more verbose than a `next` field per Step. It buys a graph analysable without reading
@@ -166,26 +180,21 @@ entry: fetch-request
 steps:
   fetch-request:
     type: tool
-    side_effect_class: read
     tool: { name: erp.purchase_request.get, schema_major: 1 }
     arguments: { request_id: "${inputs.purchase_request_id}" }
   assess:
     type: agent
-    side_effect_class: read
     # Pinned: publishing purchase-approval@3 froze this exact version into it, and the Agent
     # executes inside this Run rather than as a Run of its own (ADR-0041).
     agent: { name: procurement-analyst, version: 2 }
     input: { request: "${steps.fetch-request.output}" }
   route:
     type: condition
-    side_effect_class: read
     when: "<predicate — an Expression Profile expression, its form here undecided, section 11>"
   approve:
     type: approval
-    side_effect_class: read
   issue-po:
     type: tool
-    side_effect_class: financial
     tool: { name: erp.purchase_order.create, schema_major: 2 }
     arguments: { request_id: "${inputs.purchase_request_id}" }
     compensation:
@@ -194,7 +203,6 @@ steps:
       arguments: { purchase_order_id: "${steps.issue-po.output.purchase_order_id}" }
   notify:
     type: tool
-    side_effect_class: external-communication
     tool: { name: notify.email.send, schema_major: 1 }
     arguments: { to: "${steps.fetch-request.output.requested_by_email}" }
 edges:
@@ -210,14 +218,14 @@ edges:
 table gives, and nothing past the keys in that table. Everything else is notation chosen to make the
 shape readable, and MUST NOT be read as decided: the form of the predicate in `route` and of the
 `${…}` references, which are Expression Profile expressions (section 8) written in a notation
-section 11 registers, and the branch labels leaving `route`; the `inputs` type
-notation and the choice of YAML as the concrete syntax, registered with the type system in section
-11; the `tool: { name, schema_major }` and `agent: { name, version }` object shapes, though the pin
-on `assess` is decided
-([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)); and the class
-declared on the `agent`, `condition` and `approval` Steps, whose meaning on a type that reaches no
-Tool is itself open in section 11. A list of exceptions has to be recounted every time the example
-changes; the rule that the table is the specification does not.
+section 11 registers, and the branch labels leaving `route`; the `inputs` type notation and the
+choice of YAML as the concrete syntax, registered with the type system in section 11; the `tool: {
+name, schema_major }` and `agent: { name, version }` object shapes, though the pin on `assess` is
+decided ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). No Step in
+the example declares a Side-Effect Class, because none may: the compiler derives it
+([ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md)). A list of
+exceptions has to be recounted every time the example changes; the rule that the table is the
+specification does not.
 
 [`examples/purchase-approval.md`](examples/purchase-approval.md) walks this definition through as a
 Run, enforcement point by enforcement point.
@@ -277,9 +285,8 @@ adds indirection when debugging. C5 and C6 pay that down.
 | --- | --- | --- |
 | Construct recognition | The document conforms to the published definition schema, and every key, closed-set value and step type is one the compiler recognises — checked against an allow-list, the schema itself staying open | Rejected — L9 |
 | Step-type membership | Every `type` is in the closed set of section 7 | Rejected — L10 |
-| Side-Effect Class | Every Step declares one, from the enumeration fixed in the glossary | Rejected — L6 |
-| Registered class match | On a `tool` Step the declared class equals the class the Tool Catalog recorded at registration. A restatement that differs is a mismatch, never an override | Rejected — L6, `tool-authorization.md` TA9, `step-types.md` S2 |
-| Compensation | Every `write`, `destructive` and `financial` Step declares a compensating action | Rejected — `execution-semantics.md` X15 |
+| Side-Effect Class | No Step declares one. The compiler derives the value: `read` on `condition`, `transform`, `wait`, `approval` and `parallel`; the registered class on a `tool` Step; the set its delegation can reach on an `agent` or `subworkflow` Step | A Step carrying `side_effect_class` is rejected — L6, L9, [ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md) |
+| Compensation | Every `write`, `destructive` and `financial` Step has a compensating action: the one it declares, or the one its Tool's registration names | Rejected — `execution-semantics.md` X15, [ADR-0046](../adr/adr-0046-compensation-is-declared-on-the-tool-registration.md) |
 | Tool reference | Every Tool named — the Step's own and the one in its compensating action — is registered in this Tenant's Tool Catalog, pins its schema MAJOR, and passes arguments conforming to that major | Rejected — L7, W5, `execution-semantics.md` X21 |
 | Agent and Workflow reference | An `agent` or `subworkflow` Step names an exact version, already published within the Tenant and not `Archived`, and publication pins it. A reference naming no exact version, or a version not yet published, is rejected, so no reference cycle across definitions can form | Rejected — `step-types.md` sections 5 and 12; [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) |
 | Graph well-formedness | Step identifiers unique, `entry` names a declared Step, every edge names declared Steps, every Step reachable from `entry`, and the graph acyclic | Rejected — L8, L11 |
@@ -323,6 +330,17 @@ R2 and costs a customer nothing. Removing one is MAJOR, and VERSIONING section 1
 24 months of notice — matching a Gateway API major version, the longest in that table. Cheap to add,
 close to irreversible: the profile that belongs in an ADR. ADR-0005's escape hatch is itself a step
 type, gated identically — it admits a capability under review rather than around it.
+
+**A reviewed custom step type is a platform-wide type that Orchestra implements**, available to
+every Tenant on the same terms as the eight and admitted by an ADR of its own — never raw customer
+code, as [ADR-0016](../adr/adr-0016-compile-to-the-langgraph-library.md) carries the hatch forward.
+It is not a Tenant-private type, which would make the language a different contract in each Tenant,
+and it is not a customer plugin, which is executable customer code and what L1 forbids. Every ADR
+admitting one is reviewed against the same fixed criteria, so that one can be compared with the
+next: no construct that suppresses an enforcement point (E2); a Side-Effect Class rule consistent
+with ADR-0045's derivation, with compensation semantics; deterministic compilation (C4) with no rail
+vocabulary (L4); and the 24-month deprecation liability above. `step-types.md` section 3 states
+them, being where a ninth-type proposal starts.
 
 ## 8. Expressions — where a definition language becomes a programming language
 
@@ -371,9 +389,26 @@ in the permissive direction, and W1 then freezes every definition written under 
 later is MINOR under R2, while withdrawing them is MAJOR and needs deprecation under R5 against
 every definition already published. Deny-by-default is the reversible direction, and it is the rule
 this document already applies to an unrecognised construct (L9) and to a ninth step type (L10).
-What it costs an author is every process a loop expresses, and what would restore them is the ADR
-registered in section 11 — which has to supply the bounds first, because a language that admits
-non-termination with no bound decided anywhere is not a governed one.
+What it costs an author is every process a loop expresses.
+
+**What an ADR admitting cycles has to supply.** L11 stands, and section 11 no longer holds the
+question open. What would restore those processes is an ADR admitting cycles, and a language that
+admits non-termination with no bound decided anywhere is not a governed one, so that ADR has to
+supply four things besides the permission:
+
+- **A per-cycle iteration bound**, so that no cycle iterates without limit.
+- **A platform maximum**, holding across every definition, so that the limit on iteration is never
+  left to each definition alone.
+- **A terminal outcome when a bound is exceeded.** ADR-0009 meters Runs by outcome, and
+  `execution-semantics.md` section 10 holds that the outcomes it enumerates stay distinguishable and
+  cannot be added retroactively, so the outcome is named before any Run can reach it.
+- **Rejection of cycles across definitions.** Definitions nest only as pinned references: the child
+  definition version an `agent` or `subworkflow` Step names is pinned when its parent is published
+  (ADR-0041). A pinned version is therefore always published before the version that pins it, so
+  no chain of pinned references returns to a version already on it, and an ADR admitting cycles
+  inside one definition keeps that property rather than admitting a cycle through a reference.
+
+No figure for either bound is decided, and none appears here.
 
 ## 9. Schema-first authoring, and why there is no designer at MVP
 
@@ -410,16 +445,13 @@ components. Rows marked *repeated* carry another document's classification uncha
 
 | Question | ADR required? | Decided by |
 | --- | --- | --- |
-| What admitting a cycle would require — a step limit, an iteration bound and an answer for non-termination — and so whether the language ever admits iteration | **ADR** | An ADR beside ADR-0035, which admits no iteration. L11 rejects a cyclic graph in the interim, so nothing frozen under W1 depends on an answer nobody has given; admitting cycles later is MINOR under R2, withdrawing them would be MAJOR. The ADR has to supply the bounds, not only the permission |
 | Whether the Step-boundary and Tool enforcement points collapse into one evaluation for a `tool` Step | Document — *repeated* | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9, with a later revision of that document. Disposition below |
-| What a Side-Effect Class means on the seven types that reach no Tool of their own, and whether the compiler constrains the declared value or accepts the author's assertion | **ADR** — *repeated* | [`../40-governance/policy-model.md`](../40-governance/policy-model.md), whose rule N1 makes the class a primary evaluation input, with this document; registered by `step-types.md` section 13. Disposition below |
 | Graph shape past well-formedness — whether a `condition` branch set must be exhaustive, and whether nesting depth is bounded | Document | This document, which owns schema and graph shape; assigned here by `step-types.md` section 13. L11 rejects a cycle inside one definition, and [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) makes a reference cycle across definitions impossible to form, since a reference names only a version already published |
 | Whether a newly published version may name a version of another definition that is already `Retired` | Document | This document, with section 5's reference check. [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) fixes only that an `Archived` version cannot be named, and W4 stops only the Runs that target a Retired version |
 | Whether concurrent branches of a `parallel` Step may write the same data, and what wins if they do | Document | This document with the type-system row below, data flow being a schema question; assigned here by `step-types.md` section 9 |
 | The type system for `inputs` and Step outputs, whether the schema borrows an existing schema language, and which concrete syntax is canonical | Document | This document with the `workflow-definition` schema slot reserved in [`../VERSIONING.md`](../VERSIONING.md) section 6. W1 needs one canonical form to freeze and to diff. Now that [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) has fixed the expression language, this row includes how a document marks a value as an expression rather than a literal, and the branch labels leaving a `condition` or `parallel` Step |
 | Whether a `wait` condition is an Expression Profile expression or a structured time value, such as an ISO 8601 duration or an RFC 3339 time | Document | This document with [`step-types.md`](step-types.md) section 10. [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) covers predicates, data references and `transform` bodies, not the `wait` condition |
 | Whether compiler diagnostics are a versioned contract with stable codes a customer's build can assert against | Document | This document with the error-envelope decision registered in [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md). C5 fixes a diagnostic's content, not its stability |
-| What a reviewed custom step type is, and what review admits one | **ADR** | ADR-0005 names it as the escape hatch and ADR-0008 requires an ADR per step type, so each instance is gated. The general shape of the hatch is unmade |
 | Whether the language admits a compensating action that is anything other than a Tool invocation | Document | This document, assigned here by `execution-semantics.md` X21. That document's section 6 now fixes what a declaration contains and what executing one means — X15 to X21 — leaving only what the language admits, which L7 does not widen |
 | Whether a definition may be imported from a customer-held repository rather than authored in the Control Plane | Document | A product decision with `control-plane.md` in [`../10-architecture/`](../10-architecture/); ADR-0008 requires only that authoring be schema-first and reviewed as code |
 
@@ -437,11 +469,12 @@ constraint added here is that E6 must survive the collapse — the action evalua
 executed — so one evaluation works only where it has the Tool's arguments in hand. The
 classification stays Document, with its owner.
 
-`step-types.md` section 13 assigns the Side-Effect Class question jointly. Taking it: the language
-contributes L6 and section 5 and nothing further — every Step declares a class; on a `tool` Step the
-declaration is checked against the Catalog and a mismatch rejected (TA9, S2); on the other seven the
-compiler can check membership of the enumeration and no more, because no more is decided. The
-constraint the language adds is that whatever the value comes to mean there, it MUST NOT become a
-self-issued exemption: E3 evaluates every Step whatever the class, so an author writing `read`
-narrows no coverage and buys no silence. The row keeps the **ADR** classification its registering
-document gave it, with `policy-model.md`.
+`step-types.md` section 13 assigned the Side-Effect Class question jointly, and it is now answered.
+The constraint the language contributed decided it: whatever the value came to mean, it MUST NOT
+become a self-issued exemption, and only a derived value guarantees that.
+[ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md) therefore takes the
+value out of the document — L6 and section 5 above — and the compiler computes it at publication
+from the type, the Tool Catalog and, for a delegating Step, the Tools its pinned version declares.
+E3 still evaluates every Step whatever the class, so nothing about coverage rested on the answer;
+what rested on it was whether a rule keyed on `financial` could be defeated by an author writing
+`read`, and it can no longer be.

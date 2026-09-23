@@ -66,6 +66,9 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0041 | A nested Agent or Workflow version executes inside its parent Run, pinned when the parent version is published | Accepted |
 | 0042 | Versions declare the Tools they may call; a capability grant names the Agent or Workflow, is read at every Tool invocation and is revocable at once | Accepted |
 | 0043 | An Approval Chain's positions are each satisfied by one eligible Platform User, and any rejection is decisive; the human who initiated the Run never approves it; one request carries every matching rule's chain; chains are reassigned by hand only, never onto the reassigner; a Policy may declare a decision deadline | Accepted |
+| 0044 | Run data carries origin labels, they propagate through references and transforms, and Policy reads them | Accepted |
+| 0045 | The compiler derives a Step's Side-Effect Class; a delegating Step carries the set its delegation can reach | Accepted |
+| 0046 | A Tool declares its compensating Tool at registration, and a Step's own declaration overrides it | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

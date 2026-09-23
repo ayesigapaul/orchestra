@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.47.0
+version: 0.48.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -18,6 +18,56 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.48.0] — 2026-09-23
+
+The last three decisions, and the five the registers could settle without one: where a value in a
+Run came from, what fixes a Step's Side-Effect Class, and where a compensating action is declared.
+
+### Added
+
+- `adr/adr-0044-origin-labels-on-run-data.md` — every value in a Run's data carries origin labels
+  from a closed set of six, propagating through references and `transform` bodies and reaching
+  Policy as an input. A model's output carries *model output* and nothing else, so passing a value
+  through a model neither preserves nor launders its origin.
+- `adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md` — the compiler derives a Step's
+  class at publication and an author writes none: `read` by rule on the five types that reach no
+  Tool, the registered class on a `tool` Step, and the set a delegation can reach on an `agent` or
+  `subworkflow` Step.
+- `adr/adr-0046-compensation-is-declared-on-the-tool-registration.md` — a Tool classed `write`,
+  `destructive` or `financial` declares its compensating Tool and an argument mapping when it is
+  registered, or records an explicit none. That covers a call the model chose, which no Step could
+  declare for.
+
+### Changed
+
+- `GLOSSARY.md` (0.14.0) — origin labels, and a Step carries a class rather than declaring one.
+- `VERSIONING.md` (0.17.0) — what an ADR admitting cycles has to supply, and the client SDK scoped
+  to the event stream.
+- `40-governance/threat-model.md` (0.12.0) — T5 records that credential custody is write-only and
+  no break-glass decrypt exists, and T1's origin labels are defence a Policy can rely on.
+- `40-governance/policy-model.md` (0.10.0), `audit-model.md` (0.11.0) and `tool-authorization.md`
+  (0.11.0) — labels as an evaluation input, the refused surface enumerated, and the registered
+  compensation.
+- `50-workflows/step-types.md` (0.13.0), `workflow-dsl.md` (0.20.0) and `execution-semantics.md`
+  (0.13.0) — the derived class, what a reviewed custom step type is, the conditions an ADR admitting
+  cycles must meet, and where a compensating action is declared. The cycle rows leave both
+  registers.
+- `30-protocol/ui-protocol.md` (0.17.0) and `event-protocol.md` (0.11.0) — catalog validation is a
+  schema check rather than an enforcement point, and Orchestra builds no React Native renderer.
+- `10-architecture/control-plane.md` (0.19.0) and `identity-and-access.md` (0.18.0) — the Catalog
+  records the compensation, and custody stays write-only.
+- `50-workflows/examples/` and `00-overview/roadmap.md` (0.15.0) — the worked examples and the
+  roadmap follow these records.
+- `80-reference/a2ui-evaluation.md` (0.7.0) — its safety diagram calls the refusal an Audit Record
+  rather than a Policy Decision, which is the option taken.
+- `30-protocol/schemas/policy-rule.v1` and `workflow-definition.v1` — origin labels and the derived
+  class as inputs, and `side_effect_class` leaves a Step. Removing it is MAJOR under R2 and is spent
+  here because the schema has no producer and no consumer.
+- `adr/README.md` (0.34.0) — indexes ADR-0044 to ADR-0046.
+- `CLAUDE.md` records the three decisions.
 
 ---
 

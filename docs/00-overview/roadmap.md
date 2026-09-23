@@ -1,9 +1,9 @@
 ---
 title: Roadmap
 doc_id: DOC-015
-version: 0.14.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0014, ADR-0015]
 ---
@@ -158,7 +158,8 @@ definitions to expected compiled graphs.
 **Exit:**
 
 - The MVP Step types compile: `agent`, `tool`, `approval`, `condition`, `parallel`, `wait`,
-  `transform`, `subworkflow`. Every Step declares a Side-Effect Class.
+  `transform`, `subworkflow`. Every Step carries a Side-Effect Class the compiler derives
+  ([ADR-0045](../adr/adr-0045-the-compiler-derives-a-steps-side-effect-class.md)).
 - The compiler emits a Policy Enforcement Point at every Step boundary, so policy cannot be bypassed
   by how a definition is written, and every compiled graph traces back to its source definition,
   version and Step identifiers.

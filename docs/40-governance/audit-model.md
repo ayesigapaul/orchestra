@@ -1,7 +1,7 @@
 ---
 title: Audit Model
 doc_id: DOC-054
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -185,6 +185,7 @@ makes each row a derivation rather than a preference.
 | Run admission, and every Run state transition | The admission Policy Decision, the pinned Agent or Workflow version, and the cause of each transition; for cancellation, the cancelling Principal and any Step Execution in flight; for `Denied`, the enforcement point and the Policy Decision or Approval Request that refused; for every terminal state, the compensation outcome and each Step Execution it names as unresolved | [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md), invariant I3, [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md), [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) |
 | Step Execution start and terminal transition | The Run, the Step, the Side-Effect Class, the outcome, and the idempotency key the Step Execution is scoped to; for a Step inside a `subworkflow` Step, also the Step Execution it executes under and the Workflow version that declares the Step | Invariant I4, ADR-0009 — Step Executions is a metered dimension; [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) |
 | Tool invocation | The Tool, its Side-Effect Class, and the execution it belongs to — the Step Execution in a Workflow Run; an Agent Run has none, and that grain is open (sections 7 and 13) | GLOSSARY, ADR-0009 |
+| A UI Surface refused at catalog validation | The Run, the Agent version that produced the surface, the component catalog version it was validated against, and what failed — a component type absent from the catalog, or a property failing its type's schema. Its Principal under A3 is not settled, an Agent not being one; section 9 holds attribution open | [`../30-protocol/ui-protocol.md`](../30-protocol/ui-protocol.md) US2, US4 and CC6; [`threat-model.md`](threat-model.md) T1, of which a refusal is the signal |
 | Approval Request raise | The causing Policy Decision, the proposed action, the Evidence Set, the Approval Chain as resolved | Section 5 |
 | Each approval decision, and the resolution | The deciding Principal, the authenticated identity, which decisions satisfied the chain, and whether a Run suspended on it resumed or a compensating action waiting on it was attempted | Section 5 |
 | Amendment of an Approval Chain after it was resolved — a reassignment by hand, the only amendment there is | The cause, the acting Principal, and the chain before and after | [`approval-workflows.md`](approval-workflows.md) sections 5 and 9, [`threat-model.md`](threat-model.md) |
@@ -212,6 +213,14 @@ defect in whichever list is shorter.
 **The compiled artifact is retained, not exposed.** The publication row keeps it so a Run's process
 can be reconstructed, which [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md)
 sanctions. It is not part of the tenant-readable surface: see section 8, and A8 for why.
+
+**A refused UI Surface is an ordinary record, not a Policy Decision.** Validating a surface against
+the component catalog is a schema check and not a Policy Enforcement Point
+([`../30-protocol/ui-protocol.md`](../30-protocol/ui-protocol.md) US4), so its row sits outside the
+fail-closed class. Under A4 the record says that no Policy Decision applies rather than omitting the
+field, and under A6 its write MAY degrade, the degraded period bracketed and recoverable rather than
+silent. The refusal itself does not wait on the record: the surface is never emitted, whether or not
+the record is yet durable.
 
 ## 4. Policy Decisions, including allows
 
