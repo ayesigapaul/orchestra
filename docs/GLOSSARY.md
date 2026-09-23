@@ -1,7 +1,7 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -79,21 +79,30 @@ administers in Orchestra. Distinct from a capability grant, which lets an Agent 
 
 ## Execution
 
-**Agent** — a versioned, declarative definition: instructions, permitted tools, model binding,
+**Agent** — a versioned, declarative definition: instructions, declared tools, model binding,
 policy bindings, and bounds. An Agent is configuration, not code.
 
 **Workflow** — a versioned, declarative graph of Steps defining a business process. Steps may be
-deterministic or agentic. Compiled, not interpreted. See
+deterministic or agentic. Compiled, not interpreted. A published version pins the exact version of
+each Agent and Workflow its Steps name
+([ADR-0041](adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). See
 [`50-workflows/`](50-workflows/).
 
 **Step** — one node in a Workflow. Typed: `agent`, `tool`, `approval`, `condition`, `parallel`,
 `wait`, `transform`, `subworkflow`. Every Step declares a Side-Effect Class.
 
 **Run** — one execution of an Agent or Workflow. The primary unit of execution, observability,
-billing and audit. Pins the definition version it started with, for its whole life.
+billing and audit. Pins the definition version it started with, for its whole life. A version that
+an `agent` or `subworkflow` Step names executes inside the Run, never as a Run of its own.
 
 **Step Execution** — one execution of one Step within a Run. The unit at which idempotency keys,
 retries and compensation apply. *Not* the Run.
+
+**Compensation outcome** — whether a Run's work was undone, carried by every Run in a terminal
+state: `not_required`, `compensated` or `unresolved`, the last naming each Step Execution whose
+effect remains. It sits beside the terminal state, which says why the Run ended, and neither is
+derived from the other. See
+[ADR-0040](adr/adr-0040-run-outcomes-for-refusal-and-compensation.md).
 
 **Conversation** — an ordered sequence of Messages between an End User and an Agent, spanning one or
 more Runs.
@@ -117,8 +126,15 @@ and an authorization binding. Exposed to Orchestra via MCP or a native adapter.
 policy: `read` · `write` · `destructive` · `financial` · `external-communication`.
 
 **Tool Catalog** — the tenant-scoped registry of Tools available for binding to Agents and Workflows.
-Registration in the Catalog is an administrative act, distinct from an Agent being permitted to call
-the Tool.
+Registration in the Catalog is an administrative act, distinct from the capability grant that
+permits an Agent or a Workflow to call the Tool.
+
+**Capability grant** — an administrative act, separate from registration, permitting one Agent or
+Workflow to call one Tool registered in its Tenant's Tool Catalog. It names the definition, never a
+version, and carries no condition on a call. It covers only a Tool the pinned version declares, is
+read at every Tool enforcement point, never reaches a Run admitted before it, and its revocation
+takes effect at once. *Grant* is its short form. See
+[ADR-0042](adr/adr-0042-declared-tools-and-capability-grants.md).
 
 **Connector** — customer-deployed software running inside the customer's network. Establishes an
 outbound session to Orchestra and proxies Tool traffic inward. Requires no inbound firewall rule. See
@@ -153,8 +169,10 @@ audited, including allows. See [ADR-0012](adr/adr-0012-policy-decisions-are-audi
 **Approval Request** — a human decision gate raised by a `require_approval` verdict. Carries the
 proposed action, the evidence the agent relied on, the routing chain, and its resolution.
 
-**Approval Chain** — the ordered or parallel set of Principals whose decisions an Approval Request
-requires, derived from policy.
+**Approval Chain** — the ordered or parallel positions whose decisions an Approval Request
+requires, derived from policy. When the request is raised, each position resolves to the Platform
+Users eligible to decide it, and one approval from any of them satisfies it
+([ADR-0043](adr/adr-0043-approval-chains-and-separation-of-duties.md)).
 
 **Audit Record** — an append-only, immutable fact about something that happened, sufficient to
 reconstruct who did what, when, on what basis, and under which Policy version. Audit is a product

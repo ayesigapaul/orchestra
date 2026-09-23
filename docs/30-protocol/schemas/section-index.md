@@ -1,7 +1,7 @@
 ---
 title: Schemas
 doc_id: DOC-041
-version: 0.16.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -56,12 +56,13 @@ conformance suite the profile requires, which does not exist yet.
 
 **They do not invent what is unmade.** Where a decision is missing the member is unconstrained and
 the `$comment` says which document owns it. The Expression Profile's inputs and functions, how a
-definition marks an expression, what satisfies an Approval Chain, and the frame vocabulary on the
-Connector tunnel are all left open on purpose. A schema is the worst place to guess, because a guess
-published here is a contract. The expression language itself is decided by
+definition marks an expression, how a Policy names the Principals eligible at an Approval Chain's
+position, and the frame vocabulary on the Connector tunnel are all left open on purpose. A schema is
+the worst place to guess, because a guess published here is a contract. The expression language
+itself is decided by
 [ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md), and publication
-checks it: constraining a member these files left open would tighten it, which VERSIONING §6
-forbids in place.
+checks it: constraining a member these files left open would tighten it, which VERSIONING §6 forbids
+in place.
 
 ## What is not here
 

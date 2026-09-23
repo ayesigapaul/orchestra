@@ -1,11 +1,11 @@
 ---
 title: Execution Semantics
 doc_id: DOC-063
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0012, ADR-0013]
+depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Execution Semantics
@@ -67,7 +67,9 @@ terminal or not: each is the Run pretending to be the unit I4 says it is not.
 
 **X2 — A Run pins its Workflow or Agent version at admission and executes that version to
 completion** (W2, invariant I3). The pin survives publication of a newer version and retirement of
-the pinned one.
+the pinned one. So do the versions that version's `agent` and `subworkflow` Steps name, which were
+pinned when it was published and execute inside the Run (W6,
+[ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)).
 
 **X3 — In-flight executions are never migrated** (W3). An implementation MUST NOT provide any
 operation, API, control-plane action, support procedure or migration tool that moves a Run in
@@ -93,17 +95,16 @@ customer asks, **the correct answer is to refuse.** Three reasons, each sufficie
   effect already taken. Migration cannot preserve it, and nothing weaker is worth preserving.
 
 **X4 — Three things pin at one moment, and the Tool Catalog is not one of them.** A Run pins its
-definition version, the Policy versions in force (ADR-0012), and — under W5, for Workflow versions
-— the MAJOR version of each Tool schema referenced. It does **not** pin Catalog registration state:
-that reaches each enforcement point as an evaluation input (`policy-model.md` rule N1), which is
-what makes section 9 possible, and is the half
-[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 8
-assigns here. **Whether the capability grant set is pinned is a different question and not this
-document's.** That document's section 10 marks it ADR-required, together with whether an
-immediately effective revocation path exists and whether it overrides a Run's pin, and its section
-8 gives the pinned reading as the defensible one. Nothing below assumes either answer. W5 is
-pointedly not extended to Agent definitions, so whether an Agent version pins a Tool's MAJOR schema
-version is unsettled; the same register carries it.
+definition version, the Policy versions in force (ADR-0012), and — under W5, for Agent and Workflow
+versions alike — the MAJOR version of each Tool schema the version declares. It does **not** pin
+Catalog registration state: that reaches each enforcement point as an evaluation input
+(`policy-model.md` rule N1), which is what makes section 9 possible. **Capability grants are not
+pinned either, and they never widen a Run.** The Tools a version declares are part of the version
+and pin with it, as a ceiling on what the Run can reach. The grants naming its definition are read
+at every Tool enforcement point, where one satisfies only if it stood at the Run's admission and
+still stands ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md),
+`tool-authorization.md` TA19 to TA24). A grant made after admission never reaches the Run, and a
+revocation reaches it at the next attempt.
 
 **X5 — Retirement drains, it does not kill** (W4). `Published → Retired` changes one thing:
 admission stops pinning new Runs. Runs already pinned are untouched, and `Retired → Archived` is an
@@ -138,6 +139,11 @@ reconstruct as one act against one version rather than as N coincidences —
 [`../40-governance/audit-model.md`](../40-governance/audit-model.md) rule A4 requires a record
 sufficient to reconstruct the event, and *on what basis* is the part that decomposition would
 otherwise lose.
+
+**A force-drain reaches only the Runs pinned to the version it drains.** A version that another
+version names through an `agent` or `subworkflow` Step cannot be archived until that version is
+(W6, [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)), so draining it
+ends in `Archived` only once each version naming it has been archived as well.
 
 **A force-drain MUST NOT be paired with re-submission as one act.** X1 permits a new Run
 referencing an ended one, and X6 permits ending Runs in bulk; composing the two into a
@@ -213,12 +219,11 @@ audited.
 evaluation before *the action* and each attempt is an action; ADR-0013 requires the decision
 durable first. The cost is that *n* attempts write *n* Policy Decisions; the benefit is what
 section 9 depends on — a Tool de-registered between attempts stops the second one, Catalog
-registration state being an evaluation input rather than something the Run pinned (X4). Whether a
-*withdrawn grant* bites the same way is a different question and an unmade one:
-`tool-authorization.md` section 10 marks both grant-set pinning and an immediately effective
-revocation path ADR-required, and section 11 repeats that classification rather than assuming an
-answer. Policy itself cannot change under a Run in flight, which pinned its Policy versions at
-admission.
+registration state being an evaluation input rather than something the Run pinned (X4). A
+*withdrawn grant* bites the same way: a capability grant revoked between attempts stops the second
+one, and so does a grant left stale by a change of the Tool's Side-Effect Class
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)). Policy itself cannot change
+under a Run in flight, which pinned its Policy versions at admission.
 
 ## 5. The grain of a Tool call inside an Agent Run
 
@@ -263,7 +268,7 @@ naming it here.
 
 **What this does not settle, and where the same hole reappears.** A compensating action is declared
 on a Step (I4), and an Agent Run has no Step to carry one. Either the Tool's Catalog registration
-carries it or the Agent version declares it beside the permitted Tool — both change a permanent
+carries it or the Agent version declares it beside the Tool it declares — both change a permanent
 public contract, so section 11 marks it **ADR**. Until it lands, a `write`, `destructive` or
 `financial` Tool call in an Agent Run has nowhere to declare the compensating action X15 requires.
 The hole is reachable from inside a Workflow Run too: an `agent` Step *is* a Step, with its own
@@ -271,8 +276,9 @@ Step Execution and its own boundary evaluation, but [`step-types.md`](step-types
 fixes that a definition constrains the delegation's declared class and not the order, count or
 arguments of the calls the model makes — so a model-chosen invocation inside it has no declaration
 of its own either. Section 11 registers that residual against the same question. Which invocations
-are reachable at all is bounded by the Agent version's grant set, whose subject
-`tool-authorization.md` section 8 leaves unfixed.
+are reachable at all is bounded by the Tools the Agent version declares, each still needing a
+capability grant naming the Agent that stood at the Run's admission and still stands
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)).
 
 ## 6. Compensation
 
@@ -357,20 +363,45 @@ this one.
 ### 6.2 What happens when compensation itself fails
 
 ADR-0008 says compensation cannot be deferred indefinitely. It does not say what happens when a
-compensating action fails, and nothing else here does either. This document will not invent it. A
-failed compensating action leaves a Run with a **known unresolved side effect** — worse than an
-unknown one, because the platform can name it. Three candidates exist: a terminal `Failed` carrying
-an attribute marking unresolved compensation; a distinct terminal state; or suspension for human
-resolution, which converts a fault into an approval-shaped gate and gives the Run an unbounded
-lifetime.
+compensating action fails. A failed compensating action leaves a Run with a **known unresolved side
+effect** — worse than an unknown one, because the platform can name it. Three candidates were
+weighed: a terminal `Failed` carrying an attribute marking unresolved compensation; a distinct
+terminal state; or suspension for human resolution, which converts a fault into an approval-shaped
+gate and gives the Run an unbounded lifetime.
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) takes none of the three,
+and separates the two facts instead.
 
-**X23 — On any of them, an unresolved compensation MUST be a distinct recorded fact and MUST NOT be
-collapsed into a generic failure.** A Run that failed cleanly and a Run that failed leaving a
-payment made are different facts about the business, ADR-0009 meters Runs *by outcome*, and the
-outcome is what a customer disputes — `approval-workflows.md` rule J1's requirement in a different
-place. Choosing among the three needs a Run terminal state or outcome dimension that does not
-exist: an event-protocol enumeration under C2 and a metered dimension under ADR-0009. Marked
-**ADR**.
+**X23 — An unresolved compensation MUST be a distinct recorded fact and MUST NOT be collapsed into
+a generic failure.** A Run that failed cleanly and a Run that failed leaving a payment made are
+different facts about the business, ADR-0009 meters Runs *by outcome*, and the outcome is what a
+customer disputes — `approval-workflows.md` rule J1's requirement in a different place.
+
+**X33 — A Run's terminal state says why it ended, and its compensation outcome says whether its
+work was undone.** Every Run in a terminal state carries exactly one compensation outcome, and
+neither axis is derived from the other.
+
+| Compensation outcome | Meaning |
+| --- | --- |
+| `not_required` | Nothing the Run did called for compensation |
+| `compensated` | Every compensating action the Run called for completed |
+| `unresolved` | At least one did not: it failed, was refused at its own enforcement point, had its gate rejected or expire (X35), was stranded (`reliability.md` F21), or has an unknown outcome (X17). The outcome names each Step Execution whose effect remains |
+
+Compensation can therefore fail terminally without a Run state of its own: the Run ends in the state
+it was heading for (X34), with `unresolved` beside it. A compensating action follows no edge, being
+no Step (X21), so a refusal of one changes neither the terminal state nor the path; it leaves the
+effect `unresolved`. Resolving that effect later is a new governed act with its own record and
+Principal, never a reopened Run (X1, `audit-model.md` section 6).
+
+**X35 — A compensating action that `require_approval` gates waits in `Compensating`.** It raises an
+Approval Request like any gated action (X16), and the Run stays `Compensating` while the request is
+pending, with no transition to `Suspended`. Approved, the action is attempted. Rejected or expired,
+its effect is recorded `unresolved` (X33). The request's decision deadline, where the Policy that
+raises it sets one (ADR-0043), bounds the wait, and X27 still forbids a cancellation from abandoning
+it.
+
+For a Tool invocation in an Agent Run, or one the model chose inside an `agent` Step, these rules
+hold and the naming does not yet. Its compensating action is declared on the Tool's registration
+(ADR-0046), and what an `unresolved` outcome names for it waits on the anchor section 11 registers.
 
 ## 7. Cancellation
 
@@ -407,41 +438,58 @@ state machine agrees, since no transition leaves `Compensating` except to a term
 problem.** The transition MUST trigger the declared compensating actions of completed
 side-effecting Step Executions on the same terms as failure.
 
-X28 collides with the state machine as drawn, and the collision is the machine's, not the rule's.
-`Running → Cancelled` is direct and `Compensating` leaves only to `Failed`, so a cancelled Run that
-must compensate reaches no terminal `Cancelled` and would meter as a failure under ADR-0009 — the
-defect J1 names, from a third direction. Section 11 marks it **ADR**, plausibly one ADR with
-sections 6.2 and 8: the Run's terminal state conflates *why the Run ended* with *whether its work
-was undone*.
+X28 collided with the state machine as first drawn, where `Compensating` left only to `Failed`, so a
+cancelled Run that compensated would have metered as a failure — the defect J1 names, from a third
+direction. The Run's terminal state conflated *why the Run ended* with *whether its work was
+undone*, and [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) separates
+them.
 
-One case stays where it was raised: what cancelling a parent Run does to a `subworkflow`
-sub-execution turns on whether that sub-execution is a separate Run at all, which
-[`step-types.md`](step-types.md) section 12 owns and marks **ADR**.
+**X34 — `Compensating` ends in the terminal state the Run was heading for when it entered it —
+`Cancelled`, `Failed` or `Denied` — and the compensation outcome records what compensation achieved
+(X33).** A cancelled Run that compensates ends `Cancelled` and meters as a cancellation, and a
+refused one ends `Denied`. X27 and X28 hold unchanged: cancellation triggers compensation and never
+abandons it.
+
+**Cancelling a Run cancels the executions nested in it.** An `agent` or `subworkflow` Step executes
+the version it names inside the Run rather than as a Run of its own
+([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)), so X24 to X28 apply
+to each Step Execution inside a nested execution exactly as to any other, and no nested execution
+can be cancelled apart from its Run ([`step-types.md`](step-types.md) section 12).
 
 ## 8. A mid-Run `deny`
 
-`tool-authorization.md` section 10 registers this against this document jointly with
-`lifecycle-state-machines.md` section 2, marks it **ADR**, and names `policy-model.md` rule V1 as
-owner. **This document escalates rather than answers it**: the answer requires a Run transition the
-state machine does not have, and the Run lifecycle states are an enumeration the event profile
-declares exhaustive, so `event-protocol.md` rule C2 makes admitting one a profile **MAJOR** rather
-than an additive change. That is the same cost section 6.1 pays for `Compensating`, and it is not a
-cost a schema addition may take on quietly. What holds on every candidate answer:
+`policy-model.md` rule V1 owns this, and
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) decides it without a new
+Run state, so `event-protocol.md` rule C2 is untouched. In a Workflow Run, a `deny` at a Step's
+boundary, or at the Tool enforcement point before the invocation a `tool` Step names, follows the
+refusal edge the Step declares, and otherwise ends the Run `Denied`. In an Agent Run, or for a call
+the model chose inside an `agent` Step, the refusal returns to the model as that invocation's
+outcome and the Run continues. A gate raised at any of those points outside an `approval` Step that
+is rejected or expires goes the same way (`approval-workflows.md` rule J5). V1 states the rule; this
+section states what follows from it:
 
 - **The denied action is never the unknown one.** V1 fixes that the gated action MUST NOT be
-  attempted — not attempted and rolled back, not attempted and discarded. It is therefore a
-  compensation question: the only side effects in play are Step Executions already completed in
-  this Run, exactly the position `approval-workflows.md` rule J4 describes for a rejected gate.
-- **The outcome MUST be distinguishable from a fault** in the audit trail and the metered outcome;
-  a refusal recorded as a fault is a defect wherever it happens (J1).
-- **A declared deny branch, if chosen, is ordinary execution** (`approval-workflows.md` rule J2) —
-  every Step on it crosses an enforcement point and inherits none of the refused action's
-  authorization — and re-proposing the refused action is a new evaluation (`policy-model.md` rule
-  E6), never a resumption of the denied one.
+  attempted — not attempted and rolled back, not attempted and discarded. A Run that ends `Denied`
+  is therefore a compensation question: the only side effects in play are Step Executions already
+  completed in this Run, exactly the position `approval-workflows.md` rule J4 describes for a
+  rejected gate, and they compensate before the Run ends, on the terms X28 sets (X34).
+- **The outcome is distinguishable from a fault** in the audit trail and the metered outcome: the
+  Run ends `Denied`, never `Failed` (J1).
+- **A declared refusal edge is ordinary execution** (`approval-workflows.md` rule J2) — every Step
+  on it crosses an enforcement point and inherits none of the refused action's authorization — and
+  re-proposing the refused action is a new evaluation (`policy-model.md` rule E6), never a
+  resumption of the denied one.
+- **A model told no is still governed call by call.** Whether a rule denied the call or a human
+  rejected it, every further call the model makes crosses the Tool enforcement point (E4, X12), and
+  the outcome it receives says only that the call was refused, never why (`gateway-api.md` G23).
+  Proposing a rejected action again is a new evaluation that raises a new Approval Request
+  (`approval-workflows.md` J3). That the model may probe for a permitted route is the standing
+  residual of [`threat-model.md`](../40-governance/threat-model.md) T1.
 
 ## 9. When a Tool is de-registered
 
-`tool-authorization.md` section 8 records this as unspecified and its register names this document.
+`tool-authorization.md` section 8 recorded this as unspecified, and its register named this
+document.
 The answer divides cleanly, and the sharp part is the asymmetry with definition versions.
 
 **X29 — De-registration takes effect at the next enforcement point, through no new mechanism.**
@@ -455,23 +503,25 @@ missing record and not a crash.
 Tool registered in the same Tenant's Catalog (TA2), so de-registration makes every grant on that
 Tool undischargeable. Deleting them would erase the answer to *what was this Agent permitted to do
 at the time*, which `audit-model.md` rule A5 requires to stay readable after the Tool it names is
-gone. The condition then needs to surface as a warning on affected definitions — a third staleness
-signal beside the two [`control-plane.md`](../10-architecture/control-plane.md) section 5 names by
+gone. The condition then needs to surface as a warning on affected definitions — another staleness
+signal beside those [`control-plane.md`](../10-architecture/control-plane.md) section 5 names by
 name. That surface is that document's to place, so this one registers the requirement rather than
 imposing it.
 
 **X31 — De-registration reaches a Run in flight; a definition edit cannot.** W1 and W3 make a
 published definition unreachable by any later change, so an author cannot touch a running Run. The
 Catalog is tenant state rather than pinned definition, so an administrator de-registering a Tool
-can, and X12 makes it bite on the next attempt. That is correct behaviour — it is the only
-immediately effective withdrawal path the platform has — but it is a governance surface, not a
-housekeeping one, and MUST be presented as such.
+can, and X12 makes it bite on the next attempt. That is correct behaviour — it is one of two
+immediately effective withdrawal paths the platform has, revoking a capability grant being the
+other ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)) — but it is a
+governance surface, not a housekeeping one, and MUST be presented as such.
 
 **X32 — Completed Step Executions are unaffected.** They are audited facts and stay readable after
 the Tool is deleted (A5). De-registration is not retroactive.
 
-Three consequences follow. **The Run's resulting outcome is section 8's question**, so this
-document settles what the Catalog does and hands the Run transition to that ADR. **A suspended
+Three consequences follow. **The Run's resulting outcome is section 8's**: X29's `deny` names no
+Policy and is a `deny` like any other, so the Run follows the Step's refusal edge, ends `Denied`, or
+returns the refusal to the model in an Agent Run. **A suspended
 approval survives and authorizes nothing impossible**: a Run suspended for days on a request naming
 a Tool de-registered meanwhile resolves normally — the Evidence Set is immutable
 (`approval-workflows.md` rule E4), the resolution is a governance fact in its own right, and
@@ -479,8 +529,13 @@ a Tool de-registered meanwhile resolves normally — the Evidence Set is immutab
 it; the request is **not** `Withdrawn`, a state meaning the Run ended rather than that the action
 became impossible. And **compensation can be stranded**: if a completed Step Execution's
 compensating action is itself a Tool later de-registered, compensation is denied at its own
-enforcement point. Whether de-registration is refused, warned or permitted while Runs in flight
-hold uncompensated side effects is registered, with the staleness surface X30 needs.
+enforcement point, and the effect stays `unresolved` (X33). A revoked capability grant strands
+compensation the same way, is never refused on that account, and leaves the effect `unresolved`
+([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md),
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)). Whether de-registration is
+refused,
+warned or permitted while Runs in flight hold uncompensated side effects is registered, with the
+staleness surface X30 needs.
 
 ## 10. Failure taxonomy: six outcomes that must not collapse
 
@@ -491,9 +546,9 @@ governance refusal recorded as a fault — and ADR-0009 makes it billing-adjacen
 
 | Outcome | What it is | Fault? | Retryable? | Where the rule lives |
 | --- | --- | --- | --- | --- |
-| Policy `deny` | A rule refused the action | No | The action never; re-proposal is a new evaluation (`policy-model.md` E6) | `policy-model.md` V1; the Run transition is section 8's ADR |
+| Policy `deny` | A rule refused the action | No | The action never; re-proposal is a new evaluation (`policy-model.md` E6) | `policy-model.md` V1; the Run transition is [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)'s, section 8 |
 | Rejected approval | A human declined | No | No — re-proposal raises a **new** request (J3) | `approval-workflows.md` section 8 |
-| Expired gate | Nobody decided; no human declined | No | Re-raise undecided | `approval-workflows.md` section 7; attribution in `audit-model.md` section 9 |
+| Expired gate | Nobody decided; no human declined | No | No — there is no re-raise; proposing the action again raises a **new** request from a new verdict (D3) | `approval-workflows.md` section 7; attribution in `audit-model.md` section 9 |
 | Quota wait | The customer's own provider capacity, scheduled around | **Not a failure at all** | Not applicable — nothing failed | [ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md); `quotas-and-metering.md` |
 | Model failure | A fault inside the plane, no external effect | Yes | Yes — the Model Broker owns retry and ordered fallback | ADR-0006; `reliability.md` |
 | Tool failure | A fault outside the plane, possibly a side effect | Yes | **By position (X9), never blanket** — positions two and three admit none at all; position one is safe to attempt, but no component holds retry for a Tool invocation | `reliability.md` F19 and F20; compensation in section 6 |
@@ -525,10 +580,13 @@ dispatch is, and a refusal or a drop mid-call is unknown rather than not-done
 **Where the taxonomy is owned.** Not here. The fault half belongs to `reliability.md` in
 [`../60-operations/`](../60-operations/), which carries the failure taxonomy including connector and
 quota conditions and cuts faults operationally into four classes — refusal, wait, fault, degradation
-— a coarsening that classifies a condition and does not replace these six; the refusal half needs a
-Run outcome dimension that does not exist and lands in the ADR sections 6.2, 7 and 8 converge on.
-What this document fixes is that the six MUST stay distinguishable in the audit trail, in the
-metered outcome and to the caller — three surfaces, one enumeration, not addable retroactively.
+— a coarsening that classifies a condition and does not replace these six; the refusal half lands on
+`Denied` ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)), where sections
+6.2, 7 and 8 converged. What this document fixes is that the six MUST stay distinguishable in the
+audit trail, in the metered outcome and to the caller — three surfaces, one enumeration, not
+addable retroactively. The terminal state separates a refusal from a fault; within `Denied`, the
+recorded enforcement point, the refusing Policy Decision and the Approval Request's own resolution
+separate a `deny` from a rejection and from an expiry.
 
 ## 11. Open questions
 
@@ -538,24 +596,19 @@ question, its classification is repeated rather than revised.
 
 | Question | Needs | Decided by |
 | --- | --- | --- |
-| What a Run does after a mid-Run `deny` — terminal refusal, declared branch, or failed Step Execution | **ADR** | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9 owns it, with [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2; classification repeated from `tool-authorization.md` section 10 |
-| Whether compensation can fail terminally, and what a Run carrying a known unresolved side effect is called | **ADR** | Spans the Run state machine, ADR-0009's outcome dimension and `event-protocol.md` rule C2; very probably one ADR with the row below |
-| Whether a cancelled Run that must compensate can reach a terminal `Cancelled`, given `Compensating` leaves only to `Failed` | **ADR** | The same ADR: the Run's terminal state conflates why it ended with whether its work was undone |
 | Where a compensating action is declared for a Tool invocation the model chooses — in an Agent Run, or inside an `agent` Step whose declaration sits on the delegation | **ADR** | Either candidate, the Tool's registration record or the Agent version, changes a permanent public contract; [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) with [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md), and [`step-types.md`](step-types.md) section 5 for the `agent` half |
-| What a Tool invocation in an Agent Run is called, and what its Policy Decision, its audit record and its meter record key on, an Agent Run having no Steps | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 registers it, cited by `policy-model.md` rule E4 and `audit-model.md` section 7; classification repeated, and neither compensation nor metering can be applied retroactively |
-| Whether the capability grant set is pinned by the immutable Agent version for the life of a Run, and whether an immediately effective revocation path exists that overrides the pin | **ADR** | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 10 owns both rows; classification repeated. X12 and X31 turn on the answer and assume none |
+| What a Tool invocation in an Agent Run is called, and what its Policy Decision, its audit record, its meter record and an `unresolved` compensation outcome (X33) key on, an Agent Run having no Steps | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 registers it, cited by `policy-model.md` rule E4 and `audit-model.md` section 7; classification repeated, and neither compensation nor metering can be applied retroactively |
 | Whether `external-communication` Steps must declare a compensating action, and what one means for a sent message | **ADR** | An extension of ADR-0008's mandate, which names three classes; not a schema addition |
-| Whether an Agent version pins the MAJOR version of each Tool schema it may call, W5 covering Workflow versions only | **ADR** | `tool-authorization.md` section 10 with `policy-model.md` section 9; classification repeated |
 | The audit-retention period bounding a retained definition, an Evidence Set and a Step Execution record | **ADR** | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 11; classification repeated |
 | What a `parallel` branch failure does to its siblings — cancel, complete, or compensate — and what satisfies the join | Document | A later revision of this document; [`step-types.md`](step-types.md) section 9 assigns both halves here and section 13 carries the classification, repeated. X19 fixes three constraints any answer must satisfy |
 | Whether a compensating action may be anything other than a Tool invocation, a `subworkflow` for instance | Document | [`workflow-dsl.md`](workflow-dsl.md), which owns what the language admits |
-| Whether a `subworkflow` sub-execution is a separate Run, and what cancelling the parent does to it | **ADR** | [`step-types.md`](step-types.md) section 12 owns it, section 13 registers it; classification repeated |
-| Whether de-registering a Tool is refused, warned or permitted while Runs in flight hold uncompensated side effects against it, and where X30's staleness warning on affected definitions surfaces | Document | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 5, which names the other two staleness signals, with `tool-authorization.md`; the first half is void if the compensation-failure ADR chooses human resolution |
+| Whether de-registering a Tool is refused, warned or permitted while Runs in flight hold uncompensated side effects against it, and where X30's staleness warning on affected definitions surfaces, with the warning [ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) gives a grant left stale by a change of Side-Effect Class | Document | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 5, which names the other two staleness signals, with `tool-authorization.md`; ADR-0040 chose no human resolution, so the first half stands |
 | Whether the Tool Catalog records that an origin honours an idempotency key, which X10 needs and TA9's record lacks | Document | `control-plane.md` with `tool-authorization.md` |
 | Retry counts, backoff, attempt budgets and any bound on attempts — none is fixed here or in any document this one depends on | Document | `reliability.md` in [`../60-operations/`](../60-operations/) |
 | Whether a force-drain is offered as one control-plane operation, given that X6 fixes what it decomposes into and G15 fixes who may invoke it | Document | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 5, which registers the undrainable Retired version and names this document |
 | Whether profile v1 enumerates `Compensating`, now that X22 settles that the roll-up state exists | Document | [`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md) decides it and this document classifies it, X22 being what makes the state exist; admitting it later is a profile MAJOR under C2 |
 | Whether the Step-boundary and Tool enforcement points collapse into one evaluation for a `tool` Step | Document | A later revision of [`../40-governance/policy-model.md`](../40-governance/policy-model.md) with [`step-types.md`](step-types.md) section 6; classification repeated |
+| How a Run's representation shows an Approval Request pending on a compensating action, and refers to a later act that resolves an effect its compensation outcome left `unresolved`, the Run itself never reopening (X33, X35) | Document | [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 6 |
 
 Four questions previously registered against this document are answered above and not repeated
 here: force-drain (X6), whether a retry creates a new Step Execution and whether it is re-evaluated
@@ -563,3 +616,11 @@ here: force-drain (X6), whether a retry creates a new Step Execution and whether
 Runs in flight (X29 to X32). A fifth, the grain of a Tool call in an Agent Run, is answered only in
 part: X13 fixes what governs such an invocation and what it anchors, and the row asking what it is
 called carries the rest, where the domain model registered it.
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) answers two rows carried here
+before: capability grants are read at every attempt and never widen a Run (X4, X12), and an Agent
+version pins the schema major of each Tool it declares (X4).
+
+Three more are answered by
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md): what a mid-Run `deny`
+does to the Run (section 8), what a Run carrying an unresolved compensation is called (X33), and
+where a cancelled Run that compensates ends (X34).

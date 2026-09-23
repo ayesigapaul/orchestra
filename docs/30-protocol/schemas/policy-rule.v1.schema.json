@@ -51,7 +51,49 @@
     },
     "match": {
       "description": "One CEL expression under the Expression Profile, yielding a boolean: true when this rule applies. Checked at publication rather than by this schema — see this file's top-level comment.",
-      "$comment": "policy-model.md N1 fixes what every evaluation receives and a rule MAY match on: the Principal and its subtype, the Tenant, the Workspace, the pinned definition version, the pinned Policy versions, the Step and its type at a Step boundary, the Side-Effect Class as a primary input, the Tool, its schema major, its Tool Catalog registration state, the Agent version's capability grant set, the proposed action including its arguments, the enforcement point, and the Run. N3 requires any input outside that table — the evaluation time, the value read from an aggregate — to be captured in the Policy Decision, and a rule reads aggregate state only through an aggregate the platform defines, reserved in the transaction that writes the decision (ADR-0035). An expression that raises an error does not make its rule a non-match: the evaluation has not completed, and A3 forbids allow. D4 forbids a model in the evaluation path: a model call is neither deterministic nor attributable to a rule."
+      "$comment": "policy-model.md N1 fixes what every evaluation receives and a rule MAY match on: the Principal and its subtype, the Tenant, the Workspace, the pinned definition version, the pinned Policy versions, the Step and its type at a Step boundary, the Side-Effect Class as a primary input, the Tool, its schema major, its Tool Catalog registration state, the Tools the pinned version declares and the capability grants naming its definition, the proposed action including its arguments, the enforcement point, and the Run. A restriction on what a Tool call may do — an amount, a region, a record — is written here, as a match on the proposed action's arguments, and never as a condition on a capability grant (ADR-0042, policy-model.md S2). N3 requires any input outside that table — the evaluation time, the value read from an aggregate — to be captured in the Policy Decision, and a rule reads aggregate state only through an aggregate the platform defines, reserved in the transaction that writes the decision (ADR-0035). An expression that raises an error does not make its rule a non-match: the evaluation has not completed, and A3 forbids allow. D4 forbids a model in the evaluation path: a model call is neither deterministic nor attributable to a rule."
+    },
+    "approval": {
+      "type": "object",
+      "description": "The Approval Chain, and the optional decision deadline, that an Approval Request raised under this rule takes.",
+      "$comment": "ADR-0043 and approval-workflows.md sections 5 to 7. A rule under which a request can be raised declares a chain: one whose verdict is require_approval, or one whose allow V4 narrows to require_approval at the boundary of an approval Step. The schema cannot require the member without tightening v1. Where several matching rules return require_approval, one Approval Request carries every one of their chains and none stands in for another, and the shortest decision_deadline any of them declares applies (C9, ADR-0035). Where no matching rule declares a chain, the gate has no position, could never be satisfied, and the request is refused at raise rather than raised (C10). The Tenant authors every figure here.",
+      "properties": {
+        "chain": {
+          "type": "object",
+          "description": "Whether the chain is ordered or parallel, and its positions.",
+          "required": ["mode", "positions"],
+          "properties": {
+            "mode": { "enum": ["ordered", "parallel"] },
+            "positions": {
+              "type": "array",
+              "minItems": 1,
+              "description": "The chain's positions, in order where the chain is ordered.",
+              "items": {
+                "type": "object",
+                "description": "One position.",
+                "required": ["eligible"],
+                "properties": {
+                  "eligible": {
+                    "description": "Which Platform Users are eligible at this position, resolved when a request is raised. Unconstrained, like match and for the same reason: it is written in the policy language, which is not defined here.",
+                    "$comment": "Whatever it resolves to, a Principal who is not a Platform User is never eligible (C5), nor is the Principal the Run records at admission, nor anyone standing on the same verified Person as them (C13, C15), and no Policy can override any of it (C16)."
+                  }
+                }
+              }
+            },
+            "required_positions": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "For a parallel chain, how many of its positions must be satisfied. Absent means every position. An ordered chain omits it."
+            }
+          }
+        },
+        "decision_deadline": {
+          "type": "string",
+          "format": "duration",
+          "description": "How long a request raised under this rule may stay Pending before it expires, as an ISO 8601 duration. Absent means no deadline.",
+          "$comment": "ADR-0043. The deadline runs from the raise, and expiry resolves the request Expired as an observed condition that records its cause and no Principal. There is no re-raise. Orchestra sets no default and no bound."
+        }
+      }
     },
     "description": {
       "type": "string",

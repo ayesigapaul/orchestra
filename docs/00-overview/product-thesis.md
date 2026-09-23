@@ -1,11 +1,11 @@
 ---
 title: Product Thesis
 doc_id: DOC-012
-version: 0.15.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
+depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0043]
 ---
 
 # Product Thesis
@@ -352,9 +352,10 @@ flow is least likely to have made.
 
 The policy language and how thresholds are expressed are decided: CEL behind an Orchestra-versioned
 profile, with rate and window thresholds over platform-defined aggregates
-([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). How Approval
-Chains route and escalate is not, section 7 names what decides it, and no threshold value appears
-here because none has been chosen.
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). How an Approval
+Chain is satisfied, reassigned and expired is decided too
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)). No threshold value
+appears here, because none has been chosen.
 
 ## 6. The competitive position, without overclaiming
 
@@ -416,7 +417,6 @@ Decisions that are unmade, with what decides each:
 
 | Unmade | What decides it |
 | --- | --- |
-| What satisfies an Approval Chain, and whether escalation, delegation and reassignment exist | [`approval-workflows.md`](../40-governance/approval-workflows.md) section 11 holds these open and marks each as requiring an ADR |
 | Audit retention periods | [`audit-model.md`](../40-governance/audit-model.md) section 11. No period is decided anywhere in this repository and no number appears there |
 | Audit export | [`audit-model.md`](../40-governance/audit-model.md) section 12 states the requirement and records that nothing has designed it |
 | The run supervisor's size, and whether it dominates the build | [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)'s first follow-on: enumerate its responsibilities precisely enough to size it, before an MVP is committed to |

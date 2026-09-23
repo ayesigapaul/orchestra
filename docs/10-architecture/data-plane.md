@@ -1,11 +1,11 @@
 ---
 title: Data Plane
 doc_id: DOC-024
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0011, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Data Plane
@@ -133,7 +133,10 @@ That makes the supervisor a governance component and leaves the Gateway a bounda
 durable state. Admission is also where the Run pins its
 definition version and the Policy versions in force
 ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)), fixing the governing input set
-for the Run's life. Section 5 rests on that. One word does double duty across this plane and
+for the Run's life. Section 5 rests on that. Admission also records which capability grants stand,
+so a later Tool enforcement point can find one revoked but never one added
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)). One word does double duty
+across this plane and
 the two senses must not be collapsed: admission here is a verdict, and a `deny` produces a Policy
 Decision, while the *admission control* ADR-0006 asks of the Model Broker is scheduling against a
 Quota Envelope (section 8) — capacity, not a verdict, producing no Policy Decision and refusing
@@ -357,7 +360,7 @@ before implementation. **Document** means a later document suffices.
 | --- | --- | --- |
 | The Connector's share of the egress allow-list; the posture and the shape for this plane are both settled | **ADR** | [ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) decides the shape for the Model Broker and Tool Invocation, and [`threat-model.md`](../40-governance/threat-model.md) section 10 fixes the posture; the connector's share cannot close alone while ADR-0007 is **Proposed**, and it extends ADR-0038 rather than reopening it |
 | Which side of the Python-to-TypeScript boundary the Definition Compiler sits on, and what artifact crosses into this plane | **ADR** | Assigned here by [`containers.md`](containers.md) section 12, whose section 9 names the two candidates: TypeScript emitting a runtime-neutral artifact, or Python beside the Runtime. Each cuts the other way against ADR-0005's substitution argument — a runtime-neutral artifact keeps every point of contact with the runtime on the far side of the seam but has to be expressive enough to compile without runtime types, while a compiler beside the Runtime may emit natively and makes substitution a compiler rewrite. What blocks a choice is that the versioned internal contract ADR-0005 requires is unwritten ([`containers.md`](containers.md) section 9), so neither placement has anything to be judged against yet, and section 2 defers to this row for that reason |
-| What a `deny` outside admission does to a Run in flight, which this plane must implement and the Run state machine has no transition for | **ADR** | Already registered by [`policy-model.md`](../40-governance/policy-model.md) section 9 and [`tool-authorization.md`](../40-governance/tool-authorization.md) section 10; not this document's to take |
+| How a Tool enforcement point reads current Catalog registration and capability grant state at every attempt — a call to the owning service, or a view kept current from its facts | **ADR** if it puts a synchronous call on the enforcement path, otherwise Document | [`containers.md`](containers.md) with this document. [ADR-0020](../adr/adr-0020-monorepo-with-enforced-service-boundaries.md) rule B4 rules out reading another service's tables, and a view satisfies [ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) only if it never serves a grant its owner has recorded as revoked |
 | How a delay against a Quota Envelope is surfaced to a caller, given a waiting Run is still `Running` | Document | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/) with `event-protocol.md` in [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed** |
 | How a Run event stream survives a disconnect, given replay and resumption are Orchestra's to build rather than inherited | Document | `event-protocol.md` and `gateway-api.md` in [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed**, whose validation step 2 is the approval lifecycle through disconnect and replay |
 | Which Principals may cancel a Run, and what this plane does with an invocation already outside it | Document | [`identity-and-access.md`](identity-and-access.md) for the Principal; `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) for the in-flight invocation |

@@ -1,11 +1,11 @@
 ---
 title: Entity Lifecycle State Machines
 doc_id: DOC-032
-version: 0.17.0
+version: 0.18.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011]
+depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0042]
 ---
 
 # Entity Lifecycle State Machines
@@ -44,7 +44,7 @@ Requirement keywords carry their [RFC 2119](https://www.rfc-editor.org/rfc/rfc21
 | Entity | Typical lifetime | What moves it | Grounding |
 | --- | --- | --- | --- |
 | Run | Minutes to days | Policy Decisions, runtime progress, cancelling Principals | ADR-0005, ADR-0008 |
-| Approval Request | Minutes to days | Principals in the Approval Chain; a deadline, if one is adopted | ADR-0003 |
+| Approval Request | Minutes to days | Platform Users in the Approval Chain; a decision deadline, where its Policy declares one | ADR-0003, [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) |
 | Workflow / Agent version | Indefinite | Platform Users publishing; in-flight Runs draining | [VERSIONING.md](../VERSIONING.md) §8 |
 | Connector | Indefinite | Customer-side software; tenant administrators | ADR-0007 — **Proposed** |
 
@@ -60,18 +60,30 @@ stateDiagram-v2
   Pending --> Denied: admission PEP returns deny
   Pending --> Suspended: admission PEP returns require_approval
   Running --> Suspended: step or tool PEP returns require_approval, or a wait step
-  Suspended --> Running: gate resolved, execution resumes
-  Suspended --> Failed: gate rejected or expired — terminal outcome undecided
-  Running --> Compensating: failure after a side-effecting step
-  Compensating --> Failed: compensation completed or exhausted
+  Suspended --> Running: approved, rejected or expired onto an edge or the model, or the wait elapsed
   Running --> Succeeded: final step completed
   Running --> Failed: unrecoverable error
   Running --> Cancelled: cancelled by a Principal
+  Running --> Denied: deny at a Step with no refusal edge
   Suspended --> Cancelled: cancelled by a Principal
+  Suspended --> Denied: rejected or expired, and no edge applies
+  Running --> Compensating: ending with compensation due
+  Suspended --> Compensating: ending with compensation due
+  Compensating --> Failed: it was heading for Failed
+  Compensating --> Cancelled: it was heading for Cancelled
+  Compensating --> Denied: it was heading for Denied
   Denied --> [*]
   Succeeded --> [*]
   Failed --> [*]
   Cancelled --> [*]
+  note right of Running
+    A deny that follows a refusal edge, or returns
+    to the model, leaves the Run Running.
+  end note
+  note left of Compensating
+    A compensating action awaiting approval
+    keeps the Run Compensating.
+  end note
 ```
 
 | State | Terminal | Meaning |
@@ -79,11 +91,11 @@ stateDiagram-v2
 | `Pending` | No | Submitted; admission not yet decided. |
 | `Running` | No | Executing under the runtime. |
 | `Suspended` | No | Halted at a gate: an Approval Request, or a `wait` step. |
-| `Compensating` | No | **Provisional** — see §2.4. Declared compensating actions are executing. |
+| `Compensating` | No | Declared compensating actions are executing: the roll-up state `50-workflows/execution-semantics.md` X22 settles. Holds while a compensating action awaits approval, and leaves only for the terminal state the Run was heading for (§2.6). |
 | `Succeeded` | Yes | Completed as defined. |
-| `Failed` | Yes | Ended on an error, or on an unfavourable gate resolution. |
+| `Failed` | Yes | Ended on a fault. A governance refusal never ends a Run here. |
 | `Cancelled` | Yes | Stopped by a Principal before completion. |
-| `Denied` | Yes | Refused at admission. No Step Execution ever occurred. |
+| `Denied` | Yes | Ended by a governance refusal: at admission, where no Step Execution ever occurred, or later, where no declared edge or the model carried the Run on. Records where and why (§2.6). |
 
 ### 2.1 Admission is a Policy Enforcement Point
 
@@ -91,11 +103,15 @@ A Run can be refused before it starts. `Denied` is therefore a real state with a
 not the absence of a Run: ADR-0009 meters Runs **by outcome**, and a refused run is the outcome that
 matters most under review. The admission Policy Decision MUST be audited whichever way it goes —
 recording only denials makes the trail evidence of enforcement rather than of what happened.
+Admission is the first way into `Denied`, not the only one: section 2.6 gives the others.
 
 ### 2.2 Suspension and resumption
 
-A Run suspends when a PEP returns `require_approval` and resumes when the resulting Approval Request
-resolves; it also suspends on a `wait` step. Both are one `Suspended` state with a recorded reason —
+A Run suspends when a PEP returns `require_approval`, unless the gated action is a compensating
+action, which keeps the Run `Compensating` instead (section 2.6). A suspended Run leaves `Suspended`
+when the resulting Approval Request resolves — approved, at the gated action; rejected or expired,
+wherever section 2.6 sends it — and it also suspends on a `wait` step. Both are one `Suspended`
+state with a recorded reason —
 splitting them buys nothing an attribute does not, and adds two transitions to every consumer.
 
 Suspension may last days ([VERSIONING.md](../VERSIONING.md) §8), so suspended state MUST be durable
@@ -108,19 +124,12 @@ the Run, which Policy matched, which Approval Request gates it, whose decision r
 A Run pins its Agent or Workflow version at admission and executes that version for its whole life
 ([VERSIONING.md](../VERSIONING.md) §8, W2 and W3). The pin is immutable, so **there is no migration
 transition here and there will never be one.** A Run started on `@3` finishes on `@3` long after
-`@4` is published and `@3` retired.
+`@4` is published and `@3` retired. The versions that `@3`'s `agent` and `subworkflow` Steps name
+were pinned when `@3` was published, and execute inside the same Run on the same terms
+([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)).
 
 ### 2.4 What is not decided
 
-- **A rejected or expired gate.** The diagram routes it to `Failed`, the conservative reading; but a
-  rejection is a governance outcome rather than a fault, and an `approval` step may legitimately
-  declare a rejection branch and continue. `50-workflows/step-types.md` decides it, see
-  [`50-workflows/`](../50-workflows/).
-- **Compensation.** ADR-0008 requires that failure after a side-effecting step triggers declared
-  compensating actions and never a blind retry. The unit is settled: GLOSSARY.md puts compensation
-  at Step Execution, *not* the Run. What is open is narrower — whether the Run carries an observable
-  roll-up state while its Step Executions compensate, as drawn here.
-  `50-workflows/execution-semantics.md` decides that.
 - **Who may cancel** — Platform User, End User, Service Account — is decided by
   `10-architecture/identity-and-access.md`, see [`10-architecture/`](../10-architecture/).
 - **No timeout, retry count or maximum Run duration is decided.** None exists in this repository.
@@ -139,7 +148,43 @@ Every transition MUST be audited with `tenant_id`, `run_id`, timestamp and cause
 | `Running → Suspended` | The PEP, the Policy Decision, and the Approval Request identifier. |
 | `Suspended → Running` | The resolving Approval Request and the Principals who decided it. |
 | `* → Cancelled` | The cancelling Principal and any Step Execution in flight at that moment. |
-| `* → Succeeded / Failed / Denied` | The outcome, which is a metered dimension under ADR-0009. |
+| `* → Denied` | Where the Run was refused — admission, a Step boundary or a Tool enforcement point, with the Step where one applies — and what refused it: the Policy Decision whose verdict was `deny`, or the Approval Request whose `Rejected` or `Expired` resolution ended the Run. |
+| `* → Succeeded / Failed / Cancelled / Denied` | The terminal state, which is the metered outcome under ADR-0009, and the compensation outcome, naming each Step Execution whose effect remains. |
+
+### 2.6 Why a Run ended, and whether its work was undone
+
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) separates two facts that
+one terminal state used to carry. **The terminal state says why the Run ended**: `Succeeded`, it
+completed as defined; `Failed`, a fault ended it; `Cancelled`, a Principal stopped it; `Denied`, a
+governance refusal ended it. No state is added for either fact.
+
+A governance refusal ends the Run `Denied` unless something declared carries it on. A gate resolved
+`Rejected` or `Expired` goes where a `deny` at the same point would, except at an `approval` Step:
+
+- At admission, a `deny` or a rejected or expired gate ends the Run before any Step Execution.
+- At an `approval` Step, a rejected or expired gate resumes the Run onto the rejection or expiry
+  edge the Step declares, and otherwise ends it. A `deny` at its boundary follows its refusal edge,
+  and otherwise ends it.
+- At any other Workflow Step's boundary, or at the Tool enforcement point before the invocation a
+  `tool` Step names, a `deny` or a rejected or expired gate follows the refusal edge the Step
+  declares, and otherwise ends the Run.
+- For a call the model chose, in an Agent Run or inside an `agent` Step, a `deny` or a rejected or
+  expired gate returns to the model as that invocation's outcome, and the Run continues.
+
+A Run that ends `Denied` records where it was refused, and the Policy Decision or Approval Request
+that refused it. The Approval Request, not the Run state, says whether a gate was `Rejected` or
+`Expired` (`40-governance/approval-workflows.md` rules D1 and J5).
+
+**The compensation outcome says whether the work was undone.** Every Run in a terminal state
+carries one: `not_required` where nothing it did called for compensation, `compensated` where every
+compensating action it called for completed, and `unresolved` where at least one did not, naming
+each Step Execution whose effect remains. A Run that would end `Failed`, `Cancelled` or `Denied`
+while compensation is due passes through `Compensating`, the roll-up state
+`50-workflows/execution-semantics.md` X22 settles, and ends in the state it was heading for. A
+compensating action gated by `require_approval` keeps the Run `Compensating` while its Approval
+Request is pending: approved, the action is attempted; rejected or expired, its effect is
+`unresolved`. Resolving an `unresolved` effect later is a new governed act, never a reopened Run
+(`40-governance/audit-model.md` section 6).
 
 ## 3. Approval Request
 
@@ -151,7 +196,7 @@ stateDiagram-v2
   [*] --> Pending: require_approval verdict raises the request
   Pending --> Approved: the Approval Chain requirement is satisfied
   Pending --> Rejected: a decisive rejection is recorded
-  Pending --> Expired: a decision deadline passes undecided (provisional)
+  Pending --> Expired: the decision deadline its Policy declared passes undecided
   Pending --> Withdrawn: the gated Run ended for another reason
   Approved --> [*]
   Rejected --> [*]
@@ -164,15 +209,16 @@ stateDiagram-v2
 | `Pending` | No | Raised, awaiting the decisions the Approval Chain requires. |
 | `Approved` | Yes | The chain's requirement was met. The gated Run may resume. |
 | `Rejected` | Yes | A human declined. |
-| `Expired` | Yes | **Provisional — see §3.1.** A deadline passed undecided. No human declined. |
+| `Expired` | Yes | The decision deadline its Policy declared passed undecided. No human declined. |
 | `Withdrawn` | Yes | The gated Run was cancelled or failed; there is nothing left to gate. |
 
-**If a deadline mechanism is adopted, `Expired` MUST be distinct from `Rejected`.** "A human said
-no" and "nobody looked" are different facts about a control, and an audit that cannot separate them
-cannot report on that control. Whether a deadline exists at all is undecided, so the state is drawn
-provisionally rather than asserted.
+**`Expired` MUST be distinct from `Rejected`.** "A human said no" and "nobody looked" are different
+facts about a control, and an audit that cannot separate them cannot report on that control. A
+request can expire only where the Policy that raised it declares a decision deadline
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)); a Policy that declares
+none gives its requests none.
 
-Expiry also has no acting Principal. It is not an action but a transition caused by an observed
+Expiry has no acting Principal. It is not an action but a transition caused by an observed
 condition, so its record carries the cause and no Principal, and MUST NOT name one who did not act
 ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md),
 `40-governance/audit-model.md` section 9). Withdrawal is recorded the same way.
@@ -182,15 +228,18 @@ condition, so its record carries the cause and no Principal, and MUST NOT name o
 it is that the human approves on the same information the model had; evidence that could change
 afterwards attests to nothing.
 
-### 3.1 Routing is not decided
+### 3.1 Routing
 
-An Approval Chain is ordered or parallel and derived from Policy. Beyond that, almost nothing is
-settled and this document deliberately invents none of it: what satisfies a chain (all, quorum,
-first decision), whether one rejection in a parallel chain is decisive, escalation, delegation,
-reassignment after raise, re-raise after expiry, whether a deadline exists at all, and whether an
-ordered chain's partial progress is a substate of `Pending` or an attribute of it — all undecided.
-`40-governance/approval-workflows.md` decides them, see [`40-governance/`](../40-governance/). Until
-it exists, treat any statement about chain behaviour as opinion.
+An Approval Chain is ordered or parallel, derived from Policy, and made of positions
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)). Each position resolves
+at raise to the Platform Users eligible to decide it, and one approval from any of them satisfies
+it. Where several matching rules gated the action the request carries each rule's chain, and
+`Approved` waits on every one of them; `Rejected` waits on a single decisive rejection at an open
+position of any of them. A reassignment changes who is eligible at an open position and moves no
+state. There is no escalation on elapsed time, no delegation and no re-raise.
+`40-governance/approval-workflows.md` sections 5 to 7 state the rules, see
+[`40-governance/`](../40-governance/). One representational choice stays open: whether an ordered
+chain's partial progress is a substate of `Pending` or an attribute of it.
 
 How these transitions reach a client is also unsettled:
 [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) is **Proposed** and its second validation
@@ -199,10 +248,12 @@ outstanding.
 
 ### 3.2 Audited transitions
 
-The raise MUST record the causing Policy Decision, the proposed action, the Evidence Set and the
-Approval Chain as resolved at that moment. Each decision MUST record the deciding Principal, the
-authenticated identity behind them and the timestamp; the resolution MUST record which decisions
-produced it. Approvals are metered, raised and resolved.
+The raise MUST record the causing Policy Decision, the proposed action, the Evidence Set, the
+Approval Chain as resolved at that moment and the decision deadline where one applies. Each
+decision MUST record the deciding Principal, the authenticated identity behind them, the position
+and the timestamp. Each reassignment MUST record its acting Principal, its cause and the chain
+before and after. The resolution MUST record which decisions produced it, and an expiry records its
+cause and no Principal. Approvals are metered, raised and resolved.
 
 ## 4. Workflow version
 
@@ -217,7 +268,7 @@ stateDiagram-v2
   Published --> Active: set as current for new runs
   Active --> Published: a newer version becomes current
   Published --> Retired: no new runs admitted
-  Retired --> Archived: the last pinned run reached a terminal state
+  Retired --> Archived: the last pinned run reached a terminal state, and every version naming it is archived
   Archived --> [*]: audit retention expires
   note right of Retired
     In-flight runs continue on
@@ -230,7 +281,7 @@ stateDiagram-v2
 | `Draft` | No | Mutable, unpublished, never executed. |
 | `Published` | No | Frozen and immutable. Runs may be pinned to it; it is not the default. |
 | `Active` | No | The current version. New Runs start here. |
-| `Retired` | No | Admits no new Runs. Existing Runs continue. |
+| `Retired` | No | Admits no new Runs. Existing Runs continue, and so does its execution inside the Runs of a version that names it. |
 | `Archived` | No | Drained. Retained solely for audit. |
 
 **Published versions are immutable (W1),** so there is no edit transition — editing means creating
@@ -239,9 +290,12 @@ a Draft that publishes as a new version. **Retirement drains; it does not kill (
 version. Runs already pinned are unaffected.
 
 **`Retired → Archived` is not an administrative act** but an observed condition — the last Run
-pinned to the version reached a terminal state. That couples the version lifecycle to the Run
-lifecycle, with an uncomfortable consequence: because a Run can suspend on an approval for days, a
-Retired version can stay undrainable for an unbounded period. **A force-drain is cancellation of
+pinned to the version reached a terminal state, and every version naming it through an `agent` or
+`subworkflow` Step is archived
+([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). That couples the
+version lifecycle to the Run lifecycle and to the versions naming it, with an uncomfortable
+consequence: because a Run can suspend on an approval for days, a Retired version can stay
+undrainable for an unbounded period. **A force-drain is cancellation of
 every Run pinned to the version, and nothing else** — settled by
 `50-workflows/execution-semantics.md` X6. W3 forbids *migrating* in-flight executions, not ending
 them, so a drain cancels rather than moves; it decomposes into individually audited cancellations,
@@ -253,8 +307,10 @@ period, because an audit must reconstruct the exact process a decision followed.
 period is decided anywhere in this repository;** `40-governance/audit-model.md` decides it.
 
 A version can also go stale without changing state — under W5 a Tool's MAJOR bump does not alter
-published workflows, it surfaces as a control-plane warning. Staleness is an attribute, not a
-state.
+a published Workflow or Agent version, it surfaces as a control-plane warning. A capability grant
+left unsatisfiable by a change of the Tool's Side-Effect Class is flagged the same way
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)). Staleness is an attribute,
+not a state.
 
 ### 4.1 Audited transitions
 
@@ -346,11 +402,7 @@ billing-adjacent surface.
 
 | Question | Entity | Decided by |
 | --- | --- | --- |
-| Does a rejected or expired gate fail the Run, or route to a declared rejection branch? | Run | `50-workflows/step-types.md` |
-| Is compensation a Run state or confined to Step Execution? | Run | `50-workflows/execution-semantics.md` |
 | Which Principals may cancel a Run? | Run | `10-architecture/identity-and-access.md` |
-| What satisfies an Approval Chain, and how does it escalate or delegate? | Approval Request | `40-governance/approval-workflows.md` |
-| Is there a decision deadline, and may a request be re-raised after expiry? | Approval Request | `40-governance/approval-workflows.md` |
 | Do approval transitions survive disconnect and replay? | Approval Request | ADR-0004 validation step 2, then `30-protocol/event-protocol.md` |
 | What audit-retention period ends `Archived`? | Workflow version | `40-governance/audit-model.md` |
 | May a `Draft` version be deleted, given audit-retention obligations? | Workflow version | `40-governance/audit-model.md`, ADR-0011 follow-on |

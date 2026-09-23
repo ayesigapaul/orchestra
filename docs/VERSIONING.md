@@ -1,11 +1,11 @@
 ---
 title: Versioning & Compatibility Policy
 doc_id: DOC-001
-version: 0.15.2
+version: 0.16.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0004, ADR-0008]
+depends_on: [ADR-0004, ADR-0008, ADR-0042]
 ---
 
 # Versioning & Compatibility Policy
@@ -245,7 +245,7 @@ stateDiagram-v2
   Published --> Active: set as current
   Active --> Published: superseded by a newer version
   Published --> Retired: no new runs admitted
-  Retired --> Archived: all in-flight runs drained
+  Retired --> Archived: all in-flight runs drained, and no unarchived version names it
   Archived --> [*]: audit retention expires
   note right of Retired
     In-flight runs continue
@@ -256,9 +256,22 @@ stateDiagram-v2
 
 **W5 — Compatibility of tools inside a workflow.** A workflow version pins the *major* version of
 each tool schema it references. A tool's MAJOR bump does not retroactively alter published
-workflows; it surfaces as an actionable warning in the control plane.
+workflows; it surfaces as an actionable warning in the control plane. A run whose pinned major the
+tool's origin no longer serves is refused that tool as a precondition deny, never moved to another
+major; the remedy is a new version
+([`40-governance/tool-authorization.md`](40-governance/tool-authorization.md) TA24).
 
-Agent definitions follow rules W1–W4 identically.
+**W6 — Definitions inside a workflow.** A workflow version pins the exact version of each agent and
+workflow its steps name when it is published, and a run executes those versions inside itself,
+never as runs of their own. When a named definition moves on — a newer version is set current, or
+the named version is retired — published workflows are not altered: each one that still admits runs
+surfaces an actionable warning in the control plane, and adopting the newer version means
+publishing a new version. A version cannot be archived while a version that names it has not been
+([ADR-0041](adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)).
+
+Agent definitions follow rules W1–W5 identically: an agent version pins the *major* version of each
+tool schema it declares, and a MAJOR bump alters neither the version nor the capability grants
+naming its agent ([ADR-0042](adr/adr-0042-declared-tools-and-capability-grants.md)).
 
 ---
 

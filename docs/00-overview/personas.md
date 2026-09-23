@@ -1,11 +1,11 @@
 ---
 title: Personas
 doc_id: DOC-013
-version: 0.15.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0009, ADR-0014, ADR-0015]
+depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0009, ADR-0014, ADR-0015, ADR-0043]
 ---
 
 # Personas
@@ -214,6 +214,10 @@ may be assumed of them:
   customer backend's request and never appears in a browser or mobile bundle.
 - No Orchestra-authored surface may be assumed visible to them. Errors, delays and approval states
   are signals the customer's application chooses how to render.
+- They never decide an Approval Request. An Approval Chain resolves only to Platform Users, because
+  an End User's identity is the customer backend's assertion, and a confirmation they give inside
+  the customer's application is input to a Run, not an approval
+  ([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)).
 - UI Surfaces are declarative and rendered by allow-listed native components. An Agent never emits
   executable code — the one point on which ADR-0010 is not deferred.
 
@@ -233,10 +237,6 @@ each were an administrator.
   "auditor" correspond to roles in that set is settled when
   [`identity-and-access.md`](../10-architecture/identity-and-access.md) lists it; an approver's
   place in an Approval Chain is derived from Policy either way.
-- **Whether an End User can resolve an Approval Request.** The glossary defines an Approval Chain as
-  a set of **Principals**, which does not exclude an End User. Approving from inside the customer's
-  application rather than the Control Plane is unspecified, and it touches the seat definition, so
-  it needs the approval-workflows document or an ADR — not an assumption.
 - **How an approver is reached.** No ADR names a notification or delivery channel.
 - **Whether these five are the right five.** They come from the section README and the ADR set, not
   from research. Procurement, legal, and the operator who runs the Connector inside the customer's

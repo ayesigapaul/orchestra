@@ -54,7 +54,7 @@ flowchart TD
   PEP --&gt; K{"What can the Step reach?"}
   K --&gt;|"tool"| EFFECT["A registered Tool. A second enforcement point sits before the invocation"]
   K --&gt;|"agent"| DELEG["An Agent version. Every Tool call it makes crosses the Tool point (E1)"]
-  K --&gt;|"subworkflow"| NEST["Another Workflow version. Whether that is a separate Run is unmade"]
+  K --&gt;|"subworkflow"| NEST["Another Workflow version, pinned at publication and executed inside this Run (ADR-0041)"]
   K --&gt;|"condition, parallel, transform"| INTERNAL["Only data inside the Run. Nothing leaves"]
   K --&gt;|"approval"| GATE["A human decision. The Run suspends before the gated action"]
   K --&gt;|"wait"| TIME["Elapsed time. Resumption has no acting Principal — audit-model section 9"]
@@ -65,7 +65,7 @@ flowchart TD
   PEP --&gt; K{"What can the Step reach?"}
   K --&gt;|"tool"| EFFECT["A registered Tool. A second enforcement point sits before the invocation"]
   K --&gt;|"agent"| DELEG["An Agent version. Every Tool call it makes crosses the Tool point (E1)"]
-  K --&gt;|"subworkflow"| NEST["Another Workflow version. Whether that is a separate Run is unmade"]
+  K --&gt;|"subworkflow"| NEST["Another Workflow version, pinned at publication and executed inside this Run (ADR-0041)"]
   K --&gt;|"condition, parallel, transform"| INTERNAL["Only data inside the Run. Nothing leaves"]
   K --&gt;|"approval"| GATE["A human decision. The Run suspends before the gated action"]
   K --&gt;|"wait"| TIME["Elapsed time. Resumption has no acting Principal — audit-model section 9"]

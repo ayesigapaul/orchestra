@@ -63,14 +63,14 @@ flowchart TD
 
   subgraph EVAL["What each one does — identical at all three"]
     direction TB
-    IN["Inputs (N1): Principal and subtype, Tenant, Workspace, pinned definition version, pinned Policy versions, Tool Catalog registration state, the Agent version's grant set, Step, Side-Effect Class, Tool, proposed action"] --&gt; RULE["Evaluate the Tenant's Policies. Deny by default. A failed precondition denies without reaching a Policy (A4)."]
+    IN["Inputs (N1): Principal and subtype, Tenant, Workspace, pinned definition version, pinned Policy versions, Tool Catalog registration state, the pinned version's declared Tools, the grants naming its definition, Step, Side-Effect Class, Tool, proposed action"] --&gt; RULE["Evaluate the Tenant's Policies. Deny by default. A failed precondition denies without reaching a Policy (A4)."]
     RULE --&gt; VD{"Exactly one verdict"}
     VD --&gt;|allow| REC["Policy Decision durable first — it is an Audit Record, allows included (ADR-0012, ADR-0013)"]
     VD --&gt;|deny| REC
     VD --&gt;|require_approval| REC
     REC --&gt;|allow| ALLOW["The gated action proceeds"]
     REC --&gt;|deny| DENY["The gated action MUST NOT execute"]
-    REC --&gt;|require_approval| APPR["One Approval Request; the Run suspends"]
+    REC --&gt;|require_approval| APPR["One Approval Request; the Run suspends, or stays Compensating for a compensating action"]
   end
 
   PEP_ADMIT -.-&gt; EVAL
@@ -91,14 +91,14 @@ flowchart TD
 
   subgraph EVAL["What each one does — identical at all three"]
     direction TB
-    IN["Inputs (N1): Principal and subtype, Tenant, Workspace, pinned definition version, pinned Policy versions, Tool Catalog registration state, the Agent version's grant set, Step, Side-Effect Class, Tool, proposed action"] --&gt; RULE["Evaluate the Tenant's Policies. Deny by default. A failed precondition denies without reaching a Policy (A4)."]
+    IN["Inputs (N1): Principal and subtype, Tenant, Workspace, pinned definition version, pinned Policy versions, Tool Catalog registration state, the pinned version's declared Tools, the grants naming its definition, Step, Side-Effect Class, Tool, proposed action"] --&gt; RULE["Evaluate the Tenant's Policies. Deny by default. A failed precondition denies without reaching a Policy (A4)."]
     RULE --&gt; VD{"Exactly one verdict"}
     VD --&gt;|allow| REC["Policy Decision durable first — it is an Audit Record, allows included (ADR-0012, ADR-0013)"]
     VD --&gt;|deny| REC
     VD --&gt;|require_approval| REC
     REC --&gt;|allow| ALLOW["The gated action proceeds"]
     REC --&gt;|deny| DENY["The gated action MUST NOT execute"]
-    REC --&gt;|require_approval| APPR["One Approval Request; the Run suspends"]
+    REC --&gt;|require_approval| APPR["One Approval Request; the Run suspends, or stays Compensating for a compensating action"]
   end
 
   PEP_ADMIT -.-&gt; EVAL

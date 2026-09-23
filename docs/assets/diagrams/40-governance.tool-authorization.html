@@ -52,12 +52,14 @@ ul.docs li:first-child { border-top: 0; }
 flowchart TD
   subgraph ACTS["Two administrative acts — I5: neither implies the other"]
     REG["Register Tool in the Tool Catalog"]
-    GRANT["Capability grant: this Agent version may call this Tool"]
+    GRANT["Capability grant: this Agent or Workflow may call this Tool"]
   end
+  DECL["The pinned version declares the Tool — authored, and frozen with the version"]
   RUN["Run proposes a Tool invocation"] --&gt; IN
-  IN["Evaluation inputs: registration state, grant set, Side-Effect Class, Principal, proposed action"]
+  IN["Evaluation inputs: registration state, declaration, grant set, Side-Effect Class, Principal, proposed action"]
   REG -.-&gt;|"registration state, an input"| IN
   GRANT -.-&gt;|"grant set, an input"| IN
+  DECL -.-&gt;|"declaration, an input"| IN
   PRIN["Initiating Principal — how its own authority combines is UNDECIDED, section 6"] -.-&gt; IN
   DENY["Policy Decision: deny — audited. A failed precondition names no Policy, policy-model A4"]
   subgraph PEP["Policy Enforcement Point — before the call leaves Orchestra"]
@@ -65,7 +67,7 @@ flowchart TD
   end
   IN --&gt; POL
   V --&gt;|"deny"| DENY
-  V --&gt;|"require_approval"| APPR["Approval Request — the Run suspends"]
+  V --&gt;|"require_approval"| APPR["Approval Request — the Run suspends, or stays Compensating for a compensating action"]
   V --&gt;|"allow"| CONN{"Reached through a Connector?"}
   CONN --&gt;|"no"| INVOKE["Invoke the Tool"]
   CONN --&gt;|"yes — ADR-0007 is Proposed"| ALLOW["Connector's tool allow-list, if it carries one"]
@@ -75,12 +77,14 @@ flowchart TD
   <details><summary>Mermaid source</summary><pre class="src">flowchart TD
   subgraph ACTS["Two administrative acts — I5: neither implies the other"]
     REG["Register Tool in the Tool Catalog"]
-    GRANT["Capability grant: this Agent version may call this Tool"]
+    GRANT["Capability grant: this Agent or Workflow may call this Tool"]
   end
+  DECL["The pinned version declares the Tool — authored, and frozen with the version"]
   RUN["Run proposes a Tool invocation"] --&gt; IN
-  IN["Evaluation inputs: registration state, grant set, Side-Effect Class, Principal, proposed action"]
+  IN["Evaluation inputs: registration state, declaration, grant set, Side-Effect Class, Principal, proposed action"]
   REG -.-&gt;|"registration state, an input"| IN
   GRANT -.-&gt;|"grant set, an input"| IN
+  DECL -.-&gt;|"declaration, an input"| IN
   PRIN["Initiating Principal — how its own authority combines is UNDECIDED, section 6"] -.-&gt; IN
   DENY["Policy Decision: deny — audited. A failed precondition names no Policy, policy-model A4"]
   subgraph PEP["Policy Enforcement Point — before the call leaves Orchestra"]
@@ -88,7 +92,7 @@ flowchart TD
   end
   IN --&gt; POL
   V --&gt;|"deny"| DENY
-  V --&gt;|"require_approval"| APPR["Approval Request — the Run suspends"]
+  V --&gt;|"require_approval"| APPR["Approval Request — the Run suspends, or stays Compensating for a compensating action"]
   V --&gt;|"allow"| CONN{"Reached through a Connector?"}
   CONN --&gt;|"no"| INVOKE["Invoke the Tool"]
   CONN --&gt;|"yes — ADR-0007 is Proposed"| ALLOW["Connector's tool allow-list, if it carries one"]

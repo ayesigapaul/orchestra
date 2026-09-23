@@ -1,11 +1,11 @@
 ---
 title: Tool Authorization
 doc_id: DOC-053
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Tool Authorization
@@ -17,7 +17,7 @@ composes likewise with
 [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md), which owns
 what a Run does after a verdict. Requirement keywords carry their
 [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) meanings, and numbered rules are labelled
-`TA1`–`TA18` so other documents can cite them.
+`TA1`–`TA26` so other documents can cite them.
 
 Orchestra is pre-implementation and pre-customer. Everything below either follows from an Accepted
 ADR, from [`../GLOSSARY.md`](../GLOSSARY.md), or from
@@ -25,14 +25,15 @@ ADR, from [`../GLOSSARY.md`](../GLOSSARY.md), or from
 in section 10. No grant syntax, threshold, retry count or retention period appears here, because
 none has been decided. The term is **capability grant**, as the domain model names it and as
 [`policy-model.md`](policy-model.md) rule A2 uses it; **grant** is its short form here and not a
-second term. [`../GLOSSARY.md`](../GLOSSARY.md) has no entry for either and should gain one, with
-*grant* recorded there as the short form so the two cannot drift into synonyms.
+second term. [`../GLOSSARY.md`](../GLOSSARY.md) defines it and records *grant* as its short form,
+so the two cannot drift into synonyms.
 
 ## 1. Scope
 
 **In scope.** The separation of registration from permission; deny-by-default; the Side-Effect
 Class as a declared, non-negotiable input; where authorization is evaluated; the two authorities
-that bear on an invocation; and the enforcement points on the connector path.
+that bear on an invocation; the enforcement points on the connector path; and what a version
+declares, what a capability grant names, and how a grant is withdrawn.
 
 **Out of scope, and where it lives.** The policy language and verdict semantics —
 [`policy-model.md`](policy-model.md). Routing, delegation and escalation of a `require_approval`
@@ -44,15 +45,15 @@ verdict — [`approval-workflows.md`](approval-workflows.md). What is recorded a
 ## 2. Two relationships, two questions
 
 Invariant **I5** of [`../20-domain/domain-model.md`](../20-domain/domain-model.md) states it: *a
-Tool existing in a Tenant's Tool Catalog and an Agent being permitted to call it are two
-relationships, created by two administrative acts and audited separately. Authorization is
-deny-by-default: registration grants nothing.* Collapsing them is the likeliest way to build a
-platform that believes it is governed and is not.
+Tool existing in a Tenant's Tool Catalog and an Agent or a Workflow being permitted to call it are
+two relationships, created by two administrative acts and audited separately. Authorization is
+deny-by-default: registration grants nothing, and neither does a version declaring the Tool.*
+Collapsing them is the likeliest way to build a platform that believes it is governed and is not.
 
 | Relationship | Question it answers | Administrative act |
 | --- | --- | --- |
 | Tool Catalog registers Tool | Does this capability exist and is it available for binding in this Tenant? | Registration by a Platform User, recording the Side-Effect Class and the origin |
-| Agent version is permitted to call Tool | May this Agent invoke it? | A capability grant, a separate act with its own record |
+| Agent or Workflow is permitted to call Tool | May its Runs invoke it, where the pinned version declares it? | A capability grant, a separate act with its own record |
 
 **TA1.** Registration MUST NOT imply permission. An implementation in which registering a Tool
 makes it callable by any Agent violates I5 and ADR-0001's requirement for a tenant-scoped,
@@ -76,16 +77,18 @@ capability, and a Workspace boundary is not what stops one.
 
 ## 3. Deny by default
 
-**TA5.** An Agent MUST NOT invoke a Tool for which no capability grant is held; an Agent holds
-exactly the capabilities granted to it and no others. This is invariant I5 and
+**TA5.** A Run of an Agent or a Workflow MUST NOT invoke a Tool for which no capability grant is
+held; a definition holds exactly the capabilities granted to it, within the Tools its pinned version
+declares (TA19), and no others. This is invariant I5 and
 [ADR-0001](../adr/adr-0001-product-shape-multi-tenant-saas.md)'s deny-by-default precondition
 stated over grants, as [`policy-model.md`](policy-model.md) rule A1 states the same posture over
 Policies.
 
 **TA6.** The absence of a matching capability grant MUST yield a recorded `deny` Policy Decision,
-not a missing record. Catalog registration state and the Agent version's grant set are inputs to
-the enforcement point rather than gates in front of it, so a failed precondition is decided there
-like any other outcome; the shape of the record — a `deny` naming no Policy, because no Policy was
+not a missing record. Catalog registration state, the pinned version's declaration and the
+capability grants naming its definition are inputs to the enforcement point rather than gates in
+front of it, so a failed precondition is decided there like any other outcome; the shape of the
+record — a `deny` naming no Policy, because no Policy was
 reached — is specified by [`policy-model.md`](policy-model.md) rule A4 and is not restated here.
 *No grant matched* is an outcome, and a trail silent in that case cannot distinguish a refusal from
 an invocation that never happened.
@@ -121,14 +124,12 @@ grant MUST NOT be treated as a policy verdict ([`policy-model.md`](policy-model.
 invocation, because the enforcement point still evaluates Policy and may return `require_approval`
 or `deny`. The two are ordered, not alternatives.
 
-An origin's MAJOR schema bump is settled for one case only. Under
-[`../VERSIONING.md`](../VERSIONING.md) rule W5 a workflow version pins the *major* version of each
-Tool schema it references, so a bump does not retroactively alter published workflows and surfaces
-as a control-plane warning. W5 is pointedly excluded where that document extends W1–W4 to Agent
-definitions, so whether an Agent version pins a Tool's major schema version, and what a bump does
-to that version's grants, is not settled — which bears directly here, since the relationship this
-document governs is Agent version to Tool. Whether a *registered* Tool's class may be changed once
-grants exist is not settled either. Both are in section 10.
+An origin's MAJOR schema bump is settled for every version. Under
+[`../VERSIONING.md`](../VERSIONING.md) rule W5 an Agent version and a Workflow version each pin the
+*major* version of each Tool schema they declare, so a bump alters no published version, its
+declaration or any grant, and surfaces as a control-plane warning; TA24 says what follows when an
+origin stops serving a pinned major. A *registered* Tool's class changes only by re-registration,
+and TA23 says what that does to the grants on it.
 
 ## 5. Where authorization is evaluated
 
@@ -159,12 +160,14 @@ decision could not be written MUST NOT proceed.
 flowchart TD
   subgraph ACTS["Two administrative acts — I5: neither implies the other"]
     REG["Register Tool in the Tool Catalog"]
-    GRANT["Capability grant: this Agent version may call this Tool"]
+    GRANT["Capability grant: this Agent or Workflow may call this Tool"]
   end
+  DECL["The pinned version declares the Tool — authored, and frozen with the version"]
   RUN["Run proposes a Tool invocation"] --> IN
-  IN["Evaluation inputs: registration state, grant set, Side-Effect Class, Principal, proposed action"]
+  IN["Evaluation inputs: registration state, declaration, grant set, Side-Effect Class, Principal, proposed action"]
   REG -.->|"registration state, an input"| IN
   GRANT -.->|"grant set, an input"| IN
+  DECL -.->|"declaration, an input"| IN
   PRIN["Initiating Principal — how its own authority combines is UNDECIDED, section 6"] -.-> IN
   DENY["Policy Decision: deny — audited. A failed precondition names no Policy, policy-model A4"]
   subgraph PEP["Policy Enforcement Point — before the call leaves Orchestra"]
@@ -172,7 +175,7 @@ flowchart TD
   end
   IN --> POL
   V -->|"deny"| DENY
-  V -->|"require_approval"| APPR["Approval Request — the Run suspends"]
+  V -->|"require_approval"| APPR["Approval Request — the Run suspends, or stays Compensating for a compensating action"]
   V -->|"allow"| CONN{"Reached through a Connector?"}
   CONN -->|"no"| INVOKE["Invoke the Tool"]
   CONN -->|"yes — ADR-0007 is Proposed"| ALLOW["Connector's tool allow-list, if it carries one"]
@@ -185,13 +188,15 @@ key on — the domain model records that a Tool call inside an Agent Run has non
 model, and marks it that document's most consequential gap. The enforcement point does not wait on
 the answer; the record it writes does.
 
-What a Run does after a `deny` is settled at admission and only there.
-[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2
-takes `Pending` to the terminal `Denied` on an admission deny, and section 2.1 requires that
-decision audited whichever way it goes. That state machine has no transition out of `Running` for a
-refusal, so a `deny` at a Tool enforcement point mid-Run has no defined effect on the Run. Section
-10 registers it, next to the adjacent question [`policy-model.md`](policy-model.md) rule V1 already
-carries.
+What a Run does after a `deny` is [`policy-model.md`](policy-model.md) rule V1's, and
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) decides it past admission.
+A `deny` at the Tool enforcement point of a `tool` Step follows that Step's refusal edge, or ends
+the Run in `Denied`
+([`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section
+2.6). A `deny` of a call the model chose, in an Agent Run or inside an `agent` Step, returns to the
+model as that invocation's outcome, and the Run continues; the next call crosses this enforcement
+point again, and a missing grant refuses it again (TA6). A gate raised here that is rejected or
+expires goes the same way ([`approval-workflows.md`](approval-workflows.md) J5).
 
 ## 6. On whose behalf — the confused deputy
 
@@ -207,7 +212,8 @@ expressiveness, which the platform can meet from inputs it holds; it is not a cl
 knows what the caller could have done unaided, and it settles nothing about how the two
 authorities combine.
 
-A capability grant is a ceiling on what an Agent version can ever do. It is not a statement about
+A capability grant, within the Tools the pinned version declares, is a ceiling on what an Agent can
+ever do. It is not a statement about
 what this caller could have done alone, and it MUST NOT be recorded as the sole basis for an
 invocation made on another Principal's behalf — a negative that follows from I5 without deciding
 the combination rule. Whether authorization must additionally *weigh* the initiating Principal's
@@ -220,7 +226,7 @@ By I2 there is always exactly one, so *no caller* is not a case to design for: a
 resolves to a Service Account, and traffic arriving through the connector fabric resolves to the
 Connector, a disjoint Principal subtype (domain model section 3). The deputy problem has the same
 shape for every subtype — a Platform User or Service Account with narrow rights invoking an Agent
-version that holds a broad grant is the same laundering — so the End User above is the
+that holds a broad grant is the same laundering — so the End User above is the
 illustration, not the boundary. Platform-operator action is no exception: it resolves to a Platform
 Operator Principal of the Tenant it acts in, a disjoint subtype like the others, and crosses the
 enforcement point as any other does
@@ -289,38 +295,75 @@ How divergence between the two lists is detected, reported and reconciled is und
 whether Orchestra may read the connector's list at all; both belong to `connector.md` in
 [`../10-architecture/`](../10-architecture/), after ADR-0007 binds.
 
-## 8. What a grant does not say
+## 8. Declared Tools and capability grants
 
-**Syntax and subject.** No grant syntax exists, and whether a grant is authored per Agent, per
-Agent version, per Workspace, or at several levels and composed, is unmade — and sharper than it
-looks. [`../GLOSSARY.md`](../GLOSSARY.md) lists *permitted tools* among the contents of the
-versioned Agent definition; [`../VERSIONING.md`](../VERSIONING.md) rule W1 makes a published
-version immutable; invariant I3 pins a Run to its version for life. Read together, a
-definition-carried grant is frozen at publication and a Run in flight keeps the set it started
-with — defensible, with an uncomfortable corollary: withdrawing a capability means publishing a
-new version, which does nothing for a Run already suspended on an approval. Whether a separate,
-immediately effective revocation path exists, and whether it overrides the pin, is what an
-incident response asks first.
-[ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) has since settled the analogous
-question for Policies — immutably versioned, pinned at admission for the life of the Run — which
-makes the same shape the obvious candidate here. It does not decide it: ADR-0012 governs Policies,
-and the grant subject is still unfixed.
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) fixes what a version declares,
+what a capability grant names, how a grant is withdrawn, and where a restriction on a call belongs.
+The rules below carry it.
 
-**A Workflow Step that names a Tool.** A `tool` Step names exactly one Tool, and the domain model
-draws no grant edge from a Workflow version to a Tool at all. So either authoring the Step is
-itself the permission — which weakens I5 for Workflows, since one act would both name and permit —
-or Workflows need a grant subject the model lacks. Unmade, and it moves the authorization data
-model and the Workflow schema together.
+**TA19.** A version MUST declare every Tool its Runs may invoke. An Agent version declares each Tool
+it may call; a Workflow version declares a Tool by naming it, in a `tool` Step or in a compensating
+action declared on one. The declaration is part of the version, frozen by publication
+([`../VERSIONING.md`](../VERSIONING.md) rule W1) and pinned with it by every Run (invariant I3). It
+is a ceiling: a Run MUST NOT invoke a Tool its pinned version does not declare, whatever is granted.
+Declaring grants nothing, and naming a Tool in a `tool` Step is a declaration, never a grant.
 
-**Parameter-level and row-level restriction.** Whether a grant can say *this Tool, but only for
-refunds below a value*, or *only for orders in this region*, is undecided, and the prior question
-is where such a constraint belongs: an attribute of the grant, or a Policy rule keyed on the
-invocation arguments. The answer decides whether a grant is a boolean edge or a
-constraint-carrying object, which is why it is an ADR rather than a schema detail.
+**TA20.** A capability grant MUST name exactly one Agent or Workflow and exactly one Tool, both of
+the granting Tenant (TA2), and nothing more. It names the definition, never a version, so a new
+version needs no new grant for a Tool already granted. It carries no condition on an invocation: it
+stands or it does not. The calls made inside an `agent` or `subworkflow` Step belong to the version
+that Step delegates to, so that version's declaration bounds them and grants naming its definition
+satisfy them.
+
+**TA21.** A grant MUST be read at every Tool enforcement point, and MUST NOT widen a Run after its
+admission. Every attempt reads the grant as it stands
+([`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X12). A grant
+satisfies only if it stood when the Run was admitted, still stands, and was given for the
+Side-Effect Class the Tool is registered with now. Which grants stood is recorded when the Run is
+admitted, and the enforcement point decides from that record, never by comparing clocks
+([`policy-model.md`](policy-model.md) N3, [`audit-model.md`](audit-model.md) A7). An invocation
+proceeds only when the Tool is registered, the pinned version declares it, a grant satisfies and the
+origin still serves the schema major the version pins (TA24). A failure of any of them is a `deny`
+naming no Policy ([`policy-model.md`](policy-model.md) A4), and Policy decides the rest.
+
+**TA22.** Revoking a capability grant MUST take effect at the next Tool enforcement point, Runs in
+flight included, and MUST NOT be refused or deferred because a Run holds a side effect it may yet
+compensate. A Run suspended at an Approval Request resumes into an enforcement point that refuses
+the call. The pin of [`policy-model.md`](policy-model.md) P6 does not preserve a capability an
+administrator has withdrawn, because a revocation only narrows. Granting the Tool again makes a new
+grant, under TA21. Compensation a revocation strands is recorded as `unresolved` in the Run's
+compensation outcome (ADR-0040).
+
+**TA23.** A registered Tool's Side-Effect Class MUST NOT change in place: a change is a
+re-registration ([`../10-architecture/control-plane.md`](../10-architecture/control-plane.md)
+section 10). A re-registration that changes the class MUST leave every existing grant on the Tool
+retained and unsatisfiable, surfaced as a staleness warning on the definition holding it, which is
+the shape [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X30
+gives grants on a de-registered Tool. A stale grant never satisfies again, even if the class changes
+back, so the Tool must be granted again. A grant is consent to the Tool as it was classed.
+
+**TA24.** An Agent version and a Workflow version MUST each pin the schema major of every Tool they
+declare ([`../VERSIONING.md`](../VERSIONING.md) rule W5). A Tool's major bump surfaces as a
+control-plane warning and MUST NOT alter a published version, its declaration or any grant. An
+invocation whose pinned major the origin no longer serves is a `deny` naming no Policy, and the
+remedy is a new version. How Orchestra learns what an origin serves is the drift detection TA9
+leaves undesigned.
+
+**TA25.** A restriction on what an invocation may do, such as *refunds below a value* or *orders in
+a region*, MUST be a Policy rule on the proposed action's arguments
+([`policy-model.md`](policy-model.md) S2), and MUST NOT be an attribute of a grant. Every such
+restriction is then versioned and pinned like any Policy, and a refusal under one names the Policy
+version that refused. How the rule is written waits on the policy language.
+
+**TA26.** A Tool registration is Tenant-scoped. A Workspace MAY narrow which Tools an administrator
+delegated to it may name in a capability grant, as
+[`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 8
+derives. That constraint is checked when the grant is authored, and MUST NOT be evaluated at an
+enforcement point (TA4).
 
 **De-registration.** What happens to existing grants, and to Runs in flight, when a Tool is
-removed from the Catalog is unspecified; the domain model covers Tenant deletion and version
-retirement and is silent here.
+removed from the Catalog is specified by
+[`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X29 to X32.
 
 ## 9. Audit and metering
 
@@ -352,18 +395,10 @@ ADR, because it is costly to reverse or spans components, or whether a later doc
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
-| Grant syntax, and whether a grant is authored per Agent, per Agent version, per Workspace, or composed across levels | This document once the subject is fixed; it constrains the Agent definition schema and the Control Plane at once | **ADR** |
-| Whether the grant set is carried by the immutable Agent version, and so pinned for the life of a Run | The same decision, read against VERSIONING rule W1 and invariant I3 | **ADR** |
-| Whether an immediately effective revocation path exists, and whether it overrides a Run's pin | Incident-response requirements and [`threat-model.md`](threat-model.md) | **ADR** |
+| The syntax of a declaration and of a capability grant, their subjects being fixed by TA19 and TA20 | The Agent definition and capability grant schemas [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 8 lists, after the endpoint shape its section 9 registers | Later document |
 | How the Agent's grant combines with the calling Principal's own authority | [`threat-model.md`](threat-model.md) plus design-partner validation | **ADR** |
 | What identity the Tool origin sees — Orchestra service identity, delegated End User, or an exchanged credential | The same decision; it spans the Gateway, credential custody and the connector path | **ADR** |
-| Whether a `tool` Step naming a Tool is itself the permission, or Workflows need a grant subject of their own | This document with the workflow DSL in [`../50-workflows/`](../50-workflows/) | **ADR** |
-| Whether parameter-level or row-level restriction is a grant attribute or a Policy rule | Jointly with [`policy-model.md`](policy-model.md) | **ADR** |
-| Whether a Workspace constrains which Tools a grant may name | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | Later document |
-| Whether an Agent version pins a Tool's major schema version, and what a Tool MAJOR bump does to that version's grants | This document, with the grant-subject question; [`../VERSIONING.md`](../VERSIONING.md) is where the outcome is written, not where the choice is made | **ADR** |
+| Whether a grant left unsatisfiable by de-registration satisfies again when the Tool is registered again, and whether a re-registration that changes the origin but not the Side-Effect Class leaves grants satisfying (TA23) | This document with [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 10, and [`threat-model.md`](threat-model.md) T2 for the origin half | Later document |
 | How post-registration drift between the registered Tool record and what the origin now serves is detected, and what follows from detecting it (TA9) | This document with [`threat-model.md`](threat-model.md) T2, once a detection design exists | Later document |
-| What a Run does after a mid-Run `deny` at a Tool enforcement point, which the Run state machine has no transition for | [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2 with `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), aligned with [`policy-model.md`](policy-model.md) rule V1, which owns it | **ADR** |
-| Whether a registered Tool's Side-Effect Class may be changed once grants exist | The Control Plane specification, with [`audit-model.md`](audit-model.md) | Later document |
-| What happens to grants and to Runs in flight when a Tool is de-registered | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) | Later document |
 | Divergence between the Connector's local allow-list and Orchestra's grants: detection, reporting, and whether Orchestra may read the list at all. Existence is settled by [`threat-model.md`](threat-model.md) T7 and precedence by TA17 | `connector.md` in [`../10-architecture/`](../10-architecture/), after ADR-0007 binds | Later document |
 | Whether a refused invocation is metered as a Tool invocation | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/) | Later document |

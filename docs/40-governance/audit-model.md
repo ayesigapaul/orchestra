@@ -1,11 +1,11 @@
 ---
 title: Audit Model
 doc_id: DOC-054
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013, ADR-0043]
 ---
 
 # Audit Model
@@ -73,9 +73,12 @@ interval sets that window and is not decided — section 13.
 survives a rename or the Principal's deletion. The Principal named is the one who **acted**:
 [`approval-workflows.md`](approval-workflows.md) fixes the same rule for delegation, where the
 record names the delegate who decided and the delegation grant is a separate audited fact with its
-own acting Principal. Whether a record ever carries an acted-for Principal alongside the acting one
-depends on a delegation and impersonation mechanism no document defines; section 13 registers it,
-and this rule holds on any answer. A record of a transition caused by an observed condition carries
+own acting Principal. A record never carries an acted-for Principal alongside the acting one: it
+names only the Principal who acted, and should a delegation mechanism exist, the delegation is a
+separate audited grant the record references.
+[ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) adopts none for approvals,
+and an acted-for field could be added later
+under VERSIONING R2. A record of a transition caused by an observed condition carries
 its cause and no Principal, as section 9 states
 ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
@@ -179,17 +182,17 @@ makes each row a derivation rather than a preference.
 | Governed act | The record MUST additionally carry | Grounding |
 | --- | --- | --- |
 | Every Policy Decision at every PEP, all three verdicts | The PEP, every Policy version that matched with the verdict each contributed — by reference, never the rule text — the inputs, aggregate values included, and the verdict. A `deny` reached before any Policy applied names none, and [`policy-model.md`](policy-model.md) owns that rule | [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md); [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md); GLOSSARY; [`policy-model.md`](policy-model.md) |
-| Run admission, and every Run state transition | The admission Policy Decision, the pinned Agent or Workflow version, and the cause of each transition; for cancellation, the cancelling Principal and any Step Execution in flight | [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md), invariant I3, [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) |
-| Step Execution start and terminal transition | The Run, the Step, the Side-Effect Class, the outcome, and the idempotency key the Step Execution is scoped to | Invariant I4, ADR-0009 — Step Executions is a metered dimension |
+| Run admission, and every Run state transition | The admission Policy Decision, the pinned Agent or Workflow version, and the cause of each transition; for cancellation, the cancelling Principal and any Step Execution in flight; for `Denied`, the enforcement point and the Policy Decision or Approval Request that refused; for every terminal state, the compensation outcome and each Step Execution it names as unresolved | [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md), invariant I3, [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md), [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) |
+| Step Execution start and terminal transition | The Run, the Step, the Side-Effect Class, the outcome, and the idempotency key the Step Execution is scoped to; for a Step inside a `subworkflow` Step, also the Step Execution it executes under and the Workflow version that declares the Step | Invariant I4, ADR-0009 — Step Executions is a metered dimension; [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) |
 | Tool invocation | The Tool, its Side-Effect Class, and the execution it belongs to — the Step Execution in a Workflow Run; an Agent Run has none, and that grain is open (sections 7 and 13) | GLOSSARY, ADR-0009 |
 | Approval Request raise | The causing Policy Decision, the proposed action, the Evidence Set, the Approval Chain as resolved | Section 5 |
-| Each approval decision, and the resolution | The deciding Principal, the authenticated identity, which decisions satisfied the chain, and whether a Run suspended on it resumed | Section 5 |
-| Amendment of an Approval Chain after it was resolved | The cause, the acting Principal where one exists, and the chain before and after | [`approval-workflows.md`](approval-workflows.md) section 9, [`threat-model.md`](threat-model.md) |
+| Each approval decision, and the resolution | The deciding Principal, the authenticated identity, which decisions satisfied the chain, and whether a Run suspended on it resumed or a compensating action waiting on it was attempted | Section 5 |
+| Amendment of an Approval Chain after it was resolved — a reassignment by hand, the only amendment there is | The cause, the acting Principal, and the chain before and after | [`approval-workflows.md`](approval-workflows.md) sections 5 and 9, [`threat-model.md`](threat-model.md) |
 | A Policy version published, and any change to which Policy versions are in force | The Principal and the Policy version identity — the rule content is in the version, which is immutable and need not be restated per record | ADR-0012, [`../VERSIONING.md`](../VERSIONING.md) sections 2 and 8 |
 | Definition published, set current, or retired | The Principal, the frozen definition, and the compiled artifact | ADR-0005, ADR-0008 |
-| Definition archived | The cause — the last pinned Run reaching a terminal state — and no Principal, because none acted | Section 9, [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) |
+| Definition archived | The cause — the last pinned Run reaching a terminal state, or the last version naming it being archived, whichever completed the condition — and no Principal, because none acted | Section 9, [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md), [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) |
 | Tool registered in the Tool Catalog | The Principal and the Tool's origin | Invariant I5 |
-| A capability grant from an Agent version to a Tool, and its revocation | The Principal — a second act, audited separately from registration | Invariant I5, [`tool-authorization.md`](tool-authorization.md) |
+| A capability grant from an Agent or a Workflow to a Tool, and its revocation | The Principal, the definition and the Tool named, and the Side-Effect Class the Tool was registered with — a second act, audited separately from registration | Invariant I5, [`tool-authorization.md`](tool-authorization.md) TA20 to TA23 |
 | Model Binding created or changed; a custodied credential accessed | The binding and the Principal — never the credential, in any form | [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) |
 | Connector enrolment, first session, every version negotiation outcome including refusals, revocation | The Connector, which is itself a Principal | ADR-0007 — **Proposed** |
 | Principal, Workspace and Tenant administration, including a Tenant's creation, and an administrative grant or group-to-role mapping created, changed or removed; Session Token issuance and revocation | The Principal, and the authority granted or removed. For a mapping, the group, the role and the scope before and after. For a Platform Operator's administrative grant, its end time and the support case or incident it names. A Tenant's creation is the first record in the new Tenant's trail, attributed to the Platform Operator who created it and naming the first administrator it invites; that person's first verified sign-in, which gives them the Tenant's administrator role, is recorded with its cause and no Principal | A3, GLOSSARY, [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md), [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) |
@@ -248,9 +251,10 @@ had. A record that cannot reproduce it attests to nothing beyond somebody having
   Principal and timestamp, and the resolution MUST name the decisions that satisfied the chain. One
   aggregate record loses who dissented.
 - `Expired` MUST be distinguishable from `Rejected`. "A human declined" and "nobody looked" are
-  different facts about a control, and a report conflating them misstates it. Whether a deadline
-  exists at all belongs to [`approval-workflows.md`](approval-workflows.md); expiry records its
-  cause and no Principal, as section 9 requires.
+  different facts about a control, and a report conflating them misstates it. A request expires only
+  at a decision deadline its Policy declares
+  ([`approval-workflows.md`](approval-workflows.md) section 7), and expiry records its cause and no
+  Principal, as section 9 requires.
 - An Evidence Set is content an Agent may have been induced to assemble. It is recorded because it
   is what the human saw, never because it is trustworthy — see [`threat-model.md`](threat-model.md).
 
@@ -264,6 +268,10 @@ contradictory facts about one entity. Immutability propagates into every state m
 
 - A Run in `Succeeded`, `Failed`, `Cancelled` or `Denied` MUST NOT transition again. Re-execution is
   a new Run referencing the old one; retries live at Step Execution (invariant I4).
+- A Run whose compensation outcome is `unresolved` MUST NOT be reopened to resolve the effect it
+  names. Resolving that effect is a new governed act, with its own record and its own Principal,
+  referencing the Run and the Step Execution. The Run's terminal state and compensation outcome stay
+  as recorded ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)).
 - An `Approved` Approval Request MUST NOT be un-approved. Reversing an approval's effect is a new
   governed act — a cancellation, a compensating Step Execution, a fresh Approval Request — with its
   own record and its own Principal.
@@ -466,7 +474,8 @@ is an ADR.
 Everything this document could not settle, and whether closing it requires an ADR or a later
 document suffices. Two entries have left the register since the previous version: ADR-0012 settles
 the record model and how a Policy is identified in a decision, and ADR-0013 settles what an
-unreachable audit store does to a governed action. A third has left since:
+unreachable audit store does to a governed action. Whether a record carries an acted-for Principal
+alongside the acting one has left it too, because A3 now answers it. A third has left since:
 [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles how a fact with no
 acting Principal is recorded, and whether platform-operator work crosses a Policy Enforcement Point.
 
@@ -475,7 +484,6 @@ acting Principal is recorded, and whether platform-operator work crosses a Polic
 | The audit-retention period, and whether the rule is platform-wide, per Tenant or per record class | A customer contract forcing a regulatory floor; storage cost modelling once volume is observable. Policy Decision retention is not separate from it (section 11), and it now also fixes how long a Policy version lives, since ADR-0012 bounds that below by the records naming it | **Yes** — spans storage, erasure, the definition and Policy version lifecycles, metering and the contract |
 | How erasure requests are satisfied against immutable Audit Records | ADR-0011's per-tenant erasure follow-on, with legal input | **Yes** |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand | A design-partner conversation; forwarding attaches an availability obligation to Orchestra | **Yes** |
-| Whether a record ever carries an acted-for Principal alongside the acting one | The delegation, escalation and reassignment decision [`approval-workflows.md`](approval-workflows.md) owns; A3 holds on any answer, since the record names whoever acted | **Yes** — classified as its owning document classifies it |
 | How a degraded period is represented and signalled, for the writes ADR-0013 permits to degrade | ADR-0013 settles the split and requires that a gap be attributable rather than silent; `reliability.md` in [`../60-operations/`](../60-operations/) owns the failure taxonomy and the signals, and hands one part back — whether the bracket marking such a period is itself an Audit Record class, which section 3's enumeration decides | No |
 | What value identifies a metered occurrence across the audit and metering stores, and whether it is also the meter idempotency key | The metering design with `event-protocol.md` in [`../30-protocol/`](../30-protocol/); ADR-0009 requires the reconciliation but names no such value | No |
 | Export format, schema and transport | A later governance or protocol document, once the forwarding question above is settled. The completeness proof is no longer part of it: [ADR-0036](../adr/adr-0036-signed-merkle-checkpoints-over-audit.md) decides it, and an export carries the Audit Checkpoints and proofs that supply it | No |

@@ -1,11 +1,11 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.16.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012]
+depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012, ADR-0042]
 ---
 
 # Identity and Access
@@ -35,21 +35,20 @@ three must hold, and only the first is owned here.
 | Question | Owned by | What it decides |
 | --- | --- | --- |
 | May this Principal administer this thing through the Control Plane? | This document | Whether a capability grant, Policy, Model Binding or Tool registration may be authored at all |
-| Does this Agent version hold a capability grant on this Tool? | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | What an Agent can ever do, as a ceiling |
+| Does this Agent or Workflow hold a capability grant on this Tool, and does the version the Run pinned declare it? | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | What a Run can ever do, as a ceiling |
 | Does Policy permit this invocation now? | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) | The verdict at the enforcement point |
 
 An approver authorised to release a payment is not thereby an Agent that may make one, and an Agent
 holding a capability grant on a `financial` Tool is not thereby permitted to invoke it — rule A2 of
 `policy-model.md`, invariant I5 of [`../20-domain/domain-model.md`](../20-domain/domain-model.md).
 
-**Two mechanisms, two words, always qualified.** *Capability grant* is the second row's
-Agent-to-Tool edge, as `tool-authorization.md` uses it. *Administrative grant* is the first row's
-permission to author something through the Control Plane: one role, from a closed set Orchestra
-defines, held in one Tenant and optionally narrowed to a Workspace
+**Two mechanisms, two words, always qualified.** *Capability grant* is the second row's edge from an
+Agent or a Workflow to a Tool, as `tool-authorization.md` uses it. *Administrative grant* is the
+first row's permission to author something through the Control Plane: one role, from a closed set
+Orchestra defines, held in one Tenant and optionally narrowed to a Workspace
 ([ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)). An unqualified
 "grant" would collapse exactly the distinction this section exists to keep, so none appears below.
-[`../GLOSSARY.md`](../GLOSSARY.md) defines *administrative grant*, and *capability grant* still
-needs an entry (section 12).
+[`../GLOSSARY.md`](../GLOSSARY.md) defines both.
 
 ## 2. The Principal model
 
@@ -317,17 +316,19 @@ matters.
 
 The constraint cannot live at the enforcement point, and TA4 is explicit: sharing a Workspace
 confers no capability, and a Workspace boundary is not what stops an invocation. At the Tool
-enforcement point the inputs are Catalog registration state and the Agent version's capability grant
-set (`policy-model.md` rule N1); Workspace is an input a Policy *may* match on, and the capability
+enforcement point the inputs are Catalog registration state, the pinned version's declaration and
+the capability grants naming its definition (`policy-model.md` rule N1); Workspace is an input a
+Policy *may* match on, and the capability
 machinery does not gate on it. So a capability grant that exists is complete on its own face, and a
 defective authoring check yields a bad capability grant rather than a bypassed boundary — audited,
 visible and revocable, which is what makes an administrative control acceptable here and
 unacceptable in the enforcement path.
 
-One residual: whether a Tool *registration* may itself be Workspace-scoped, given the Catalog is
-tenant-scoped. That is a second scoping mechanism and belongs with the capability grant's subject,
-which `tool-authorization.md` marks ADR-required — if capability grants become Workspace-authored,
-the subject and this constraint are one decision.
+The residual is closed. A Tool registration stays Tenant-scoped, as a component catalog registration
+does, so this authoring-time constraint is the only scoping a Workspace applies to capability
+grants ([`control-plane.md`](control-plane.md) section 10). A capability grant names an Agent or a
+Workflow, never a Workspace ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)),
+and `tool-authorization.md` TA26 now carries the rule this section derives.
 
 ## 9. Credentials and Session Tokens: what bounds a lifetime
 
@@ -426,19 +427,22 @@ against an outsider who has obtained operator-level read access.
 
 Settled above and so absent from the table: who may read audit and an Evidence Set (section 6);
 which Principals may cancel a Run (section 7); whether a Workspace constrains which Tools a
-capability grant may name (section 8); whether Workspace-scoped visibility is enforced in
+capability grant may name, and whether a Tool registration may itself be Workspace-scoped, which it
+may not (section 8); whether Workspace-scoped visibility is enforced in
 application code (section 4); whether credential custody is write-only (section 10); whether a
 cross-tenant person record exists (section 2); that a Service Account credential is not a Session
 Token (section 3); and which component authenticates each subtype, mints and validates a Session
 Token, and reads the tenant directory (section 3). That discharges eight of the twelve register rows
 naming this document in full. The other four are discharged in part: the Service Account halves of
 `containers.md`, `system-context.md` and the domain model land in the credential-class row below,
-and `threat-model.md`'s lifetimes row is below unchanged. Which signed token carries a Principal
-and Tenant between services is settled by
-[ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) (section 3), so its
-row is gone too. Three more rows are gone for the same reason:
-[ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles platform-operator
-attribution (section 11),
+and `threat-model.md`'s lifetimes row is below unchanged. Which signed token carries a Principal and
+Tenant between services is settled by
+[ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) (section 3), so its row
+is gone too. So is whether an End User may sit in an Approval Chain:
+[ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) resolves every chain to
+Platform Users only, so no Session Token carries an approval authority. Three more rows are gone for
+the same reason: [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles
+platform-operator attribution (section 11),
 [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) settles the shape
 of an administrative grant (section 5), and `gateway-api.md` G15 carries the cancellation rule
 (section 7).
@@ -449,13 +453,10 @@ of an administrative grant (section 5), and `gateway-api.md` G15 carries the can
 | How a Platform Operator authenticates, which verified subjects Tenant User Management may resolve to one, and whether a Platform Operator Principal stands on a Membership | This document, before the first operation a Platform Operator performs; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) fixes the Principal, and ADR-0017 keeps the list of operators out of Keycloak roles | No — but before the first operator operation |
 | Whether an operator break-glass decrypt of a custodied credential exists | A security review, on the same test `approval-workflows.md` applies to break-glass | **ADR** — a deliberate hole in the control section 10 settles closed |
 | What a Session Token's scope may contain, which bounds the End User row in section 7 | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — its classification, repeated |
-| Whether an End User may sit in an Approval Chain, which would give a Session Token an approval authority | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md), and the seat definition under ADR-0009 | **ADR** — its classification, repeated |
 | Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be | [`control-plane.md`](control-plane.md) with a design partner; that document accepts the assignment in its section 12 and carries the row in section 13. [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) decides that a group holds a role only through a mapping | No |
 | How a Platform User is deprovisioned, and what becomes of administrative grants held by a Principal who can no longer authenticate | [`control-plane.md`](control-plane.md), which accepts it in section 12 and carries the row in section 13; the domain model fixes that a Principal outlives its credentials, not what removes its authority | No |
 | What credential class a Service Account authenticates with, and whether the tenant identity provider authenticates it or a separate credential type does | A product decision with a design partner; section 3 fixes only what it is not, and which component receives it | No |
 | Session Token, Service Account and enrolment credential lifetimes and rotation intervals | A customer contract or design partner; no input exists pre-customer, and section 9 gives the forces | No — unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies |
 | Whether a Platform Operator's access to a Tenant requires the Tenant's consent, is time-bounded, or is announced to the Tenant, and who gives a Platform Operator an administrative grant there | A design-partner conversation and the contract; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) decides the attribution, not the consent | No — but it must exist before the first security review |
-| Whether a Tool registration may itself be Workspace-scoped, given one Catalog per Tenant | [`control-plane.md`](control-plane.md) section 10, which specifies registration no further today, with the capability grant's subject, which `tool-authorization.md` marks ADR-required | No — unless it merges with that ADR |
 | Whether a Service Account consumes a seat, given ADR-0009 counts Principals authenticating to the Control Plane and carries no Service Account dimension | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), where [`../00-overview/personas.md`](../00-overview/personas.md) section 5 registers it | No — its classification, repeated |
-| A GLOSSARY entry for *capability grant*, which has none | [`../GLOSSARY.md`](../GLOSSARY.md), joining the entry [`../20-domain/domain-model.md`](../20-domain/domain-model.md) already registers | No |
 | When identity sync runs — on a schedule, on the identity provider's events, or at sign-in — and so how long a Person's name and email may lag behind the identity provider | [`control-plane.md`](control-plane.md), which owns deprovisioning, with a design partner's expectations of how soon a change must show | No |

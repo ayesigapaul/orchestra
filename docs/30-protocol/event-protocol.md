@@ -1,11 +1,11 @@
 ---
 title: Event Protocol
 doc_id: DOC-042
-version: 0.9.0
+version: 0.10.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0009, ADR-0010, ADR-0013]
+depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0009, ADR-0010, ADR-0013, ADR-0043]
 ---
 
 # Event Protocol
@@ -102,24 +102,24 @@ type it does not enumerate is non-conformant. This table fixes the families and 
 
 | Family | In the profile | Grounding |
 | --- | --- | --- |
-| Run lifecycle | **Emitted.** The states are Orchestra's — `Pending`, `Running`, `Suspended`, `Succeeded`, `Failed`, `Cancelled`, `Denied` — and MUST NOT be a projection of runtime internals. The eighth state in the source, `Compensating`, is **Provisional** there and is not enumerated here; see below | [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) sections 2 and 2.4 |
+| Run lifecycle | **Emitted.** The states are Orchestra's — `Pending`, `Running`, `Suspended`, `Succeeded`, `Failed`, `Cancelled`, `Denied` — and MUST NOT be a projection of runtime internals. The eighth state in the source, `Compensating`, is not enumerated in profile v1; see below | [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2; [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X22 |
 | Text message | **Emitted.** Streamed content from an Agent to an End User | [`../GLOSSARY.md`](../GLOSSARY.md) |
 | Tool call | **Emitted.** The Tool is identified by its Tool Catalog identifier and Side-Effect Class; no tool-protocol vocabulary appears | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md); [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A8 |
 | State snapshot and delta | **Emitted.** The one capability genuinely inherited: a snapshot replaces wholesale, a delta is an [RFC 6902](https://www.rfc-editor.org/rfc/rfc6902) JSON Patch applied atomically, deltas carry no version, and divergence is repaired by a fresh snapshot | [state events](https://docs.ag-ui.com/spec/draft/events/state) |
 | Reasoning | **Not emitted in profile v1.** Who may see model reasoning is undecided, and it is the same question the Evidence Set raises. Admitting the family for every reader of a Run's stream is a MINOR change under R2. Admitting it for some readers and not others is **MAJOR**, because section 4 mints `seq` once per Run and admits no filtered stream | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 8; section 4; section 11 |
 | Activity | **Not emitted.** Orchestra's progress vocabulary is Step Execution. A second progress vocabulary is a synonym for an existing term, which CLAUDE.md working rule 3 makes a defect | [`../GLOSSARY.md`](../GLOSSARY.md) |
-| Subagent attribution | **Not emitted.** Orchestra's nesting is the `subworkflow` Step. Subagent attribution is an execution shape the domain model does not have, and emitting it would create one on the wire before the domain has it | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) |
+| Subagent attribution | **Not emitted.** Orchestra's nesting is the `agent` and `subworkflow` Step, and the version either one names executes inside the same Run rather than as a Run of its own ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). Subagent attribution describes a child Run, which the domain model does not have, and emitting it would put one on the wire | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) |
 | Raw passthrough | **MUST NOT be populated.** The base event's raw-event field carries the underlying provider or runtime payload verbatim. Populating it would put a rail's vocabulary into a public contract | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A8, [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md), invariant I6 in [`../20-domain/domain-model.md`](../20-domain/domain-model.md) |
 | Custom envelope | **Emitted, `orchestra.`-prefixed only.** Section 3.3 | [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) — **Proposed** |
 
-**`Compensating` is left out deliberately, and leaving it out is not free.**
-[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2.4
-marks it Provisional and leaves one thing open: whether the Run carries an observable roll-up state
-while its Step Executions compensate. `execution-semantics.md` in
-[`../50-workflows/`](../50-workflows/) decides that, and the profile does not emit a state the
-domain model has not settled. The cost is that the Run lifecycle set is one a consumer branches
-across exhaustively, so C2 applies rather than R2: **admitting `Compensating` later is a profile
-MAJOR.** Section 11 carries the row with the classification its owning document gives it.
+**`Compensating` is left out of profile v1, and leaving it out is not free.**
+[`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X22 settles that
+the Run carries it as an observable roll-up state while its Step Executions compensate, and
+[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2
+draws it. Whether the profile enumerates it is this document's to decide, and is not decided yet.
+The cost is that the Run lifecycle set is one a consumer branches across exhaustively, so C2
+applies rather than R2: **admitting `Compensating` later is a profile MAJOR.** Section 11 carries
+the row.
 
 Wire compatibility is deliberate. The profile keeps the upstream type constants on the wire, because
 the interoperability ADR-0004 buys — any format-aware frontend can read Orchestra's stream — exists
@@ -427,14 +427,19 @@ another document owns a row, its classification is repeated rather than revised.
 | Which upstream commit the profile pins, and what governs moving it | The first implementation. The pin is normative and there is nothing to pin against until code exists | No |
 | Which transport bindings the Gateway serves, given that only the binary one drops top-level extras silently and only the server-sent-events one carries a cursor | [`gateway-api.md`](gateway-api.md). EG2 holds on any answer and holds hardest if the binary binding is ever served; O4 binds only where a binding defines an equivalent cursor, so O2 and O4 have no defined behaviour on a binding served without one | No |
 | Whether the profile ever admits a reasoning family, and what an End User may see of model reasoning | The same decision [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 13 registers for who may read an Evidence Set; `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) owns it. Section 4 bounds the answer: admitting the family for every reader of a Run's stream is MINOR under R2, while a per-reader answer needs per-subscription sequencing | No — classified as its owning document classifies it. The profile change a per-reader answer forces is a **MAJOR**, not the MINOR an earlier draft claimed |
-| Whether the profile enumerates `Compensating`, and what it emits while Step Executions compensate | Whether the Run carries an observable roll-up state at all, which [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2.4 marks Provisional and assigns to `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) | No — that document's classification, repeated. Admitting the state into the profile later is a **MAJOR** under C2, which is the cost of leaving it out today |
+| Whether the profile enumerates `Compensating`, and what it emits while Step Executions compensate | This document, now that [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X22 settles that the Run carries the roll-up state | No — that document's section 11 classification, repeated. Admitting the state into the profile later is a **MAJOR** under C2, which is the cost of leaving it out today |
+| Whether a terminal Run lifecycle event carries the Run's compensation outcome, and the refusal a `Denied` Run records ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)) | This document, with the Run lifecycle family of section 3.2 | No — a member a consumer may ignore is additive under R2 |
 | The event names inside the reserved `orchestra.ui.*` family, and how a surface orders against the approval extension it accompanies | [`ui-protocol.md`](ui-protocol.md) UC1, which asks this profile to fix them and invents none; section 3.3 reserves the family and does not name its events | No — additive under R2 once a surface model exists, and both ADRs behind it are **Proposed** |
 | Whether untrusted content carries provenance inside the model context, and whether that marking reaches this contract — the profile carries none in v1 | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9, with this document; assigned by [`../40-governance/threat-model.md`](../40-governance/threat-model.md) section 14 | **ADR** if it changes a public contract — that document's classification, repeated |
 | Whether Orchestra's resumption survives a frozen upstream version that makes the no-resumption rule normative for producers as well as consumers | The freeze, which has no announced date. Today the rule binds consumers only, so O4 is an addition rather than a contradiction | No — ADR-0004's revisit criteria already cover a divergence that forces a fork |
 | Whether the conformance suite tests against a fixture corpus of Orchestra's own making, and what "conformant client" admits | The suite, which does not exist. There is no upstream corpus to inherit ([`../80-reference/ag-ui-evaluation.md`](../80-reference/ag-ui-evaluation.md) section 7) | No |
 
 Two rows deliberately do not appear. **How a `deny` outside admission ends a Run in flight** is
-[`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9's, marked **ADR**
-there; this profile carries whatever transition that decision produces. **What satisfies an Approval
-Chain** is [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md)'s, and
-`orchestra.approval.*` reports chain progress in whatever shape that document settles on.
+decided by [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) without a new
+Run state, so C2 is untouched: a Run it ends reaches this stream in `Denied`, which now means *ended
+by a governance refusal* rather than *refused at admission*. **What satisfies an Approval
+Chain** is settled by [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) and
+stated in [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md), and
+`orchestra.approval.*` reports chain progress in that shape: a position satisfied, a decisive
+rejection, a reassignment and an expiry. Their event names are fixed with the carrier section 7
+leaves open, and adding them is additive under X4.

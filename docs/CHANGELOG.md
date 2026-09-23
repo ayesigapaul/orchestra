@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.46.0
+version: 0.47.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -18,6 +18,69 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.47.0] — 2026-09-23
+
+Four decisions about execution under governance: what a Run does when it is refused, how one
+definition nests another, what a capability grant is, and how an Approval Chain is satisfied.
+
+### Added
+
+- `adr/adr-0040-run-outcomes-for-refusal-and-compensation.md` — a governance refusal ends a Run
+  `Denied` unless a declared edge or the model carries it on, and every terminal Run carries a
+  compensation outcome saying whether its work was undone. A rejected or expired gate goes where a
+  `deny` at the same point would, and a compensating action that needs approval keeps the Run
+  `Compensating` until the request resolves.
+- `adr/adr-0041-nested-versions-execute-inside-the-parent-run.md` — an `agent` or `subworkflow`
+  Step executes the version it names inside the Run that reached it, pinned when the parent version
+  is published. Every definition that ran counts on the active meter, nested or not.
+- `adr/adr-0042-declared-tools-and-capability-grants.md` — a version declares the Tools it may call
+  as a ceiling, a capability grant is a separate administrative act read at every invocation,
+  revocation takes effect at once, and a changed Side-Effect Class stales every grant on the Tool.
+- `adr/adr-0043-approval-chains-and-separation-of-duties.md` — a chain is ordered or parallel
+  positions satisfied by Platform Users other than the human who initiated the Run, reassigned only
+  by hand and never onto the reassigner, and expiring only at a deadline its Policy declares. One
+  request carries the chain of every matching rule.
+
+### Changed
+
+- `GLOSSARY.md` (0.13.0) — entries for a capability grant and a compensation outcome, and the Run,
+  Workflow and Approval Chain entries follow these records.
+- `VERSIONING.md` (0.16.0) — W5 covers a major an origin no longer serves and extends to Agent
+  versions, and a new W6 pins the definitions a version names.
+- `20-domain/lifecycle-state-machines.md` (0.18.0) — the Run diagram and table carry `Compensating`
+  and the wider `Denied`, and `Expired` is settled rather than provisional.
+- `20-domain/domain-model.md` (0.13.0) — a Step names a version, and the metering grain counts every
+  definition that ran.
+- `40-governance/approval-workflows.md` (0.9.0) — sections 5 to 7 state what satisfies a chain,
+  separation of duties, reassignment and deadlines, and section 10 records what is not permitted.
+- `40-governance/policy-model.md` (0.9.0) — V1, V2 and S2 say what a refusal does, what a gate
+  carries and where a restriction on a call is written.
+- `40-governance/tool-authorization.md` (0.10.0) and `audit-model.md` (0.10.0) — declared Tools,
+  grants read at every invocation, and the records a refusal and a reassignment leave.
+- `50-workflows/step-types.md` (0.12.0), `workflow-dsl.md` (0.19.0) and `execution-semantics.md`
+  (0.12.0) — declared edges, the nested Step's semantics, rules L12 and X33 to X35, and the
+  registers those three records discharge.
+- `30-protocol/gateway-api.md` (0.13.0), `event-protocol.md` (0.10.0), `ui-protocol.md` (0.16.0),
+  `http-conventions.md` (0.9.0) and `schemas/README.md` (0.17.0) — the Approval Request resource
+  gains reassignment, nesting emits no subagent attribution, and the schemas' open questions narrow.
+- `10-architecture/control-plane.md` (0.18.0), `data-plane.md` (0.19.0) and
+  `identity-and-access.md` (0.17.0) — staleness warnings, what a plane executes, and the two grants.
+- `60-operations/reliability.md` (0.14.0) and `quotas-and-metering.md` (0.13.0) — a refusal is not a
+  fault, and the Runs and Active dimensions count what actually ran.
+- `00-overview/vision.md` (0.18.0), `product-thesis.md` (0.16.0), `personas.md` (0.16.0) and
+  `scope-and-non-goals.md` (0.15.0) — the approval and compensation claims are now recorded
+  decisions rather than open questions.
+- `50-workflows/examples/` (0.19.0) — the worked examples show the pinned Agent version, the
+  declared edges and the gate each example stops at.
+- `30-protocol/schemas/run.v1`, `approval-request.v1`, `policy-rule.v1`,
+  `workflow-definition.v1` and `audit-record.v1` — refusal and compensation on a Run, positions and
+  chains on a request, a rule's chain and deadline, and the pinned reference a Step carries. Every
+  change is MINOR: nothing tightens, and no member is removed.
+- `adr/README.md` (0.33.0) — indexes ADR-0040 to ADR-0043.
+- `CLAUDE.md` records the four decisions.
 
 ---
 

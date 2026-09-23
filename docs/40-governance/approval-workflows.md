@@ -1,11 +1,11 @@
 ---
 title: Approval Workflows
 doc_id: DOC-052
-version: 0.8.0
+version: 0.9.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0043]
 ---
 
 # Approval Workflows
@@ -27,7 +27,7 @@ been built, and no design partner has tested any claim here.
 | When a PEP returns `require_approval` | [`policy-model.md`](policy-model.md) |
 | What the Approval Request carries, and who may satisfy it | This document |
 | What the Evidence Set is, and its integrity | This document |
-| Whether a Principal may approve their own action | This document owns it and **does not decide it** — section 6 |
+| Whether a Principal may approve their own action | [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md), which this document states in section 6 |
 | Record format, retention, facts with no actor | [`audit-model.md`](audit-model.md) |
 | Whether a capability grant existed at all | [`tool-authorization.md`](tool-authorization.md) |
 | What an attacker does to the gate | [`threat-model.md`](threat-model.md) |
@@ -40,7 +40,9 @@ Whatever follows from an Accepted ADR, from [`../GLOSSARY.md`](../GLOSSARY.md), 
 derivation, not invention. Where a choice is genuinely open this document says so, names what
 would decide it, and stops. **It contains no threshold, no duration, no quorum size, no retry
 count and no retention period**, because no ADR in this repository contains one and naming one
-here would manufacture a decision nobody has taken.
+here would manufacture a decision nobody has taken. A decision deadline, and how many positions a
+parallel chain requires, are figures a Tenant writes into its own Policies
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)), never platform values.
 
 Two **Proposed** decisions reach it and bind nothing:
 [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md), whose outstanding validation step is a
@@ -71,15 +73,15 @@ sequenceDiagram
     R->>R: resume at the gated action
   else rejected, or expired where a deadline exists
     A-->>R: resolved Rejected or Expired
-    Note over R: What the Run does next is not decided. Section 8.
+    Note over R: A declared edge, the model, or Denied, as J5 directs. Section 8.
   end
   A->>AU: resolution recorded, with the decisions that produced it
 ```
 
 | | Requirement |
 | --- | --- |
-| **G1** | A `require_approval` verdict MUST raise exactly one Approval Request, and the gated Run MUST suspend before the proposed action executes. The causing Policy Decision is a class of Audit Record ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)) and MUST be durable before the gated action could be attempted; if it cannot be written, nothing proceeds ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)). Suspension may last days, so suspended state MUST be durable and MUST NOT depend on a live process, connection or in-memory continuation. Orchestra consumes that durability from the runtime rather than implementing it ([ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md)), and owns the governance record of the suspension. |
-| **G2** | The Run MUST resume only on resolution, and MUST resume *at* the gated action rather than before it. Re-entering the Agent to re-derive the action would mean the human approved something other than what executes. |
+| **G1** | A `require_approval` verdict MUST raise exactly one Approval Request, and the gated Run MUST suspend before the proposed action executes — unless the proposed action is a compensating action, whose Run stays `Compensating` without attempting it until the request resolves (J5). The causing Policy Decision is a class of Audit Record ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)) and MUST be durable before the gated action could be attempted; if it cannot be written, nothing proceeds ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)). Suspension may last days, so suspended state MUST be durable and MUST NOT depend on a live process, connection or in-memory continuation. Orchestra consumes that durability from the runtime rather than implementing it ([ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md)), and owns the governance record of the suspension. |
+| **G2** | The Run MUST resume only on resolution. Approved, it MUST resume *at* the gated action rather than before it: re-entering the Agent to re-derive the action would mean the human approved something other than what executes. Rejected or expired, it goes where J5 directs, never to the gated action. |
 | **G3** | No model output satisfies a gate — not the Agent's justification, not a Tool result, not a retrieved document. The Agent's argument is an input to the deciding Principal's judgement and never to the verdict ([ADR-0003](../adr/adr-0003-governance-layer-positioning.md), [`../00-overview/product-thesis.md`](../00-overview/product-thesis.md) section 3). |
 
 ## 3. The Approval Request
@@ -96,8 +98,8 @@ entry is where that should be closed.
 | --- | --- |
 | Proposed action | The Tool or Step, its Side-Effect Class, and the arguments as they would execute. Recorded, never paraphrased. |
 | Evidence Set | Section 4. Exactly one per request. |
-| Approval Chain | Section 5. Exactly one per request, resolved at raise. |
-| Resolution | Section 8. The terminal outcome and the decisions, if any, that produced it — a `Withdrawn` resolution has none. |
+| Approval Chain | Section 5. Exactly one per request, resolved at raise, and amended afterwards only by reassignment. |
+| Resolution | Section 8. The terminal outcome and the decisions, if any, that produced it — a `Withdrawn` or `Expired` resolution has none. |
 | Causing Policy Decision | The Policy **version** evaluated, the inputs and the verdict, so that *why was I asked* is answerable from the request alone. |
 
 **R1.** The proposed action MUST be recorded as it would execute. An action re-derived at resume
@@ -190,100 +192,138 @@ as needing design.
 
 ## 5. The Approval Chain
 
-An Approval Chain is the ordered or parallel set of Principals whose decisions the request
+An Approval Chain is the ordered or parallel set of positions whose decisions the request
 requires, **derived from Policy** — not a static list on the request, and not whoever happened to
-be asked. What follows from that, from invariant I2 (one action, one Principal), and from
-deny-by-default:
+be asked. [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) decides what
+satisfies one, who may sit in one and how it may change after raise. What follows from that ADR,
+from invariant I2 (one action, one Principal), and from deny-by-default:
 
 | | Requirement |
 | --- | --- |
-| **C1** | The chain MUST be derived from Policy at raise time and recorded as resolved at that moment. A chain that cannot be reconstructed later cannot be audited. Where several matching rules return `require_approval`, the chain requires the chain of every one of them ([`policy-model.md`](policy-model.md) V2, [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). |
-| **C2** | A chain MUST resolve to at least one Principal. A chain resolving to none is an unresolvable gate: the request MUST NOT resolve as satisfied and the gated action MUST NOT execute. An empty chain that auto-satisfies is a silent bypass of the platform's central control. |
+| **C1** | The chain MUST be derived from Policy at raise time and recorded as resolved at that moment: whether it is ordered or parallel, its positions, the Platform Users eligible at each, and how many positions a parallel chain requires. A chain that cannot be reconstructed later cannot be audited. Where several matching rules return `require_approval`, the request carries the chain of every one of them ([`policy-model.md`](policy-model.md) V2, [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md), [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)). |
+| **C2** | A position MUST NOT be satisfied except by an approval from a Platform User eligible at it, so a position that resolves to nobody cannot be satisfied, and its request waits for a reassignment under C11. A chain that cannot reach the positions it requires is an unresolvable gate: the request MUST NOT resolve as satisfied and the gated action MUST NOT execute. An empty chain that auto-satisfies is a silent bypass of the platform's central control. A gate to which no matching rule supplies a chain at all is refused at raise rather than raised — C10. |
 | **C3** | Satisfaction MUST be affirmative. Silence, absence, unavailability and the passage of time are not decisions and MUST NOT count toward satisfying a chain. |
-| **C4** | Each decision MUST be attributed to exactly one Principal, with the authenticated identity behind them. |
-| **C5** | A Service Account or Connector decision MUST NOT count toward satisfying a chain. Both are Principals, but the glossary defines an Approval Request as a **human** decision gate, and a machine Principal approving on a human's behalf is an automated approval wearing a human's name. |
-| **C6** | In an ordered chain a Principal MUST NOT be asked before everyone ahead of them has decided, or ordered and parallel are the same thing; partial progress MUST be recoverable from the record. |
+| **C4** | Each decision MUST be attributed to exactly one Principal, with the authenticated identity behind them, and MUST name the one position it was taken at. |
+| **C5** | Only a Platform User is ever eligible at a position. A Service Account or Connector decision MUST NOT count toward satisfying a chain: both are Principals, but the glossary defines an Approval Request as a **human** decision gate, and a machine Principal approving on a human's behalf is an automated approval wearing a human's name. Nor is an End User ever eligible. Orchestra does not authenticate an End User but trusts the customer backend's assertion ([`threat-model.md`](threat-model.md) boundary B1), which is too weak for the gate, and a confirmation an End User gives inside the customer's application is input to a Run, never an approval. |
+| **C6** | In an ordered chain a position MUST NOT open before every position ahead of it is satisfied, or ordered and parallel are the same thing; partial progress MUST be recoverable from the record. |
+| **C7** | A position is open while the request is `Pending` and the position is not yet satisfied; every position of a parallel chain is open from raise. A position is satisfied by one approval from any one of the Platform Users eligible at it. An ordered chain is satisfied when all its positions are. A parallel chain declares how many of its positions must be satisfied, and requires all of them where it declares none. The request resolves `Approved` the moment every chain it carries is satisfied, and positions still open then close undecided. |
+| **C8** | A rejection by a Platform User eligible at an open position is decisive: the request resolves `Rejected`, whatever other positions and whatever other chains hold, and no count of approvals outvotes it. |
+| **C9** | Where several matching rules return `require_approval`, the one Approval Request V2 raises carries the chain of every one of them, and none stands in for another ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). It resolves `Approved` only when every chain is satisfied on its own terms; a rejection at any open position of any chain is decisive under C8; the earliest deadline any matching rule declares applies to the whole request (section 7); and C14 counts a Principal at most once across the whole request rather than once per chain. |
+| **C10** | Where no matching rule supplies a chain, the request MUST be refused at raise rather than raised: a gate with no position can never be satisfied, so none enters `Pending`. The case this is written for is an `approval` Step, where V4 narrows a matching `allow` to `require_approval` and an `allow` rule declares no chain; there the Run follows that Step's rejection edge where the definition declares one, and otherwise ends `Denied` ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)). A gate refused this way anywhere else goes wherever ADR-0040 sends a refusal raised at that point. The refusal MUST be recorded with its causing Policy Decision and the proposed action. A chain that is declared but resolves to nobody eligible is the other case: that request is raised, and waits under C2. |
 
-**What satisfies a chain is not decided, and needs an ADR.** Unanimity, quorum, first-decision and
-any-one-of are all defensible, and nothing in the ADR set, the glossary or the domain model
-chooses between them; nor is it decided whether one rejection in a parallel chain is decisive.
-This is not a syntax detail deferrable to a schema. It is a predicate tenants author Policies
-against, read by the compiler, the enforcement path, the approval surface, the event protocol and
-the audit export, and once Policies exist against one reading it is expensive to move to another —
-the ADR test in [`../adr/README.md`](../adr/README.md) met twice over.
+**Tenants author the figures, and the Expression Profile writes them.** Which Platform Users a
+Policy makes eligible at each position, and how many positions a parallel chain requires, are the
+Tenant's. How a Policy expresses them belongs to the Expression Profile
+([`policy-model.md`](policy-model.md) section 8,
+[ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)), and no syntax is
+fixed here. A request takes its chains, and any decision deadline under section 7, from the Policy
+versions its causing Policy Decision names and the Run pinned (R2).
 
-**Escalation, delegation and reassignment after raise are undecided**, as is whether an End User
-may sit in a chain at all — which [`../00-overview/personas.md`](../00-overview/personas.md)
-raises, and which touches the seat definition under
-[ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md). Two constraints hold on whatever is
-adopted, both from I2 and from what audit is for:
+**The Control Plane warns an author whose `approval` Step no Policy gives a chain**, because a gate
+C10 refuses at raise is cheapest to find while the definition is being written. It is a warning and
+not a publication error: a Workflow version and a Policy version are published independently, so a
+compiler that refused the Step would let a later Policy edit invalidate a definition already
+published.
 
-- **Delegation records the delegate, not the delegator.** The Audit Record MUST name the Principal
-  who actually decided; the delegation grant is a separate audited fact with its own acting
-  Principal and scope. Naming the person on whose behalf a decision was taken is false
-  attribution.
-- **Escalation amends the chain, it does not rewrite it.** It changes the chain after C1 recorded
-  it, so the amendment MUST be recorded with its cause and the chain as originally resolved MUST
-  remain reconstructible. Escalation on elapsed time has no acting Principal — section 7's
-  problem.
+**After raise, a chain is amended only by reassignment, by hand.** An escalation is a reassignment
+like any other, and nothing reassigns a request on its own.
+
+| | Requirement |
+| --- | --- |
+| **C11** | A Principal holding an administrative grant for it MAY reassign a chain of a `Pending` request by hand, changing which Platform Users are eligible at a position that is not yet satisfied. A reassignment MUST NOT satisfy a position, remove or alter a recorded decision, change a chain from ordered to parallel or back, or lower how many positions a chain requires. It MUST NOT make the Principal performing it eligible, any more than it may make the Principal the Run records at admission eligible: another Principal holding the grant reassigns that position to them. C5 and the rules of section 6 bind a reassigned chain exactly as they bind the chain resolved at raise. |
+| **C12** | A reassignment amends the chain; it does not rewrite it. It MUST be recorded with its acting Principal, its cause, and the chain before and after, and the chain as resolved at raise MUST remain reconstructible. |
+
+Reassignment is the way out of a chain no Platform User can decide: a position that section 6 left
+with nobody eligible, or one held by an approver who can no longer authenticate. It is not a
+bypass. The reassigned request still needs an affirmative decision under C3, and the gated action
+still waits for it. Because C11 refuses to make the reassigning Principal eligible, routing a
+request to oneself takes two governed acts by two people, and a Tenant whose only grant holder is
+also its only approver has to grant the role to a second person. Which role in the closed set of
+administrative grants that
+[ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) defines carries
+reassignment is not decided here.
+
+**Delegation and automatic escalation are not adopted.** No standing authority lets one Principal
+decide in another's place, and no chain changes because time has passed. Either could be added
+later without changing what an existing chain means. One constraint would hold on any delegation
+added then, from I2 and from what audit is for: **the record names the delegate who decided**,
+never the Principal on whose behalf they decided, and the delegation grant is a separate audited
+fact with its own acting Principal and scope. Naming the person on whose behalf a decision was
+taken is false attribution.
 
 ## 6. Separation of duties
 
-**May the Principal who triggered an action approve it? Nothing in this repository decides.** Not
-an ADR, not the glossary, not the domain model. It is registered prominently because it is the
-control an enterprise security review asks about by name, and *we have not decided* is a materially
-worse answer in that room than either alternative.
-
-What exists is the ability to enforce whichever answer is chosen: invariant I2 gives every action
-exactly one Principal, so the triggering and deciding Principals are both recorded and comparable.
-The data model supports the control; the rule does not exist. The candidate defaults are not
-symmetric. **Deny self-approval unless a Policy permits it** matches the deny-by-default stance
-ADR-0001 requires and invariant I5, and its cost is real: in a small Tenant, or a Workspace with
-one qualified approver, a chain excluding the trigger can resolve to nobody and deadlock under C2.
-**Permit unless a Policy forbids it** never deadlocks and fails silently — a Tenant that never
-writes the rule has a gate the person taking the action can satisfy alone.
-
-The same question returns in a second form and MUST be answered with it: whether one Principal may
-occupy more than one position in a chain, and whether their single decision then counts twice. A
-quorum satisfied twice by one person is a quorum in name only.
-
-**This needs an ADR.** The predicate has to be expressible in the policy language, the default is a
-security posture rather than a preference, deadlock under C2 is a liveness consequence reaching the
-Run state machine, and changing the default later silently changes what existing Policies mean.
-
-## 7. Deadlines, expiry and re-raise
-
-**Whether a decision deadline exists at all is not decided.** No duration exists anywhere in this
-repository and none is introduced here. What can be settled is what any deadline mechanism would
-have to satisfy, and what follows from having none.
+**May the Principal who triggered an action approve it? No, and no Policy can say otherwise.**
+[ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) decides it, because it is
+the control an enterprise security review asks about by name, and a rule a Tenant has to remember
+to write fails silently for the Tenant that never writes it. Invariant I2 gives every action
+exactly one Principal, so the triggering and deciding Principals are both recorded and comparable,
+and [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) gives the Person behind
+each of them wherever Orchestra verified it.
 
 | | Requirement |
 | --- | --- |
-| **D1** | If a deadline exists, `Expired` MUST be distinct from `Rejected`. *A human declined* and *nobody looked* are different facts about a control, and an audit that cannot separate them cannot report on that control at all. |
+| **C13** | The Principal a Run records at admission MUST NOT be eligible at any position of a chain gating that Run, whether the chain was resolved at raise or reassigned afterwards. |
+| **C14** | One Principal counts at most once across a request, however many chains it carries. A Platform User who has approved at one position MUST NOT be eligible at any other, because a quorum satisfied twice by one person is a quorum in name only. |
+| **C15** | C13 and C14 compare the Person behind a Principal, where the identity provider verified that Person. Two Principals standing on one verified Person count as one, so a human who initiated a Run through one Principal is never eligible through another, and one human satisfies at most one position. A Principal no verified Person stands behind is compared as itself: a Service Account, which has none, and an End User whose Person a customer's backend asserts, which [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) keys to the asserting Tenant and never merges. |
+| **C16** | C13 to C15 are the platform's rules. No Policy can permit what they refuse, and none is written into a Policy. |
+
+**Deadlock is the accepted cost.** In a small Tenant, or a Workspace with one qualified approver, a
+chain excluding the trigger can leave a position with nobody eligible and deadlock under C2. The
+way out is a governed act rather than a weaker rule: reassignment under C11, a decision deadline
+where the Policy declares one (section 7), or cancelling the Run. Strict first is the reversible
+direction. A Policy-permitted exception could be added later without changing what existing
+Policies mean, while a default loosened now and tightened later would change them silently.
+
+**The comparison stops at identity Orchestra verified.** One human can act as more than one
+Principal, starting a Run as an End User or through a Service Account and deciding as a Platform
+User, and C15 catches that only where one verified Person stands behind both. Treating a customer
+backend's assertion as proof of identity would let a Tenant merge two humans, or split one, by
+writing its own subject claims, and boundary B1 of [`threat-model.md`](threat-model.md) is exactly
+what the gate may not rest on. Where no verified join exists, a Policy narrowing who is eligible is
+the control.
+
+## 7. Deadlines, expiry and re-raise
+
+**A Policy MAY declare a decision deadline, as an ISO 8601 duration**
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)). The Tenant authors the
+duration, so none appears in this document or anywhere else in the platform, and a Policy that
+declares none gives its requests none. The deadline runs from the raise. The instant it falls is
+computed once, at raise, from the Policy version the Run pinned (R2), and recorded with the
+request; where several matching rules declare one, the earliest instant is the request's (C9), and
+a reassignment under C11 does not move it.
+
+| | Requirement |
+| --- | --- |
+| **D1** | `Expired` MUST be distinct from `Rejected`. *A human declined* and *nobody looked* are different facts about a control, and an audit that cannot separate them cannot report on that control at all. A request resolves `Expired` only when its deadline passes while it is still `Pending`. |
 | **D2** | Expiry MUST NOT be recorded as a decision by any Principal, and MUST NOT be attributed to a Principal who did not act. Expiry is not an action but a transition caused by an observed condition, so its record carries its cause and no Principal ([`audit-model.md`](audit-model.md) section 9, [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Withdrawal takes the same rule; where a Principal cancelled the gated Run, the cancellation is the cause of the withdrawal, recorded as that Principal's own act, and that Principal MUST NOT be recorded as having decided the request. |
-| **D3** | A terminal Approval Request is permanently terminal, so a re-raise after expiry is a **new** Approval Request referencing the expired one, never a reopening. Derivable rather than preferred: reopening a terminal state would make the request's own history a lie, and Audit Records are append-only. |
-| **D4** | A re-raised request captures its own Evidence Set at its own raise time under E4. Whether that is a copy of the original capture or a fresh one MUST be recorded — a Principal told *this is what the Agent saw* is entitled to know when it saw it. |
+| **D3** | A terminal Approval Request is permanently terminal, and **no re-raise operation exists**. Proposing the action again raises a **new** Approval Request from a new verdict, wherever [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) sends the Run after the refused gate — on a Step reached through a rejection or expiry edge an `approval` Step declares, along another Workflow Step's refusal edge, at the next evaluation the model reaches in an Agent Run, or in a new Run (J3). It is never a reopening, and a decision that arrives after a request is terminal is refused. Derivable rather than preferred: reopening a terminal state would make the request's own history a lie, and Audit Records are append-only. |
+| **D4** | A request raised again for the same action captures its own Evidence Set at its own raise time under E4. Whether that is a copy of an earlier capture or a fresh one MUST be recorded — a Principal told *this is what the Agent saw* is entitled to know when it saw it. |
 
-Whether re-raise is permitted at all, and whether it is manual or automatic, is undecided.
-Automatic re-raise creates a loop nothing in this repository bounds, and bounding it means naming
-a number no decision supports. Having no deadline has two real consequences: a suspended Run holds
-its pinned version undrainable indefinitely, so a `Retired` version never reaches `Archived` and
-no force-drain mechanism is decided either; and a request nobody will ever decide is
-indistinguishable, from the record, from one about to be decided.
+Automatic re-raise does not exist: it would create a loop nothing bounds, and bounding it means
+naming a number no decision supports. What the Run does after its gate is rejected or expires is
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)'s: an `approval` Step may
+declare rejection and expiry edges, a gate raised anywhere else goes where a `deny` at the same
+point would go — back to the model in an Agent Run, along a Workflow Step's refusal edge — and with
+no edge to take, the Run ends `Denied`.
 
-**This needs an ADR.** The answer decides whether Orchestra makes any liveness promise about a
-suspended Run, and that promise reaches the Run state machine, version drain, actorless
-attribution in audit, the event protocol and the policy language at once.
+**Orchestra makes no liveness promise beyond the deadline a Tenant declares.** A Policy that
+declares none keeps two consequences. A suspended Run holds its pinned version undrainable
+indefinitely, so a `Retired` version reaches `Archived` only once its Runs end, by cancellation if
+need be, which is all a force-drain is
+([`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X6). And a
+request nobody will ever decide is indistinguishable, from the record, from one about to be
+decided.
 
 ## 8. Rejection, expiry, withdrawal and the Run outcome
 
-**Whether a rejected or expired gate fails the Run or routes to a declared rejection branch is not
-decided.** [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md)
-draws `Suspended → Failed` as the conservative reading and marks it undecided; an `approval` Step
-may legitimately declare a rejection branch and continue. The question is shared with
-`step-types.md` in [`../50-workflows/`](../50-workflows/) and is not settled here alone. Four
-things hold either way — though the first, as the paragraph immediately after the table records,
-has nowhere to land under the Run state machine as currently drawn.
+**A rejected or expired gate goes where a `deny` at the same point would, except at an `approval`
+Step, which declares edges of its own.**
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) decides it, widening
+`Denied` to *ended by a governance refusal* and adding no Run state. The Run state machine is
+[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md)'s, and the
+edges are `step-types.md`'s, in [`../50-workflows/`](../50-workflows/). Five requirements hold, and
+J5 is where the gate lands.
 
 | | Requirement |
 | --- | --- |
@@ -291,16 +331,13 @@ has nowhere to land under the Run state machine as currently drawn.
 | **J2** | A rejection MUST NOT be readable as authorization for anything. A declared rejection branch is ordinary execution: every Step on it crosses a Policy Enforcement Point, because the compiler emits one at every Step boundary ([ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md)). The branch does not inherit the refused action's authorization. |
 | **J3** | Re-proposing the refused action raises a **new** Approval Request. A refused request is terminal and MUST NOT be resumed. |
 | **J4** | Rejection MUST NOT be read as proof that no side effect occurred. G1 guarantees the refused action itself never started, so the unknown state is never that invocation: it is the Step Executions that already ran in this Run. A Tool invocation interrupted earlier leaves that call in an unknown state, and unknown is not the same as not done — which is why compensation, not retry, is the mechanism ADR-0008 requires, and why the unit is the Step Execution (invariant I4). |
+| **J5** | A rejected or expired gate MUST go where a `deny` at the same point goes, except at an `approval` Step. At an `approval` Step it MUST resume the Run onto the rejection or expiry edge the Step declares for that resolution, and otherwise end the Run `Denied`. At any other Workflow Step's boundary, or at the Tool enforcement point before the invocation a `tool` Step names, it MUST follow that Step's refusal edge, and otherwise end the Run `Denied`. At Run admission it MUST end the Run `Denied`. For a call the model chose, in an Agent Run or inside an `agent` Step, it MUST be returned to the model as that invocation's outcome, saying only that the call was rejected or expired and never why, and the Run continues. A gate on a compensating action keeps the Run `Compensating` while the request is pending, never `Suspended`: approved, the action is attempted; rejected or expired, its effect is recorded `unresolved`, and the request's decision deadline, where its Policy sets one, bounds the wait. A Run this rule ends records the enforcement point and this Approval Request, after compensating where compensation is due. J2 and J3 hold on every path, and `Rejected` and `Expired` stay distinct on the Approval Request (D1), never in the Run state ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)). |
 
-**J1 does not hold under the Run state machine as drawn**, and the requirement is not the defect.
+**J1 holds, because of J5.** The metered outcome under ADR-0009 is the Run's terminal state, and
 [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2
-routes a rejected or expired gate to `Failed` and defines `Failed` as *ended on an error, or on an
-unfavourable gate resolution* — one terminal state carrying both facts — while `Denied` is reachable
-only from `Pending`. The metered outcome under ADR-0009 is that terminal state, so today a
-governance refusal and a crash meter identically, which is exactly what J1 forbids. J1 is grounded
-in ADR-0009 and stands; what is missing is somewhere for it to land. Either the Run gains a terminal
-state for governance refusal reachable from `Suspended`, or the metered outcome keys on an attribute
-distinct from the terminal state. Section 11 carries it.
+now gives `Failed` to a fault alone and `Denied` to every governance refusal, whether it arrives at
+admission or after a suspension. A refusal and a crash no longer meter identically, and no terminal
+state was added to make it so.
 
 **Withdrawal runs the other way.** The three outcomes above are the gate deciding what the Run does
 next; `Withdrawn` is the Run having already ended — cancelled, or failed for an unrelated reason —
@@ -312,21 +349,15 @@ so a resolution is never unexplained; D2 governs its attribution, since nobody d
 permanent terminality applies unchanged, so a withdrawn request MUST NOT be reopened and work
 re-attempted afterwards raises a new Approval Request.
 
-A second inconsistency awaits whoever settles this. The Run state machine gives `Denied` the meaning
-*refused at admission, no Step Execution ever occurred*, which describes a human-rejected
-admission gate exactly, yet the diagram routes every rejected gate through `Suspended → Failed`.
-An admission gate has no Step to branch from, so a rejection branch cannot exist there in any case.
+**A rejected admission gate ends the Run `Denied` with no Step Execution.** An admission gate has
+no Step to branch from, so no edge can exist there, and the widened meaning of `Denied` covers it
+exactly.
 
-The same shape recurs one gate earlier, and that one is not this document's to register. A mid-Run
-`deny` verdict has no defined effect on the Run either: [`policy-model.md`](policy-model.md) V1
-makes `deny` terminal at admission and says only that the action MUST NOT be attempted elsewhere,
-and the Run state machine has no transition for a refusal that is not a fault. It is the same
-question in a different place and probably the same ADR; [`policy-model.md`](policy-model.md)
-owns it.
-
-**This needs an ADR.** It spans the Run state machine in `20-domain/`, branch semantics in
-`50-workflows/`, and a metered outcome dimension — three documents that cannot answer it
-separately without diverging.
+The same decision reaches one gate earlier. A mid-Run `deny` follows the refusal edge its Step
+declares or ends the Run `Denied`, and in an Agent Run it returns to the model;
+[`policy-model.md`](policy-model.md) V1 owns that rule, and J5 sends a rejected or expired gate
+outside an `approval` Step the same way.
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) records both.
 
 ## 9. Audit
 
@@ -343,8 +374,8 @@ the enumeration rather than a competing list, and it is closed there, not here.
 | --- | --- |
 | Raise | The causing Policy Decision by Policy version, the proposed action as it would execute, the Evidence Set with its provenance, the chain as resolved, the timestamp |
 | Each decision | The deciding Principal, the authenticated identity behind them, the timestamp, the decision — approve or reject — and the chain position |
-| Chain amendment | The cause, the acting Principal where one exists, the chain before and after, the timestamp |
-| Resolution | The terminal outcome, the decisions — if any — that produced it, and the timestamp |
+| Chain amendment | The cause, the acting Principal, the chain before and after, the timestamp |
+| Resolution | The terminal outcome, the decisions — if any — that produced it, and the timestamp; for `Expired`, the deadline that passed, and no Principal |
 | Withdrawal | The cause and the terminating Run event. A withdrawal is a resolution with no decision and no deciding Principal; D2 governs its attribution |
 | Resume or non-resume | The resolving Approval Request and the Principals who decided it |
 
@@ -390,20 +421,20 @@ exception is either correctly scoped or not a control at all, and the data to te
 exists either way.
 
 Mechanisms that reduce approval volume — batching several requests into one decision, standing
-approvals, automatic approval below a bound — are **not adopted**, and none is a schema detail.
-Each weakens the control in a way an attacker can aim at, so each belongs in
-[`threat-model.md`](threat-model.md) before it belongs in a policy language. One constraint
-already holds: a batching mechanism MUST NOT let one decision cover an Evidence Set the deciding
-Principal was not shown, which is E1 and E3 applied to a batch.
+approvals, automatic approval below a bound — are **not permitted**. Each removes the per-decision
+Evidence Set that makes the gate a control ([`threat-model.md`](threat-model.md) T8): a batch lets
+one decision cover evidence the deciding Principal was not shown, against E1 and E3, and a
+standing approval is decided before its Evidence Set exists. **A bound below which no human is
+needed is a Policy that returns `allow`**, and it is recorded as an allow, never as an approval,
+because an action permitted by rule and one permitted by a human are different facts
+([`policy-model.md`](policy-model.md) V3). Adopting any of the three would need an ADR.
 
-A **break-glass path** — a declared emergency bypass of the gate — is the same class of question
-and is likewise **not adopted**. [`threat-model.md`](threat-model.md) sections 12 and 14 assign it
-here and mark it as needing an ADR, because a deliberate hole in the primary control is costly to
-reverse; this document accepts the assignment and registers it in section 11 rather than inventing
-a mechanism. Two constraints would hold on any bypass that is adopted: it would be a governed act
-with exactly one acting Principal and a recorded justification, and it would be audited in the same
-surface as the approvals it bypasses, since a bypass invisible beside the control it circumvents is
-not a control at all.
+**No break-glass path exists.** Nothing bypasses the gate in an emergency, because a deliberate
+hole in the primary control is costly to reverse, and adding one later would be additive while
+removing one people rely on would not. An emergency uses governed acts instead: reassigning the
+chain to a Platform User who can decide now (section 5, C11), or publishing a new Policy version and
+starting a new Run under it. Each is attributed to exactly one Principal and audited in the same
+surface as the approvals it concerns.
 
 ## 11. Open questions
 
@@ -414,15 +445,6 @@ in the section named.
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
-| What satisfies an Approval Chain — unanimity, quorum, first decision, any-one-of — and whether one rejection in a parallel chain is decisive | Section 5 | **Yes** |
-| Whether escalation, delegation and reassignment after raise exist, and their triggers | Section 5; the two constraints there hold on any answer | **Yes** |
-| Whether the Principal who triggered an action may approve it, the default, and whether one Principal may hold two chain positions | Section 6 | **Yes** |
-| Whether a decision deadline exists at all, and whether a request may be re-raised after expiry | Section 7; D1–D4 hold on any answer | **Yes** |
-| Whether a rejected or expired gate fails the Run or takes a declared rejection branch, and whether `Denied` or `Failed` ends a rejected admission gate | Section 8; shared with `step-types.md` in [`../50-workflows/`](../50-workflows/) | **Yes** |
-| Where a governance refusal lands as a metered outcome, given `Failed` currently carries both a refusal and a fault | Section 8; the same decision, and J1 is unsatisfiable until it is taken | **Yes** |
-| Whether an End User may sit in an Approval Chain | Touches the seat definition under ADR-0009 and the approver's identity | **Yes** |
-| Whether batching, standing approvals or automatic approval below a bound are ever permitted | Section 10; [`threat-model.md`](threat-model.md) first, then a policy-language decision | **Yes** |
-| Whether a break-glass path exists at all | Section 10; assigned here by [`threat-model.md`](threat-model.md) sections 12 and 14 — a deliberate hole in the primary control | **Yes** |
 | Evidence Set retention and erasure against audit-retention obligations | [`audit-model.md`](audit-model.md) and the ADR-0011 erasure follow-on; ADR-0012 fixes the record model and leaves the period unmade | **Yes** — [`audit-model.md`](audit-model.md) section 13 owns the classification |
 | Whether an ordered chain's partial progress is a substate of `Pending` or an attribute of it | Assigned here by [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 3.1; C6 holds either way, so the choice is representational | No |
 | Whether *request more information* is a state, given the lifecycle admits only Approved, Rejected, Expired and Withdrawn | [`../00-overview/personas.md`](../00-overview/personas.md) names the action and the state machine has no transition for it; a later document reconciles the two | No |
@@ -436,6 +458,10 @@ Two questions are **not** here, and their absence is deliberate. The Evidence Se
 from raise time is settled by E4 and open nowhere.
 And whether the causing Policy Decision carries the Policy version or the rule text is settled by
 [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md): it carries the version, R2.
+Seven more left this register with
+[ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md). What satisfies a chain,
+reassignment after raise, separation of duties, End Users in a chain and decision deadlines are
+stated in sections 5 to 7, and batching and break-glass are refused in section 10.
 
 **The remaining Evidence Set questions are the ones to take first.** E4 and E6 fix what a gate holds
 at the moment it is first built, and unlike a chain predicate they cannot be reinterpreted

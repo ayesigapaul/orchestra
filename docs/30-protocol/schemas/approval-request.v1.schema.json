@@ -3,9 +3,9 @@
   "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/approval-request.v1.schema.json",
   "title": "Approval Request",
   "description": "A human decision gate raised by a require_approval verdict, carrying the proposed action, the Evidence Set the Agent relied on, the Approval Chain, the causing Policy Decision, and its resolution.",
-  "$comment": "Normative prose: 40-governance/approval-workflows.md and 20-domain/lifecycle-state-machines.md section 3. Almost everything about chain behaviour is unmade and none of it is invented here: what satisfies a chain (all, quorum, first decision), whether one rejection in a parallel chain is decisive, escalation, delegation, reassignment after raise, re-raise after expiry, whether a deadline exists at all, and whether an ordered chain's partial progress is a substate of Pending or an attribute of it.",
+  "$comment": "Normative prose: 40-governance/approval-workflows.md and 20-domain/lifecycle-state-machines.md section 3. ADR-0043 decides chain behaviour: a chain is ordered or parallel positions; each position resolves at raise to the Platform Users eligible at it and is satisfied by one approval from any of them; a parallel chain requires k of its positions, all by default; any rejection at an open position is decisive; where several matching rules returned require_approval the one request carries every one of their chains and is Approved only when all of them are satisfied (ADR-0035), while a gate no matching rule gives a chain is refused at raise rather than raised; the Principal the Run records at admission is never eligible, one Principal counts at most once across the request, and both rules compare the Person the identity provider verified behind a Principal (ADR-0024); after raise a chain is amended only by reassignment by hand, never onto the reassigning Principal; a Policy may declare a decision deadline, the earliest of several applies, expiry records its cause and no Principal, and there is no re-raise. What stays unmade here is representational: whether an ordered chain's partial progress is a substate of Pending or an attribute of it.",
   "type": "object",
-  "required": ["approval_request_id", "tenant_id", "run_id", "state", "proposed_action", "evidence_set", "approval_chain", "causing_policy_decision", "raised_at"],
+  "required": ["approval_request_id", "tenant_id", "run_id", "state", "proposed_action", "evidence_set", "causing_policy_decision", "raised_at"],
   "properties": {
     "approval_request_id": { "type": "string", "minLength": 1 },
     "tenant_id": {
@@ -16,12 +16,12 @@
     "run_id": {
       "type": "string",
       "minLength": 1,
-      "description": "The suspended Run this request gates."
+      "description": "The Run this request gates: suspended at the gate, or still Compensating where the gated action is a compensating action."
     },
     "state": {
       "enum": ["Pending", "Approved", "Rejected", "Expired", "Withdrawn"],
       "description": "Pending awaits the decisions the chain requires; Approved, Rejected, Expired and Withdrawn are terminal.",
-      "$comment": "Expired is PROVISIONAL — whether a deadline mechanism exists at all is undecided (lifecycle section 3.1). If one is adopted, Expired MUST be distinct from Rejected: a human said no and nobody looked are different facts about a control, and an audit that cannot separate them cannot report on that control. Expiry also has no acting Principal, which invariant I2 does not admit; audit-model.md owns that gap together with platform-operator action. Withdrawn means the gated Run ended for another reason and there is nothing left to gate."
+      "$comment": "Expired occurs only where the Policy that raised the request declared a decision deadline (ADR-0043), and MUST be distinct from Rejected: a human said no and nobody looked are different facts about a control, and an audit that cannot separate them cannot report on that control. Expiry is an observed condition: its record carries its cause and no Principal (ADR-0030), and it is never a decision (approval-workflows.md D2). Withdrawn means the gated Run ended for another reason and there is nothing left to gate. A terminal request never reopens, and there is no re-raise (D3)."
     },
     "proposed_action": {
       "type": "object",
@@ -33,6 +33,13 @@
           "type": "string",
           "minLength": 1,
           "description": "The Step gated, in a Workflow Run. Absent in an Agent Run, which has no Steps."
+        },
+        "step_path": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The identifiers of the Steps leading from the Run's target definition to the Step named by step_id, outermost first and ending with step_id. Present whenever step_id is.",
+          "$comment": "ADR-0041 — an agent or subworkflow Step executes the version it names inside the Run, and a Step identifier is unique only within the version that declares it (workflow-dsl.md L6), so an approver shown step_id alone cannot tell a gate inside a nested execution from a Step of the target with the same identifier. Optional in the schema only because requiring it would tighten v1, which VERSIONING section 6 forbids in a MINOR change."
         },
         "tool": {
           "type": "object",
@@ -68,17 +75,30 @@
     },
     "approval_chain": {
       "type": "object",
-      "description": "The Principals whose decisions this request requires, derived from Policy and recorded as resolved at raise time.",
-      "$comment": "C1 — derived from Policy at raise and recorded as resolved at that moment; a chain that cannot be reconstructed later cannot be audited. It is not a static list on the request and not whoever happened to be asked. What satisfies the chain is unmade — see this file's top-level comment — so no satisfaction member appears here. Where several matching rules returned require_approval, the chain requires the chain of every one of them (ADR-0035); how this object records several rules' chains, each with its own mode, is not decided, and mode and members cannot yet represent it.",
+      "description": "The positions whose decisions this request requires, derived from Policy and recorded as resolved at raise time. Set only when exactly one chain applies; where several matching rules declared one, chains carries them all and this member is absent.",
+      "$comment": "C1 — derived from Policy at raise and recorded as resolved at that moment; a chain that cannot be reconstructed later cannot be audited. It is not a static list on the request and not whoever happened to be asked, and it is never rewritten: chain_amendments records every reassignment. C7 — each position is satisfied by one approval from any Platform User eligible at it; an ordered chain requires every position, in order (C6), and a parallel chain requires required_positions of them, or all where that member is absent. C8 — a rejection at an open position is decisive. C2 — a position no member is eligible at cannot be satisfied, and a chain that cannot reach the positions it requires never resolves Approved. C9 — where several matching rules returned require_approval this member is absent and chains carries each rule's chain, the same narrowing ADR-0035 makes for policy_version; exactly one of approval_chain and chains MUST be present, which JSON Schema cannot require without tightening v1, and which is why approval_chain left required. C10 — a request whose Policies supplied no chain at all is refused at raise, so no recorded chain is ever without positions.",
       "required": ["mode", "members"],
       "properties": {
         "mode": {
           "enum": ["ordered", "parallel"],
-          "description": "Whether the chain's decisions are sequenced or concurrent."
+          "description": "Whether the chain's positions are decided in order or concurrently."
+        },
+        "position_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "How many positions the chain has. A position no member is eligible at still counts, and cannot be satisfied.",
+          "$comment": "MUST be present (ADR-0043). It is not in required only because adding a required member would tighten v1 (VERSIONING section 6)."
+        },
+        "required_positions": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "For a parallel chain, how many of its positions must be satisfied: k of position_count. Absent means every position. An ordered chain omits it, and always requires every position.",
+          "$comment": "ADR-0043. The Tenant authors the figure in its Policy, and Orchestra sets no default beyond every position and no bound. It cannot exceed position_count, which JSON Schema cannot express."
         },
         "members": {
           "type": "array",
-          "minItems": 1,
+          "description": "Every Platform User eligible at a position, one entry per Principal per position. Members sharing a position form that position's eligible set.",
+          "$comment": "Deliberately allowed to be empty (ADR-0043). A chain whose positions resolve to nobody, because the Policy made no Principal eligible or separation of duties removed the only one, is still recorded so that it can be reassigned (C11), and it cannot be satisfied until then (C2). That is not the case C10 refuses at raise, where no matching rule supplied a chain at all and no request exists to reassign.",
           "items": { "$ref": "#/$defs/chain_member" }
         }
       }
@@ -111,18 +131,42 @@
     "resolution": {
       "type": "object",
       "description": "Present once the request is terminal.",
+      "$comment": "C7 and C9 — Approved the moment every chain in force is satisfied; C8 — Rejected on a decisive rejection at an open position of any of them; D1 — Expired when expires_at passes while the request is still Pending; Withdrawn when the gated Run ended for another reason. A decision that arrives after the request is terminal is refused (D3).",
       "required": ["outcome"],
       "properties": {
         "outcome": { "enum": ["Approved", "Rejected", "Expired", "Withdrawn"] },
         "decisions": {
           "type": "array",
-          "description": "The decisions that produced the outcome. A Withdrawn resolution has none.",
+          "description": "The decisions that produced the outcome: for Approved, the approval that satisfied each position every chain required; for Rejected, the decisive rejection. An Expired or Withdrawn resolution has none.",
           "items": { "$ref": "#/$defs/decision" }
         },
         "resolved_at": { "$ref": "#/$defs/timestamp" }
       }
     },
-    "raised_at": { "$ref": "#/$defs/timestamp" }
+    "raised_at": { "$ref": "#/$defs/timestamp" },
+    "chains": {
+      "type": "array",
+      "description": "Every matching require_approval rule's chain, each with the Policy version that declared it. Present only where more than one chain applies; where exactly one does, approval_chain carries it.",
+      "$comment": "C9 and ADR-0035 — the verdict is a function of every matching rule, so one Approval Request carries the chain of every matching require_approval rule and none stands in for another. The request resolves Approved only when every chain is satisfied on its own terms, a rejection at any open position of any chain is decisive (C8), and C14 counts a Principal at most once across the whole request rather than once per chain. Exactly one of this member and approval_chain is present on every request.",
+      "items": { "$ref": "#/$defs/request_chain" }
+    },
+    "decision_deadline": {
+      "type": "string",
+      "format": "duration",
+      "description": "The decision deadline the causing Policy version declared, as an ISO 8601 duration. Where several matching rules declared one, the shortest of them, so that the earliest instant applies. Absent where none declared one.",
+      "$comment": "ADR-0043 and approval-workflows.md section 7. The Tenant authors the duration, and Orchestra sets no default and no bound. The format is the ISO 8601 duration grammar of RFC 3339 Appendix A."
+    },
+    "expires_at": {
+      "$ref": "#/$defs/timestamp",
+      "description": "When the request expires if it is still Pending: raised_at plus decision_deadline, computed once at raise. Absent where no deadline was declared.",
+      "$comment": "Fixed at raise so that nothing recomputes it later, and not moved by a reassignment (C11). D1 — expiry resolves the request Expired, distinct from Rejected; D2 — its record carries its cause and no Principal (ADR-0030)."
+    },
+    "chain_amendments": {
+      "type": "array",
+      "description": "Every amendment of this request's chain after raise, in the order recorded. Absent or empty where there has been none.",
+      "$comment": "C11 and C12 — the only amendment is a reassignment by hand, by a Principal holding an administrative grant for it, while the request is Pending. It changes which Platform Users are eligible at a position not yet satisfied, and never satisfies a position, removes or alters a decision, changes the mode, lowers the positions required, or makes the Principal performing it eligible. It amends and never rewrites: the chain as raised stays in approval_chain, or in the entry of chains the amendment names, and each entry here records the chain before and after. The chain in force is the chain_after of the latest entry for that chain, or the chain as raised where there is none.",
+      "items": { "$ref": "#/$defs/chain_amendment" }
+    }
   },
   "$defs": {
     "evidence_item": {
@@ -154,17 +198,23 @@
     },
     "chain_member": {
       "type": "object",
-      "description": "One position in the chain, as resolved at raise time.",
+      "description": "One Platform User eligible at one position of the chain. A Principal eligible at several positions appears once for each.",
+      "$comment": "C5 — only a Platform User is ever eligible: never a Service Account, a Connector or an End User. C13 — the Principal the Run records at admission is never a member. C14 — a Principal counts at most once across the whole request, so one who has approved at one position is no longer eligible at any other, of this chain or of any other the request carries; the member stays recorded, and a decision they attempt there is refused. C15 — C13 and C14 compare the Person the identity provider verified behind a Principal, so two principal_ids standing on one verified Person are one approver (ADR-0024); a Service Account, and an End User whose Person a customer backend asserts, have no verified Person and are compared as themselves.",
       "required": ["principal_id"],
       "properties": {
         "principal_id": { "type": "string", "minLength": 1 },
-        "position": { "type": "integer", "minimum": 1, "description": "Order within an ordered chain." }
+        "position": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The position this Principal is eligible at, from 1 to its chain's position_count. An ordered chain decides its positions in ascending order.",
+          "$comment": "MUST be present (ADR-0043). It is not in required only because adding a required member would tighten v1 (VERSIONING section 6)."
+        }
       }
     },
     "decision": {
       "type": "object",
       "description": "One recorded human decision on this request.",
-      "$comment": "lifecycle 3.2 — each decision MUST record the deciding Principal, the authenticated identity behind them and the timestamp; the resolution MUST record which decisions produced it. G11 — a replayed approval decision MUST NOT record a second decision, since every Audit Record resolves to exactly one Principal.",
+      "$comment": "lifecycle 3.2 — each decision MUST record the deciding Principal, the authenticated identity behind them, the position and the timestamp; the resolution MUST record which decisions produced it. C4 — a decision is taken at exactly one position of exactly one chain, by a Platform User eligible at it while it is open. G11 — a replayed approval decision MUST NOT record a second decision, since every Audit Record resolves to exactly one Principal.",
       "required": ["principal_id", "authenticated_identity", "decided", "decided_at"],
       "properties": {
         "principal_id": { "type": "string", "minLength": 1 },
@@ -175,7 +225,67 @@
         },
         "decided": { "enum": ["approve", "reject"] },
         "decided_at": { "$ref": "#/$defs/timestamp" },
+        "position": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The position this decision was taken at.",
+          "$comment": "MUST be present (C4, ADR-0043). It is not in required only because adding a required member would tighten v1 (VERSIONING section 6)."
+        },
+        "chain": {
+          "$ref": "#/$defs/policy_version_ref",
+          "description": "Which of the request's chains the position belongs to, named by the Policy version that declared it. Absent where exactly one chain applies and approval_chain carries it.",
+          "$comment": "C9 — a request can carry several matching rules' chains, and a position is identified by its chain and its ordinal together."
+        },
         "comment": { "type": "string" }
+      }
+    },
+    "chain_amendment": {
+      "type": "object",
+      "description": "One reassignment of a chain by hand, after raise.",
+      "required": ["principal_id", "authenticated_identity", "cause", "chain_before", "chain_after", "amended_at"],
+      "properties": {
+        "principal_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Principal who reassigned the chain, holding an administrative grant for it.",
+          "$comment": "C11 — a reassignment never makes this Principal eligible, any more than it may make the Principal the Run records at admission eligible, and C15 compares the verified Person behind each."
+        },
+        "authenticated_identity": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Carried so that attribution survives a rename or the Principal's deletion."
+        },
+        "cause": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why the chain was reassigned, as the acting Principal recorded it."
+        },
+        "chain": {
+          "$ref": "#/$defs/policy_version_ref",
+          "description": "Which of the request's chains this reassignment amended, named by the Policy version that declared it. Absent where exactly one chain applies and approval_chain carries it."
+        },
+        "chain_before": {
+          "$ref": "#/properties/approval_chain",
+          "description": "That chain as it stood before this reassignment."
+        },
+        "chain_after": {
+          "$ref": "#/properties/approval_chain",
+          "description": "That chain as it stands after this reassignment."
+        },
+        "amended_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "request_chain": {
+      "type": "object",
+      "description": "One matching rule's chain, with the Policy version that declared it.",
+      "$comment": "C9 — where several matching rules returned require_approval, the request carries one of these per rule, and resolves Approved only when every one of them is satisfied.",
+      "required": ["policy_version", "chain"],
+      "properties": {
+        "policy_version": { "$ref": "#/$defs/policy_version_ref" },
+        "chain": {
+          "$ref": "#/properties/approval_chain",
+          "description": "The chain that Policy version declared, as resolved at raise."
+        }
       }
     },
     "definition_pin": {

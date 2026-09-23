@@ -1,7 +1,7 @@
 ---
 title: Vision
 doc_id: DOC-011
-version: 0.17.0
+version: 0.18.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -293,7 +293,7 @@ the first commit: every persisted record, every emitted event and every log line
 property that cannot be retrofitted, so it is MVP scope, not a later phase.
 
 **Definitions are declarative and compiled, not interpreted.** An Agent is configuration —
-instructions, permitted Tools, a Model Binding, policy bindings and bounds. A Workflow is a
+instructions, declared Tools, a Model Binding, policy bindings and bounds. A Workflow is a
 versioned graph of Steps, each typed and each declaring a Side-Effect Class. Orchestra owns the
 schema, the validating compiler and the versioning. That decision was taken in
 [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md), now superseded, and is carried

@@ -51,13 +51,13 @@
     "step": {
       "type": "object",
       "description": "One declared Step. Every Step declares a type and a Side-Effect Class whatever else it carries.",
-      "$comment": "What each type declares beyond these two is deliberately unconstrained here. The tool object shape, how a document writes an expression, and the branch labels leaving a condition Step are notation in workflow-dsl.md's worked example and are NOT decided — sections 3 and 11 register them. The expressions themselves — a condition predicate, a data reference, a transform body — are Expression Profile expressions under ADR-0035, which workflow-dsl.md section 8 records; the compiler checks them at publication, and this schema does not. A compiler pass, not this schema, checks a Step body against the allow-list for its type.",
+      "$comment": "What each type declares beyond these two is deliberately unconstrained here. The tool object shape, how a document writes an expression, and the branch labels leaving a condition Step are notation in workflow-dsl.md's worked example and are NOT decided — sections 3 and 11 register them. The expressions themselves — a condition predicate, a data reference, a transform body — are Expression Profile expressions under ADR-0035, which workflow-dsl.md section 8 records; the compiler checks them at publication, and this schema does not. A compiler pass, not this schema, checks a Step body against the allow-list for its type. One rule about an agent or subworkflow Step is decided although the member carrying it is not: the Step names exactly one Agent or Workflow version, exact, published and not Archived, pinned when this version is published and never resolved again, and the compiler rejects any other reference (ADR-0041, VERSIONING W6, workflow-dsl.md section 5).",
       "required": ["type", "side_effect_class"],
       "properties": {
         "type": {
           "enum": ["agent", "tool", "approval", "condition", "parallel", "wait", "transform", "subworkflow"],
           "description": "The step type. The set is closed at eight.",
-          "$comment": "step-types.md section 3 — a ninth type is denied by default. Only a tool Step names a Tool to invoke; every other type names none (L7)."
+          "$comment": "step-types.md section 3 — a ninth type is denied by default. Only a tool Step names a Tool to invoke; every other type names none (L7). Naming a Tool, in a tool Step or in a compensating action declared on one, declares it for the Workflow version and grants nothing: a Run invokes it only under a capability grant naming the Workflow (ADR-0042, tool-authorization.md TA19 and TA20)."
         },
         "side_effect_class": {
           "$ref": "#/$defs/side_effect_class",
@@ -75,7 +75,7 @@
         "branch": {
           "type": "string",
           "minLength": 1,
-          "description": "The outcome label this edge leaves by, on an edge out of a condition or parallel Step.",
+          "description": "The outcome label this edge leaves by: on an edge out of a condition or parallel Step, or on an edge a Step leaves by on a governance refusal, which is a refusal edge from any Step, or a rejection or expiry edge from an approval Step (workflow-dsl.md L12).",
           "$comment": "The label vocabulary is NOT decided — workflow-dsl.md section 11 registers it with the concrete syntax, and the labels in the worked example are notation. Typed as a free string rather than an enum for that reason."
         }
       }

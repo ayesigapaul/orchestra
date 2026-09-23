@@ -1,7 +1,7 @@
 ---
 title: Quotas and Metering
 doc_id: DOC-073
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -191,9 +191,9 @@ that already exists.
 | **Platform Users** | Distinct **Platform Users** authenticating to the Control Plane in a billing period — **the seat-billable identity**, and the only one | Platform User; section 9 |
 | **End Users** | Distinct end-user subjects observed via session tokens — measured, explicitly **not** seat-billed | Session Token subject; a derivation, not an occurrence class |
 | **Service Accounts** | Distinct Service Accounts authenticating to Orchestra in a billing period, at the Control Plane or the Gateway — **measured, never billed** | Service Account; the audited authentication act, [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3 |
-| **Runs** | Executions of an Agent or Workflow, by outcome | Run, broken down by outcome; the outcome enumeration is unsettled — section 14, and `execution-semantics.md` section 7 |
+| **Runs** | Executions of an Agent or Workflow, by outcome | Run, broken down by terminal state, which says why it ended: a governance refusal is `Denied` and never `Failed` ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)); whether the breakdown also carries the compensation outcome is section 14's |
 | **Step Executions** | Executions of individual steps | Step Execution |
-| **Active Agents / Workflows** | Definitions with at least one run in the period | The definition, not the version; a derivation over Run records |
+| **Active Agents / Workflows** | Definitions with at least one run in the period | The definition, not the version, whether a Run targeted it or it executed nested inside another definition's Run ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)); a derivation over Run records |
 | **Connectors** | Enrolled connector instances, by health | Connector — ADR-0007 is **Proposed**, so this dimension and its lifecycle are provisional |
 | **Approvals** | Raised and resolved | Approval Request |
 | **Tool invocations** | By Tool and Side-Effect Class | The Step Execution of a `tool` Step; section 12 |
@@ -316,10 +316,10 @@ the two edges it settles:
 | Refused at the Connector (TA16) | Unresolved | This document cannot assert the origin was never called: [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA18 is normative and puts a connector refusal or a mid-call tunnel drop in an **unknown** state, which is why neither may be retried blindly. Metering it requires TA18 to distinguish a refusal resolved before dispatch from a drop after it. Registered in section 13. ADR-0007 is **Proposed** |
 | Attempted, outcome unknown | **Yes** | The far side may have acted. Under-counting a call that may have had a side effect is the worse error, and the general prohibition binds: [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) 2.4 and `execution-semantics.md` X26 — unknown is not the same as not done. `audit-model.md` section 10 carries the narrower Connector-state form of the same rule |
 
-Two related questions are not this one and keep their owners' classifications. Where a *governance
-refusal* lands as a metered Run outcome, given that `Failed` carries both a refusal and a fault, is
-[`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 8's,
-marked **ADR** there; what a Tool call *inside an Agent Run* keys on, that Run having no Steps, is
+Two related questions are not this one. Where a *governance refusal* lands as a metered Run outcome
+is decided: on `Denied`, never `Failed`
+([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)). What a Tool call *inside
+an Agent Run* keys on, that Run having no Steps, is
 [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) section 11's, and
 neither audit nor metering is retroactive, so it wants settling before the first Run.
 
@@ -357,7 +357,7 @@ another document owns a question, its classification is repeated rather than rev
 | Which clock assigns an occurrence to a billing period, and what happens to a record arriving after that period closed | The metering design with the datastore selection; ADR-0009 requires a timestamp and names no boundary rule | No |
 | The audit-retention period, which bounds how long an invoice can be reconciled and therefore disputed | A customer contract forcing a regulatory floor; storage cost modelling once volume is observable | **Yes** — *repeated* from [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 13 |
 | Whether Connector health transitions are Audit Records or telemetry, which the *Connectors, by health* dimension depends on | The tension between the actor test and the reconciliation requirement, in [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 10 | No — *repeated*, and it must be settled before the dimension ships; ADR-0007 is **Proposed**, so the Connector lifecycle underneath the dimension is provisional |
-| Where a governance refusal lands as a metered Run outcome, given `Failed` carries both a refusal and a fault | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 8, which owns it | **Yes** — *repeated* |
+| Whether the *Runs* breakdown also carries a Run's compensation outcome beside its terminal state, which is the outcome ADR-0009 meters by | The metering design, with [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) X33; the outcome is recorded on every terminal Run and in its Audit Record, so a breakdown can be derived from records that already exist | No — it adds no dimension and changes no count |
 | What a Tool invocation inside an Agent Run keys on for its meter record, that Run having no Steps | [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) section 11, with [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 | No — *repeated*; neither audit nor metering is retroactive |
 | Queue-depth, wait-time and admission figures, and whether any of them ever becomes a customer commitment | The same quota design; bounded below by what a customer's operator can act on and above by BYOK itself — the ceiling is the customer's own capacity, so a commitment on it would be a promise about someone else's system | No — *repeated* from [`observability.md`](observability.md) section 9 |
 | Whether [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 7 adopts the occurrence identifier section 11 derives, retires its own open row, and names the A-rule that carries an Audit Record's identity | That document, which owns both MUSTs; this one is informative and can propose the shape, not decide it | No — the derivation is section 11's, the rule is that document's |
