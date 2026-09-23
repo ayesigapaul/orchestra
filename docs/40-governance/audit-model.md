@@ -1,7 +1,7 @@
 ---
 title: Audit Model
 doc_id: DOC-054
-version: 0.8.0
+version: 0.9.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -61,8 +61,12 @@ period, whose duration is undecided — section 11, and no implementation can cl
 term until it exists. A correction is a new record naming the one it corrects; the original stays
 readable, and both are returned by any query covering the period. Immutability MUST be structural,
 not conventional — the role that writes audit MUST NOT hold update or delete privilege on it, which
-is ADR-0011's reasoning applied a second time. Whether immutability is additionally cryptographic —
-hash chain, write-once storage, external notarisation — is **not decided**.
+is ADR-0011's reasoning applied a second time. Immutability is **also cryptographic**: every Audit
+Record a Tenant holds is a leaf of one append-only Merkle log in arrival order, over which Orchestra
+produces periodic signed Audit Checkpoints
+([ADR-0036](../adr/adr-0036-signed-merkle-checkpoints-over-audit.md)). Nothing is added to the write
+path, so an alteration is detected at the next checkpoint rather than at the write; the checkpoint
+interval sets that window and is not decided — section 13.
 
 **A3 — Exactly one Principal.** Every record of an act MUST resolve to exactly one Principal
 (GLOSSARY, invariant I2) and MUST carry the authenticated identity behind it, so attribution
@@ -189,7 +193,8 @@ makes each row a derivation rather than a preference.
 | Model Binding created or changed; a custodied credential accessed | The binding and the Principal — never the credential, in any form | [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) |
 | Connector enrolment, first session, every version negotiation outcome including refusals, revocation | The Connector, which is itself a Principal | ADR-0007 — **Proposed** |
 | Principal, Workspace and Tenant administration, including a Tenant's creation, and an administrative grant or group-to-role mapping created, changed or removed; Session Token issuance and revocation | The Principal, and the authority granted or removed. For a mapping, the group, the role and the scope before and after. For a Platform Operator's administrative grant, its end time and the support case or incident it names. A Tenant's creation is the first record in the new Tenant's trail, attributed to the Platform Operator who created it and naming the first administrator it invites; that person's first verified sign-in, which gives them the Tenant's administrator role, is recorded with its cause and no Principal | A3, GLOSSARY, [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md), [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) |
-| A Platform User authenticating to the Control Plane | The Principal, the authenticated identity behind them, and the outcome | ADR-0009 — Platform Users is the seat-billable metered dimension; section 7 |
+| A Platform User authenticating to the Control Plane | The Principal, the authenticated identity behind them, and the outcome | [ADR-0039](../adr/adr-0039-seats-count-platform-users.md) — Platform Users is the seat-billable metered dimension, and the only one; section 7 |
+| A Service Account authenticating, at the Control Plane or the Gateway | The Principal, the authenticated identity behind it, and the outcome | [ADR-0039](../adr/adr-0039-seats-count-platform-users.md) — Service Accounts is a measured, never-billed dimension, and section 7 requires every metered occurrence to be an audited fact |
 | A read of the audit surface or of an Evidence Set | The reading Principal and the scope of the query | ADR-0003 and section 8 — derived here, not required by an ADR |
 | A Platform Operator's access to a Tenant's records, whether it reads or changes them | The Platform Operator, the authenticated identity behind it, and the records read or changed — one record for each Tenant affected | [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md), A1 |
 
@@ -280,12 +285,13 @@ from counts and timestamps, and a join has requirements on both sides.
 
 **Of audit.** Every occurrence of a metered dimension MUST also be an audited fact — Runs by
 outcome, Step Executions, Tool invocations by Tool and Side-Effect Class, approvals raised and
-resolved, Platform Users authenticating, Connectors by health, model usage per Model Binding. Each
-such record MUST carry a stable identifier that does not change on retry or replay. Two of
-ADR-0009's nine dimensions are not occurrences of their own: Active Agents and Workflows is a
-derivation over Run records, and End Users is observed through Session Tokens. Both reconcile
-against the records above rather than against a class of their own. Connectors by health is the one
-dimension whose audit status is unsettled — section 10.
+resolved, Platform Users authenticating, Service Accounts authenticating, Connectors by health,
+model usage per Model Binding. Each such record MUST carry a stable identifier that does not change
+on retry or replay. Two of [ADR-0039](../adr/adr-0039-seats-count-platform-users.md)'s ten
+dimensions are not occurrences of their own: Active Agents and Workflows is a derivation over Run
+records, and End Users is observed through Session Tokens. Both reconcile against the records above
+rather than against a class of their own. Connectors by health is the one dimension whose audit
+status is unsettled — section 10.
 
 **Of metering.** A meter record MUST carry the identifier of the occurrence it counts, resolving to
 exactly one Audit Record. That requirement is this document's own, derived from *reconciliation is a
@@ -444,7 +450,9 @@ so an export whose recipient cannot resolve the versions its records name is not
 trail. Nothing here specifies a format, a schema, a transport or a cadence. Three interactions
 register with it: export is one answer to the retention ceiling, since a customer who exports can
 keep records longer than Orchestra does, which changes what Orchestra must promise; an exported
-record should be verifiable as unaltered, which is A2's cryptographic question again; and ADR-0011's
+record is verifiable as unaltered, because an export carries the signed Audit Checkpoints covering
+its range and the inclusion and consistency proofs a recipient needs to check them
+([ADR-0036](../adr/adr-0036-signed-merkle-checkpoints-over-audit.md)); and ADR-0011's
 promotion path, relocating a Tenant to a dedicated database, needs the same property export needs —
 a trail movable without a break in it.
 
@@ -466,13 +474,13 @@ acting Principal is recorded, and whether platform-operator work crosses a Polic
 | --- | --- | --- |
 | The audit-retention period, and whether the rule is platform-wide, per Tenant or per record class | A customer contract forcing a regulatory floor; storage cost modelling once volume is observable. Policy Decision retention is not separate from it (section 11), and it now also fixes how long a Policy version lives, since ADR-0012 bounds that below by the records naming it | **Yes** — spans storage, erasure, the definition and Policy version lifecycles, metering and the contract |
 | How erasure requests are satisfied against immutable Audit Records | ADR-0011's per-tenant erasure follow-on, with legal input | **Yes** |
-| Whether immutability is additionally cryptographic — hash chain, write-once storage, notarisation | A security review, and the datastore selection ADR-0011 constrains but does not make | **Yes** — it narrows the datastore choice |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand | A design-partner conversation; forwarding attaches an availability obligation to Orchestra | **Yes** |
 | Whether a record ever carries an acted-for Principal alongside the acting one | The delegation, escalation and reassignment decision [`approval-workflows.md`](approval-workflows.md) owns; A3 holds on any answer, since the record names whoever acted | **Yes** — classified as its owning document classifies it |
 | How a degraded period is represented and signalled, for the writes ADR-0013 permits to degrade | ADR-0013 settles the split and requires that a gap be attributable rather than silent; `reliability.md` in [`../60-operations/`](../60-operations/) owns the failure taxonomy and the signals, and hands one part back — whether the bracket marking such a period is itself an Audit Record class, which section 3's enumeration decides | No |
 | What value identifies a metered occurrence across the audit and metering stores, and whether it is also the meter idempotency key | The metering design with `event-protocol.md` in [`../30-protocol/`](../30-protocol/); ADR-0009 requires the reconciliation but names no such value | No |
-| Export format, schema, transport and completeness proof | A later governance or protocol document, once the forwarding question above is settled | No |
+| Export format, schema and transport | A later governance or protocol document, once the forwarding question above is settled. The completeness proof is no longer part of it: [ADR-0036](../adr/adr-0036-signed-merkle-checkpoints-over-audit.md) decides it, and an export carries the Audit Checkpoints and proofs that supply it | No |
 | Whether a discarded `Draft` definition version's content is retained | The retention decision above. The discard is audited under A2 regardless, and no Run ever pinned a Draft, so no reconstruction depends on its content; only whether rejected content is itself evidence is in question | No — a later document, once retention exists |
 | Whether Connector health transitions are Audit Records or telemetry | The section 10 tension between the actor test and ADR-0009's reconciliation requirement; `connector.md` in [`../10-architecture/`](../10-architecture/) with `observability.md` in [`../60-operations/`](../60-operations/) | No — but it MUST be settled before the metered dimension ships |
 | Who within a Tenant may read audit, and who may read an Evidence Set | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | No |
 | The audit grain of a Tool call inside an Agent Run | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) — the gap `domain-model.md` section 4 registers | No — but neither audit nor metering can be applied retroactively |
+| The interval between Audit Checkpoints, which sets how long an alteration can go undetected | Observed write volume, weighed against signing and storage cost. [ADR-0036](../adr/adr-0036-signed-merkle-checkpoints-over-audit.md) decides the mechanism and deliberately fixes no interval | No — an operational figure, set with the export surface |

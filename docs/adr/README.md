@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.31.0
+version: 0.32.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -35,7 +35,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0006](adr-0006-model-layer-as-credential-broker.md) | Model layer is a credential and endpoint broker | Accepted | 2026-09-08 |
 | [0007](adr-0007-outbound-connector-for-enterprise-reachability.md) | Outbound connector for enterprise tool reachability | Proposed | 2026-09-08 |
 | [0008](adr-0008-declarative-workflow-definitions.md) | Customer-defined workflows as declarative definitions | Superseded by 0014 | 2026-09-08 |
-| [0009](adr-0009-meter-first-defer-tiering.md) | Meter from day one, defer tiering | Accepted | 2026-09-08 |
+| [0009](adr-0009-meter-first-defer-tiering.md) | Meter from day one, defer tiering | Superseded by 0039 | 2026-09-08 |
 | [0010](adr-0010-a2ui-genui-interchange.md) | A2UI as the GenUI interchange format | Proposed | 2026-09-09 |
 | [0011](adr-0011-tenant-isolation-shared-schema-rls.md) | Tenant isolation by shared schema with row-level security | Accepted | 2026-09-09 |
 | [0012](adr-0012-policy-decisions-are-audit-records.md) | Policy Decisions are a class of Audit Record over versioned Policies | Accepted | 2026-09-09 |
@@ -62,6 +62,10 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0033](adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) | The Gateway contract follows JSON:API's recommended URL layout, and a command is a resource that is created | Accepted | 2026-09-13 |
 | [0034](adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md) | A Policy Decision is written in the enforcing service's own transaction, and reaches the audit store through that service's outbox | Accepted | 2026-09-13 |
 | [0035](adr-0035-cel-profile-for-policies-and-workflow-expressions.md) | Policies and Workflow expressions are written in CEL behind an Orchestra profile, and matching Policies combine by verdict, never by order | Accepted | 2026-09-13 |
+| [0036](adr-0036-signed-merkle-checkpoints-over-audit.md) | Audit immutability is also cryptographic, through periodic signed Merkle checkpoints per Tenant | Accepted | 2026-09-13 |
+| [0037](adr-0037-per-tenant-keys-for-protected-content.md) | Per-tenant data keys extend beyond credentials to protected content | Accepted | 2026-09-13 |
+| [0038](adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) | Tenant-configured egress leaves through one proxy, on a per-tenant allow-list derived from configuration | Accepted | 2026-09-13 |
+| [0039](adr-0039-seats-count-platform-users.md) | A seat is a Platform User, and Service Accounts are measured without being billed | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -124,12 +128,21 @@ flowchart TD
   A12 --> A35["ADR-0035<br/>CEL profile, verdicts combine"]
   A34 --> A35
 
+  A12 --> A36["ADR-0036<br/>Signed Merkle checkpoints over audit"]
+  A27 --> A36
+  A2 --> A37["ADR-0037<br/>Per-tenant keys for protected content"]
+  A11 --> A37
+  A6 --> A38["ADR-0038<br/>Egress proxy on a per-tenant allow-list"]
+  A7 --> A38
+  A9 -.->|superseded by| A39["ADR-0039<br/>Seats count Platform Users"]
+  A30 --> A39
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39 accepted;
   class A4,A7,A10 proposed;
-  class A3,A5,A8,A22 superseded;
+  class A3,A5,A8,A9,A22 superseded;
 ```
 
 **Accepted** decisions are binding on implementation. **Proposed** decisions require a named

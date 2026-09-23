@@ -107,12 +107,21 @@ flowchart TD
   A12 --&gt; A35["ADR-0035&lt;br/&gt;CEL profile, verdicts combine"]
   A34 --&gt; A35
 
+  A12 --&gt; A36["ADR-0036&lt;br/&gt;Signed Merkle checkpoints over audit"]
+  A27 --&gt; A36
+  A2 --&gt; A37["ADR-0037&lt;br/&gt;Per-tenant keys for protected content"]
+  A11 --&gt; A37
+  A6 --&gt; A38["ADR-0038&lt;br/&gt;Egress proxy on a per-tenant allow-list"]
+  A7 --&gt; A38
+  A9 -.-&gt;|superseded by| A39["ADR-0039&lt;br/&gt;Seats count Platform Users"]
+  A30 --&gt; A39
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39 accepted;
   class A4,A7,A10 proposed;
-  class A3,A5,A8,A22 superseded;
+  class A3,A5,A8,A9,A22 superseded;
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">flowchart TD
   A1["ADR-0001&lt;br/&gt;Multi-tenant SaaS"] --&gt; A2["ADR-0002&lt;br/&gt;Enterprise + BYOK"]
@@ -172,12 +181,21 @@ flowchart TD
   A12 --&gt; A35["ADR-0035&lt;br/&gt;CEL profile, verdicts combine"]
   A34 --&gt; A35
 
+  A12 --&gt; A36["ADR-0036&lt;br/&gt;Signed Merkle checkpoints over audit"]
+  A27 --&gt; A36
+  A2 --&gt; A37["ADR-0037&lt;br/&gt;Per-tenant keys for protected content"]
+  A11 --&gt; A37
+  A6 --&gt; A38["ADR-0038&lt;br/&gt;Egress proxy on a per-tenant allow-list"]
+  A7 --&gt; A38
+  A9 -.-&gt;|superseded by| A39["ADR-0039&lt;br/&gt;Seats count Platform Users"]
+  A30 --&gt; A39
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39 accepted;
   class A4,A7,A10 proposed;
-  class A3,A5,A8,A22 superseded;</pre></details>
+  class A3,A5,A8,A9,A22 superseded;</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

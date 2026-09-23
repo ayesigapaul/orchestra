@@ -1,7 +1,7 @@
 ---
 title: Threat Model
 doc_id: DOC-055
-version: 0.9.0
+version: 0.10.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -270,6 +270,13 @@ provider account.
   backend. It MUST NOT be a tenant API key and MUST NOT be present in a browser or mobile bundle.
 - Rotation and revocation MUST be possible without changing any definition, and both MUST be
   audited. Lifetimes, rotation intervals and key hierarchy depth are **not decided**.
+- Protected content — Evidence Sets, Tool results, retrieved context and Messages — is encrypted at
+  the application level under the same per-tenant data keys, by the service that produces it, before
+  it reaches any store
+  ([ADR-0037](../adr/adr-0037-per-tenant-keys-for-protected-content.md)). Custody therefore covers
+  more than a credential: a backup, a replica or a dump carries ciphertext for those classes too,
+  and C6's rule that no plaintext credential exists in any store is joined by a second class of
+  content that is never in plaintext outside the service that produced or reads it.
 
 **Residual risk.** Custody is itself the residual: BYOK does not reduce credential risk, it
 concentrates it, moving a per-customer secret into a multi-tenant custodian. The runtime must use
@@ -293,7 +300,9 @@ a redirect from an allowed host to a private one; and the same against a Tool or
   is normative and this requirement is derived here, from the analysis above, rather than inherited:
   ADR-0001's deny-by-default governs authorization rather than network reachability. A
   customer-configurable endpoint is an SSRF primitive by construction, and a block-list cannot
-  enumerate what it has not seen. The posture binds; its shape does not yet exist.
+  enumerate what it has not seen. The posture binds, and its shape is now decided for the model
+  broker and Tool invocation
+  ([ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md)).
 - Every outbound request made on tenant-supplied input MUST have its destination resolved and
   validated **at connection time**, not only at configuration time, and MUST be re-validated on
   every redirect. Cloud instance metadata endpoints MUST be unreachable from any component making
@@ -303,10 +312,15 @@ a redirect from an allowed host to a private one; and the same against a Tool or
 - Validation failure MUST surface as a loud, tenant-visible configuration error and MUST NOT fall
   back silently to a default endpoint. A response from a tenant-configured endpoint is untrusted
   content and is subject to T1.
-- The **shape** of the allow-list is **not decided** — per tenant or platform-wide, hostnames or
-  address ranges, in the application or by an egress proxy identity. The posture above is settled;
-  only its shape is open. It spans the model broker, Tool invocation and the connector, so it needs
-  one ADR covering all three rather than three local answers.
+- The **shape** of the allow-list is decided for the model broker and Tool invocation
+  ([ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md)): a per-tenant list
+  derived from configuration — one entry per Model Binding endpoint and per registered Tool origin,
+  by scheme, host and port — enforced at an egress proxy that is those components' only outbound
+  route. The proxy resolves each name itself, connects to an address it checked, and checks each new
+  connection again, which is how the connection-time requirement above is met outside the calling
+  process. Loopback, private-use, link-local, other special-purpose and Orchestra-internal ranges
+  are refused whatever a tenant configured, and no entry overrides them. The connector's share of
+  the same question stays open while ADR-0007 is **Proposed** — section 14.
 
 **Residual risk.** A customer's internal gateway is, by intent, an internal address, and Orchestra
 cannot distinguish "the tenant's own gateway" from "an internal address this configurer should not
@@ -432,10 +446,9 @@ classification is the one repeated here.
 | What happens when registered Tool metadata diverges from what the origin now serves — a precedence rule between registered and served metadata | [`tool-authorization.md`](tool-authorization.md), with the Tool registration specification in [`../10-architecture/`](../10-architecture/) | Later document |
 | Whether a Tool is invoked with the Agent's authority or with a delegated End User identity | [`tool-authorization.md`](tool-authorization.md) | **ADR required** — spans identity, connector and the origin contract |
 | Whether an immediately effective revocation path exists for a capability grant, and whether it overrides a Run's pinned version | [`tool-authorization.md`](tool-authorization.md), with the incident-response requirements this document does not carry | **ADR required** — that document's classification; it is what an incident response asks first |
-| The shape and scope of the egress allow-list; the default-deny posture is settled normatively in section 10 and is not reopened here | Connector and model-broker designs in [`../10-architecture/`](../10-architecture/) | **ADR required** for the shape — it spans model broker, Tool invocation and connector |
+| The Connector's share of the egress allow-list. The default-deny posture is settled normatively in section 10, and the shape for the model broker and Tool invocation by [ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) | The Connector design in [`../10-architecture/`](../10-architecture/), after ADR-0007 binds | **ADR required** — it extends ADR-0038 to a fourth outbound edge; void if ADR-0007 is rejected |
 | Which stores exist outside the row-level-secured datastore, and how each is tenant-scoped and CI-checked | `multi-tenancy.md` in [`../10-architecture/`](../10-architecture/) | Later document |
 | How Orchestra authorizes issuing a Platform Operator's administrative grant, and who may issue one — the grant always carrying an end time and a recorded support case or incident, with no consent from the Tenant ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 12, with this document | Later document — but before the first security review |
-| Whether per-tenant keys extend beyond credentials to data at rest | Left open by ADR-0011 | **ADR required** — key hierarchy and data model, expensive to reverse |
 | Credential and Session Token lifetimes and rotation intervals | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | Later document; a customer contract will force it first |
 | Audit and Evidence Set retention periods, which bound how long any record relied on here can be produced | [`audit-model.md`](audit-model.md) | **ADR required** — that document's classification; it spans storage, erasure, the definition lifecycle and metering |
 | Whether credential custody is write-only, or a read-back path exists on an audited access path | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/), constrained by ADR-0002 and C6 | Later document |

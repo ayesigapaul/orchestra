@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.45.0
+version: 0.46.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -18,6 +18,59 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.46.0] — 2026-09-23
+
+Four more decisions: audit immutability becomes cryptographic as well as structural, per-tenant keys
+reach protected content, tenant-configured egress leaves through one proxy, and a seat is a Platform
+User. The last of them supersedes ADR-0009.
+
+### Added
+
+- `adr/adr-0036-signed-merkle-checkpoints-over-audit.md` — one append-only Merkle log per Tenant
+  over Audit Records in arrival order, with RFC 9162's structure and proofs and periodic signed
+  checkpoints carried in exports. Nothing joins the write path, and no checkpoint interval is
+  invented here.
+- `adr/adr-0037-per-tenant-keys-for-protected-content.md` — per-tenant data keys reach Evidence
+  Sets, Tool results, retrieved context and Messages wherever they are held, encrypted by the
+  service that produces them and bound to their Tenant and record. Identifiers stay queryable.
+- `adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md` — the Model Broker and Tool Invocation
+  reach a destination only through an egress proxy, on an allow-list derived from each Tenant's
+  Model Bindings and registered Tool origins, with loopback, private-use, link-local and every other
+  special-purpose range denied outright.
+- `adr/adr-0039-seats-count-platform-users.md` — a seat is a Platform User, Service Accounts become
+  a tenth metered dimension that is measured and never billed, and a Platform Operator is never a
+  seat. It carries ADR-0009's metering rules forward unchanged.
+
+### Changed
+
+- `adr/adr-0009-meter-first-defer-tiering.md` — superseded by ADR-0039, with its status and front
+  matter saying so. Its reasoning is retained unedited.
+- `GLOSSARY.md` (0.12.0) — entries for an Audit Checkpoint and for protected content, and the
+  developer row follows the seat rule.
+- `40-governance/audit-model.md` (0.9.0) — A2's immutability is structural and cryptographic,
+  section 12 says what makes an exported record verifiable, section 3 enumerates a Service Account
+  authenticating, T5 gains per-tenant keys, and section 13 registers the checkpoint interval.
+- `40-governance/threat-model.md` (0.10.0) — T6's controls name the proxy and the derived
+  allow-list, and the egress and per-tenant-key rows are discharged.
+- `60-operations/quotas-and-metering.md` (0.12.0) — ten dimensions rather than nine, the seat
+  counted as a Platform User, Service Accounts measured, and the seat row discharged.
+- `10-architecture/multi-tenancy.md` (0.16.0) — key custody widens to protected content, and the
+  egress paragraph names the proxy.
+- `10-architecture/containers.md` (0.27.0), `data-plane.md` (0.18.0), `control-plane.md` (0.17.0),
+  `system-context.md` (0.10.0) and `connector.md` (0.13.0) — the egress rows are discharged for the
+  two components the proxy covers, the store tables carry key custody, and the connector's share
+  stays with ADR-0007, which is Proposed.
+- `20-domain/domain-model.md` (0.12.0) — section 8's seat rows cite ADR-0039, and a Service Account
+  is measured on a dimension of its own.
+- `00-overview/personas.md` (0.15.0) — whether a Service Account consumes a seat is answered.
+- `70-delivery/compliance-roadmap.md` (0.16.0) — the per-tenant-key row is discharged.
+- `30-protocol/schemas/audit-record.v1.schema.json` — its comment says why no member carries
+  cryptographic immutability: the log is over records, not inside one.
+- `adr/README.md` (0.32.0) — indexes ADR-0036 to ADR-0039, and records ADR-0009 as superseded.
+- `CLAUDE.md` records the four decisions and ADR-0009's supersession.
 
 ---
 

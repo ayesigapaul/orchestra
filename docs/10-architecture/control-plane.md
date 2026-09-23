@@ -1,7 +1,7 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.16.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -334,11 +334,12 @@ that join to exist — which is what a customer disputing an invoice ultimately 
 reconciliation is a tenant-readable view on this surface or an operator-assisted procedure is not
 decided, and neither is the identifier the join needs. Section 13.
 
-The seat sits here too, on unclean wording: ADR-0009 meters *distinct Principals authenticating to
-the Control Plane* while [`../GLOSSARY.md`](../GLOSSARY.md) names the Platform User as the
-seat-billable identity — so authenticating here is a billing event, and whether a Service Account
-doing so consumes a seat is registered in
-[`../00-overview/personas.md`](../00-overview/personas.md).
+The seat sits here too, and its wording is now clean:
+[ADR-0039](../adr/adr-0039-seats-count-platform-users.md) supersedes ADR-0009 so that the metered
+dimension counts *distinct Platform Users authenticating to the Control Plane*, which is what
+[`../GLOSSARY.md`](../GLOSSARY.md) has always called the seat-billable identity. A Platform User
+authenticating here is therefore a billing event; a Service Account authenticating is measured on a
+dimension of its own and never billed, and a Platform Operator is never a seat.
 
 ## 12. Tenancy, the operator boundary, and how the front end is built
 
@@ -420,7 +421,6 @@ unchanged.
 | Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be when a check relies on it | A design partner; [`identity-and-access.md`](identity-and-access.md) assigns it here and no ADR names one, so no input exists pre-customer; [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) fixes that a group holds a role only through a mapping | No — *repeated* |
 | How a Platform User is deprovisioned, and what becomes of grants held by a Principal who can no longer authenticate | The same assignment from [`identity-and-access.md`](identity-and-access.md); the domain model fixes that a Principal outlives its credentials, not what removes its authority | No — *repeated* |
 | How a new Tenant's first administrator receives an administrative grant — within the creation, or as a second act of the Platform Operator | This document with [`identity-and-access.md`](identity-and-access.md), once the role set of [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) exists; [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md) creates the Tenant, and either act is recorded in its trail | No |
-| Audit export: format, transport, completeness proof, and self-serve versus operator-assisted | [`audit-model.md`](../40-governance/audit-model.md) section 12, which separates on-demand export from continuous forwarding | No |
+| Audit export: format, transport, and self-serve versus operator-assisted | [`audit-model.md`](../40-governance/audit-model.md) section 12, which separates on-demand export from continuous forwarding. The completeness proof is decided: an export carries the signed Audit Checkpoints covering its range and the proofs to check them ([ADR-0036](../adr/adr-0036-signed-merkle-checkpoints-over-audit.md)) | No |
 | Whether the Control Plane ships as one duplicated front-end surface or several | Answered for the first slice only by [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) section 6 — one surface, because duplication pays before divergence exists. It reopens when a second audience does, such as an auditor who only reads | No |
 | Whether a Connector administration surface exists at all, and what separates `Degraded` from `Healthy` | ADR-0007 binding first, then `connector.md` in this section with `reliability.md` in [`../60-operations/`](../60-operations/) | No |
-| Whether a Service Account authenticating here consumes a seat | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/); the wording gap is registered in [`../00-overview/personas.md`](../00-overview/personas.md) | No |

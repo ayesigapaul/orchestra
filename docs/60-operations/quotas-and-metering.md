@@ -1,9 +1,9 @@
 ---
 title: Quotas and Metering
 doc_id: DOC-073
-version: 0.11.0
+version: 0.12.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -177,18 +177,20 @@ Early contracts are priced by hand and invoiced manually, which is normal at thi
 
 ## 8. The metered dimensions
 
-The nine dimensions below are ADR-0009's, reproduced faithfully. **They are decided, and this
-document does not extend them.** Where ADR-0009's wording is wider than its own dimension name —
-*Platform Users*, defined as distinct Principals — section 13 states the counting rule and registers
-it rather than treating the reading as this document's to settle. The grain column is
-[`../20-domain/domain-model.md`](../20-domain/domain-model.md) sections 8 and 9: section 9 states
+The ten dimensions below are [ADR-0039](../adr/adr-0039-seats-count-platform-users.md)'s,
+reproduced faithfully. **They are decided, and this document does not extend them.** ADR-0039
+supersedes ADR-0009 to state the *Platform Users* dimension against its own name and to add
+*Service Accounts*; the rest of the set is ADR-0009's, carried forward unchanged. The counting rule
+section 13 used to read out of ADR-0009's wording is now the deciding record's own. The grain column
+is [`../20-domain/domain-model.md`](../20-domain/domain-model.md) sections 8 and 9: section 9 states
 three of the mappings outright and the rest follow from section 8's table of units, each an entity
 that already exists.
 
-| Dimension | Definition (ADR-0009) | Grain it keys on |
+| Dimension | Definition ([ADR-0039](../adr/adr-0039-seats-count-platform-users.md)) | Grain it keys on |
 | --- | --- | --- |
-| **Platform Users** | Distinct Principals authenticating to the Control Plane in a billing period — **the seat-billable identity** | Platform User; section 9 |
+| **Platform Users** | Distinct **Platform Users** authenticating to the Control Plane in a billing period — **the seat-billable identity**, and the only one | Platform User; section 9 |
 | **End Users** | Distinct end-user subjects observed via session tokens — measured, explicitly **not** seat-billed | Session Token subject; a derivation, not an occurrence class |
+| **Service Accounts** | Distinct Service Accounts authenticating to Orchestra in a billing period, at the Control Plane or the Gateway — **measured, never billed** | Service Account; the audited authentication act, [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3 |
 | **Runs** | Executions of an Agent or Workflow, by outcome | Run, broken down by outcome; the outcome enumeration is unsettled — section 14, and `execution-semantics.md` section 7 |
 | **Step Executions** | Executions of individual steps | Step Execution |
 | **Active Agents / Workflows** | Definitions with at least one run in the period | The definition, not the version; a derivation over Run records |
@@ -197,9 +199,11 @@ that already exists.
 | **Tool invocations** | By Tool and Side-Effect Class | The Step Execution of a `tool` Step; section 12 |
 | **Model usage** | Tokens and calls per Model Binding | Model Binding — **reported to the customer, never billed** |
 
-Two of the nine are derivations rather than occurrence classes of their own — *Active Agents and
+Two of the ten are derivations rather than occurrence classes of their own — *Active Agents and
 Workflows* over Run records, *End Users* through Session Tokens — and both reconcile against records
-of other classes (section 11). *Connectors, by health* is the one whose audited status is unsettled:
+of other classes (section 11). Three are measured and never billed — *End Users*, *Service Accounts*
+and *Model usage* — which is a property of each dimension rather than a price deferred.
+*Connectors, by health* is the one whose audited status is unsettled:
 health transitions have no acting Principal, which
 [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 10's test calls
 telemetry, while its section 7 requires every metered occurrence to be audited. That document owns
@@ -213,6 +217,11 @@ hundreds while its End Users may number in the hundreds of thousands where the S
 customer-facing application, so pricing the second population as though each were an administrator
 misprices by orders of magnitude. Both are counted; only one is a seat — a split
 [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 8 and the glossary carry too.
+[ADR-0039](../adr/adr-0039-seats-count-platform-users.md) closes the rest of it: of the Principal
+subtypes only a Platform User consumes a seat. A Service Account does not, and is counted on a
+dimension of its own; a Connector does not; and a Platform Operator never does, because it acts for
+Orchestra rather than for the Tenant, and billing a Tenant for Orchestra's own access to it would be
+charging a customer for being supported.
 
 **Model usage in tokens and calls is reported to the customer and never billed.** Under BYOK the
 customer already pays their provider, so reselling tokens is neither available nor wanted. What is
@@ -325,7 +334,7 @@ now would be read as a decision.
 
 | Question, and who assigned it | Answer |
 | --- | --- |
-| Whether a Service Account authenticating to the Control Plane consumes a seat — [`../00-overview/personas.md`](../00-overview/personas.md) section 5, [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 13, [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) | **No.** ADR-0009 names the dimension *Platform Users* and the glossary names the Platform User as the seat-billable identity; a Service Account is a different Principal subtype, non-human and used for machine-to-machine calls into the Gateway. The dimension's wording — "distinct Principals authenticating to the Control Plane" — is wider than its own name and must be read against it. The counting rule is therefore: a seat is a Platform User, and no Service Account consumes one. A Service Account that does authenticate to the Control Plane is unaffected in every other respect — it is a Principal, and every act it takes is attributed and audited on the same terms ([`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3); what it does not do is consume a seat. Reading a decided dimension against its own name narrows the seat-billed population, which is a commercial effect, so that reading and whether an unbilled Service Account count exists as a dimension of its own are registered together in section 14 |
+| Whether a Service Account authenticating to the Control Plane consumes a seat — [`../00-overview/personas.md`](../00-overview/personas.md) section 5, [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 13, [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) | **No — and it is now decided rather than read.** [ADR-0039](../adr/adr-0039-seats-count-platform-users.md) supersedes ADR-0009 so that the *Platform Users* dimension counts Platform Users, and a seat is a Platform User. A Service Account is a different Principal subtype, non-human and used for machine-to-machine calls. One that authenticates is unaffected in every other respect — it is a Principal, and every act it takes is attributed and audited on the same terms ([`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3); what it does not do is consume a seat. It is counted instead on a *Service Accounts* dimension of its own, measured and never billed (section 8). A Platform Operator is never a seat either |
 | What the Quota Envelope delay signal carries, the carrier being settled — [`../10-architecture/data-plane.md`](../10-architecture/data-plane.md) section 11, [`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md) section 10, [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 9 | **Section 4's table.** The Model Binding, the observable queue depth, that the Run is still `Running` with nothing refused, and a clearing signal when the call is admitted. Not provider-native rate-limit vocabulary, not any part of the credential, and not a promised wait estimate — an estimate needs the envelope refresh behaviour section 5 has not decided. Rests on ADR-0004, **Proposed**, as the protocol document marks it |
 | Whether a Quota Envelope is declared, discovered or both — [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11, [`../10-architecture/containers.md`](../10-architecture/containers.md) section 12, [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 9 | **Not answered, and not closable here.** ADR-0006 says the design does not exist; section 5 states the forces that bound it. Registered, with its owners' classification repeated |
 | Whether a refused invocation is metered as a Tool invocation — [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 10 | **Split.** A refusal resolved before dispatch is not metered — nothing was invoked. A refusal at the Connector is **unresolved**: [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA18 puts a connector refusal or a mid-call tunnel drop in an unknown state, so this document cannot assert the origin was never called. Metering it requires TA18 to separate the two cases first — section 12 |
@@ -345,7 +354,6 @@ another document owns a question, its classification is repeated rather than rev
 | Queue ordering within a Model Binding, and whether it is ever customer-configurable | The same quota design; no definition carries a priority, deadline or importance attribute today, so there is no input to order on | No |
 | Whether the delay signal may name the Tenant's configured limits, given that the Run stream reaches an application built for End Users | The payload design with [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md), which owns who may read what | No |
 | Whether Orchestra rate-limits its own inbound Gateway traffic, and on what basis | A separate decision with no owner today; it is not the Quota Envelope and must not borrow its vocabulary | No |
-| Whether a Service Account is excluded from the *Platform Users* count, section 13 having read that dimension against its own name, and whether an unbilled Service Account count exists as a dimension of its own | ADR-0009's revisit criteria: its nine dimensions and their wording are both decided, so narrowing the seat-billed population and adding a dimension are equally that ADR's to confirm rather than a document's; [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3 would need the matching audited act for a new dimension | **Yes** — both change a fixed commercial dimension set |
 | Which clock assigns an occurrence to a billing period, and what happens to a record arriving after that period closed | The metering design with the datastore selection; ADR-0009 requires a timestamp and names no boundary rule | No |
 | The audit-retention period, which bounds how long an invoice can be reconciled and therefore disputed | A customer contract forcing a regulatory floor; storage cost modelling once volume is observable | **Yes** — *repeated* from [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 13 |
 | Whether Connector health transitions are Audit Records or telemetry, which the *Connectors, by health* dimension depends on | The tension between the actor test and the reconciliation requirement, in [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 10 | No — *repeated*, and it must be settled before the dimension ships; ADR-0007 is **Proposed**, so the Connector lifecycle underneath the dimension is provisional |

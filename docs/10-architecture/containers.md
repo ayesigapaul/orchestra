@@ -1,7 +1,7 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.26.0
+version: 0.27.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -309,7 +309,7 @@ before implementation. **Document** means a later document suffices.
 
 | Question | Needs | Decided by |
 | --- | --- | --- |
-| The shape and scope of the egress allow-list | **ADR** | One ADR spanning the Model Broker, Tool Invocation and the Connector, per [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T6. The posture is not open: T6 derives default-deny egress from its own analysis and binds it normatively, so this document treats it as settled and registers only the allow-list's shape — per tenant or platform-wide, by hostname or by address range, in the application or at an egress identity. Those three containers are the only outbound edges reaching a tenant-supplied destination, which is what this document contributes; `connector.md` cannot settle the shape alone while ADR-0007 is **Proposed** |
+| The Connector's share of the egress allow-list | **ADR** | [ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) settles the shape for the Model Broker and Tool Invocation: a per-tenant list derived from Model Binding endpoints and registered Tool origins by scheme, host and port, enforced at an egress proxy that is their one outbound route and that is the stable egress identity a customer allow-lists. The posture was never open — [`../40-governance/threat-model.md`](../40-governance/threat-model.md) T6 binds it normatively. Those two container boundaries are this document's contribution and are now fixed; `connector.md` cannot settle its own share while ADR-0007 is **Proposed** |
 | Which side of the language boundary the Definition Compiler sits on, and what artifact crosses it | **ADR** | [`data-plane.md`](data-plane.md) section 11, which carries the analysis of both candidates, with ADR-0005 behind it. This view names the container; it does not decide the side. It fixes where every point of contact with the substrate lives, which is the substitution argument the boundary exists to protect |
 | How the control-plane-to-runtime internal contract is versioned and deprecated | Document | [`../VERSIONING.md`](../VERSIONING.md), which enumerates nine artifacts and does not include this one, though ADR-0005 requires it be documented as a versioned contract |
 | How long the Kafka topics that carry facts between services keep them, and how far a capture connector's replication slot may lag | Document | [`../60-operations/reliability.md`](../60-operations/reliability.md), with [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md), when the first event type and its consumer are built. Retention must cover the longest a consumer may be down, and the lag bound decides how much write-ahead log a stalled connector may hold. The event contracts themselves belong in [`../30-protocol/schemas/`](../30-protocol/schemas/) |
@@ -322,7 +322,9 @@ before implementation. **Document** means a later document suffices.
 | What the Gateway emits on the Run event stream, and how replay reaches a disconnected client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed**, whose validation step 2 is outstanding |
 | Whether the Model Broker's Quota Envelopes are declared, discovered from the surface, or both | Document | The quota design ADR-0006 calls for, with [`../60-operations/`](../60-operations/) |
 
-One of these gates other work: the allow-list's shape gates two container boundaries and the
-connector. Evaluation location, which sat underneath the governance section's implementability, is
-settled in section 5, and the engine decision that used to lead this list, and gated every T4
-control, is now [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md).
+Neither of the two that gated other work still does. The allow-list's shape is settled for both
+container boundaries by
+[ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md), which leaves the connector's
+share alone, and evaluation location, which sat underneath the governance section's
+implementability, is settled in section 5. The engine decision that used to lead this list, and
+gated every T4 control, is now [ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md).

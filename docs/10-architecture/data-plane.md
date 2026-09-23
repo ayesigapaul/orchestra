@@ -1,7 +1,7 @@
 ---
 title: Data Plane
 doc_id: DOC-024
-version: 0.17.0
+version: 0.18.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -284,10 +284,14 @@ Platform User configured. [`threat-model.md`](../40-governance/threat-model.md) 
 that a customer-configurable endpoint is an SSRF primitive by construction and requires egress to
 default to deny, deriving that requirement from its own analysis rather than inheriting it from
 ADR-0001. That section is normative, so **the posture binds this plane already**; it is linked here
-rather than restated, and it is not this document's to reopen. What is open is the allow-list's
-**shape**, which spans the Model Broker, Tool Invocation and the connector — the last resting on
-Proposed ADR-0007 — and so needs one ADR across the three rather than three local answers. Section
-11 registers the shape, and only the shape.
+rather than restated, and it is not this document's to reopen. The allow-list's **shape** is now
+decided for this plane by
+[ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md): the Model Broker and Tool
+Invocation reach a tenant-configured destination only through an egress proxy that is their one
+outbound route, on a per-tenant list derived from Model Binding endpoints and registered Tool
+origins by scheme, host and port, with loopback, private-use, link-local, other special-purpose and
+Orchestra-internal ranges refused whatever a Tenant configured. The connector's share rests on
+Proposed ADR-0007 and stays open. Section 11 registers that share, and only that share.
 
 ## 9. Retry, idempotency and compensation
 
@@ -351,7 +355,7 @@ before implementation. **Document** means a later document suffices.
 
 | Question | ADR required? | Decided by |
 | --- | --- | --- |
-| The shape and scope of the egress allow-list, the default-deny posture itself being settled | **ADR** | One ADR across the Model Broker, Tool Invocation and `connector.md`; [`threat-model.md`](../40-governance/threat-model.md) section 10 is normative and fixes the posture, leaving only the shape, and ADR-0007 is **Proposed**, so the connector's share cannot close alone |
+| The Connector's share of the egress allow-list; the posture and the shape for this plane are both settled | **ADR** | [ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) decides the shape for the Model Broker and Tool Invocation, and [`threat-model.md`](../40-governance/threat-model.md) section 10 fixes the posture; the connector's share cannot close alone while ADR-0007 is **Proposed**, and it extends ADR-0038 rather than reopening it |
 | Which side of the Python-to-TypeScript boundary the Definition Compiler sits on, and what artifact crosses into this plane | **ADR** | Assigned here by [`containers.md`](containers.md) section 12, whose section 9 names the two candidates: TypeScript emitting a runtime-neutral artifact, or Python beside the Runtime. Each cuts the other way against ADR-0005's substitution argument — a runtime-neutral artifact keeps every point of contact with the runtime on the far side of the seam but has to be expressive enough to compile without runtime types, while a compiler beside the Runtime may emit natively and makes substitution a compiler rewrite. What blocks a choice is that the versioned internal contract ADR-0005 requires is unwritten ([`containers.md`](containers.md) section 9), so neither placement has anything to be judged against yet, and section 2 defers to this row for that reason |
 | What a `deny` outside admission does to a Run in flight, which this plane must implement and the Run state machine has no transition for | **ADR** | Already registered by [`policy-model.md`](../40-governance/policy-model.md) section 9 and [`tool-authorization.md`](../40-governance/tool-authorization.md) section 10; not this document's to take |
 | How a delay against a Quota Envelope is surfaced to a caller, given a waiting Run is still `Running` | Document | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/) with `event-protocol.md` in [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed** |
@@ -364,8 +368,9 @@ before implementation. **Document** means a later document suffices.
 [`system-context.md`](system-context.md) assign *where policy evaluation executes*; section 5
 answers it — in process at each enforcing service — now that ADR-0035 has taken the aggregate-state
 question. [`threat-model.md`](../40-governance/threat-model.md) section 14 assigns
-*egress*; section 8 accepts the default-deny posture as binding already and registers the allow-list
-shape alone, because that is what spans three components, one of which rests on a Proposed ADR.
+*egress*; section 8 accepts the default-deny posture as binding and records the shape
+[ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) decides for this plane,
+registering the connector's share alone, which rests on a Proposed ADR.
 [`containers.md`](containers.md) section 12 assigns the *compiler's side of the language boundary*;
 ADR-0005 places neither side and the row above marks it **ADR**.
 [`multi-tenancy.md`](multi-tenancy.md) section 10 asks each plane to name the stores it introduces
