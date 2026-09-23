@@ -1,11 +1,11 @@
 ---
 title: Step Types
 doc_id: DOC-062
-version: 0.11.0
+version: 0.12.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0012, ADR-0013]
+depends_on: [ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Step Types
@@ -67,7 +67,7 @@ flowchart TD
   PEP --> K{"What can the Step reach?"}
   K -->|"tool"| EFFECT["A registered Tool. A second enforcement point sits before the invocation"]
   K -->|"agent"| DELEG["An Agent version. Every Tool call it makes crosses the Tool point (E1)"]
-  K -->|"subworkflow"| NEST["Another Workflow version. Whether that is a separate Run is unmade"]
+  K -->|"subworkflow"| NEST["Another Workflow version, pinned at publication and executed inside this Run (ADR-0041)"]
   K -->|"condition, parallel, transform"| INTERNAL["Only data inside the Run. Nothing leaves"]
   K -->|"approval"| GATE["A human decision. The Run suspends before the gated action"]
   K -->|"wait"| TIME["Elapsed time. Resumption has no acting Principal — audit-model section 9"]
@@ -105,7 +105,9 @@ cannot express is *a reviewed custom step type, never raw customer code* — a n
 | Type | Exactly one of the eight | [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md) |
 | Side-Effect Class | Mandatory: `read`, `write`, `destructive`, `financial` or `external-communication` | [`../GLOSSARY.md`](../GLOSSARY.md) |
 | Compensating action | MUST be declared where the class is `write`, `destructive` or `financial` | [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md) risks; [`../00-overview/roadmap.md`](../00-overview/roadmap.md) Phase 4 exit |
+| Refusal edge | MAY be declared, in `edges`: the edge the Run follows when the Step's boundary, or the Tool enforcement point before the invocation a `tool` Step names, returns `deny`, or when a gate raised there is rejected or expires. Without one the Run ends `Denied`. An `approval` Step's own gate takes its rejection and expiry edges instead (section 7) | [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md); [`workflow-dsl.md`](workflow-dsl.md) L12 |
 | Tool reference | Exactly one on a `tool` Step, none on any other type | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 5 |
+| Definition reference | An exact Agent version on an `agent` Step and an exact Workflow version on a `subworkflow` Step, pinned when the Workflow version is published; none on any other type | [ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md); [`../VERSIONING.md`](../VERSIONING.md) rule W6 |
 | Tool schema MAJOR pin | A Workflow version pins the major version of each Tool schema it references | [`../VERSIONING.md`](../VERSIONING.md) rule W5 |
 
 **S1 — Every Step is evaluated at a Policy Enforcement Point, whatever its Side-Effect Class.** This
@@ -143,29 +145,30 @@ half.
 
 What makes it governable is that its bounds are declared and its every act evaluated. **A definition
 can constrain five things:** the Agent it delegates to — Agent definitions follow rules W1 to W4
-identically ([`../VERSIONING.md`](../VERSIONING.md) section 8), though whether the Step *pins* the
-version it names or resolves the Active one at run time is **unmade**, ADR-required, and registered
-by [`workflow-dsl.md`](workflow-dsl.md) section 11 jointly with this document; everything the
-resolved version fixes — instructions, permitted tools, model binding, policy bindings and bounds
-([`../GLOSSARY.md`](../GLOSSARY.md)); that version's capability grant set, the outer limit on what
-may be called at all (I5), though whether the grant set is carried by the immutable Agent version
-and so pinned for the life of a Run is **unmade** and owned by
-[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 10; the
-data handed in; and the Step's class with its compensation declaration. **It cannot constrain** the
+identically ([`../VERSIONING.md`](../VERSIONING.md) section 8), and the Step names an exact Agent
+version, pinned when the Workflow version is published and executed inside this Run
+([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)); everything the
+resolved version fixes — instructions, model binding, policy bindings and bounds
+([`../GLOSSARY.md`](../GLOSSARY.md)); the Tools that version declares, the outer limit on what may
+be called at all, each call still needing a capability grant naming the Agent (I5,
+[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA19 to TA21);
+the data handed in; and the Step's class with its compensation declaration. **It cannot
+constrain** the
 order, count or arguments of the calls the model makes, which the Tool enforcement point bounds at
 runtime. The definition bounds the authority; the enforcement point bounds each act.
 
 | Aspect | |
 | --- | --- |
-| Compiler validates | The reference resolves to a published rather than `Draft` Agent definition. Whether it resolves to a pinned version or to the Active one is the unmade question above, so no pinning check is specified here and none may be read in. A compensating action is present where the declared class requires one. The reference names no Agent outside the Tenant, and Workspace scope resolves. |
-| At its boundary | One evaluation over the Step and the Agent version it resolves to as the proposed action — the delegation itself, not any call it will make. Inputs are [`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N1. The definition fixes no sequence inside the delegation, so it declares no further Steps and there are no further Step boundaries; every Tool call the model makes crosses the Tool enforcement point, which rule E1 places before *any* Tool invocation rather than once per Step. Rule E4 says the same of an Agent Run, where that point is not optional and is the only control between admission and a side effect — the same shape, cited as the analogy it is rather than as coverage, an `agent` Step not being an Agent Run. Whether the delegated execution *additionally* crosses a Run admission enforcement point turns on the missing Step-to-Agent-version edge below, exactly as the equivalent question does for `subworkflow` in section 12. |
-| Failure modes | A failed model call is safe to retry; a partially executed Tool call is not, and is compensated rather than retried (ADR-0008) — though the only declaration a definition can carry sits on the delegation rather than on the calls the model chooses, and where a compensating action for such a call is declared is **unmade**, section 13. Non-termination: no step limit, no maximum duration and no timeout is decided anywhere in this repository. A `deny` on a call inside the Step has no defined effect on the Run, which [`../40-governance/policy-model.md`](../40-governance/policy-model.md) registers. Quota Envelope pressure under BYOK is a steady-state capacity constraint, not an exceptional failure ([ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md)). |
+| Compiler validates | The reference names an exact Agent version already published in this Tenant and not `Archived`, which publication pins ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). A compensating action is present where the declared class requires one. The reference names no Agent outside the Tenant, and Workspace scope resolves. |
+| At its boundary | One evaluation over the Step and the Agent version it resolves to as the proposed action — the delegation itself, not any call it will make. Inputs are [`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N1. The definition fixes no sequence inside the delegation, so it declares no further Steps and there are no further Step boundaries; every Tool call the model makes crosses the Tool enforcement point, which rule E1 places before *any* Tool invocation rather than once per Step. Rule E4 says the same of an Agent Run, where that point is not optional and is the only control between admission and a side effect — the same shape, cited as the analogy it is rather than as coverage, an `agent` Step not being an Agent Run. The delegated execution crosses no Run admission enforcement point of its own: it is not a Run, and every evaluation inside it runs under the Policy versions this Run pinned at admission ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). |
+| Failure modes | A failed model call is safe to retry; a partially executed Tool call is not, and is compensated rather than retried (ADR-0008) — though the only declaration a definition can carry sits on the delegation rather than on the calls the model chooses, and where a compensating action for such a call is declared is **unmade**, section 13. Non-termination: no step limit, no maximum duration and no timeout is decided anywhere in this repository. A `deny` on a call the model chooses, or a gate on such a call that is rejected or expires, returns to the model as that invocation's outcome and the Step continues; a `deny` of the delegation at the Step's own boundary, or a gate raised there that is rejected or expires, follows the Step's refusal edge or ends the Run `Denied` ([`../40-governance/policy-model.md`](../40-governance/policy-model.md) V1, [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) J5). Quota Envelope pressure under BYOK is a steady-state capacity constraint, not an exceptional failure ([ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md)). |
 
 Prompt injection is not a failure mode of this type; it is the ordinary condition of it. The defence
 is that no model output ever satisfies a control, and
 [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 7 owns that argument.
-Separately: the domain model draws no edge from a Step to an Agent version, so this type needs one
-that does not exist — the same shape as the `subworkflow` gap in section 12, registered with it.
+The domain model draws the edge from this Step to the Agent version it names, as it does for
+`subworkflow` in section 12
+([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)).
 
 ## 6. `tool` — the only type that names a Tool
 
@@ -177,14 +180,15 @@ actually occurs, and the one place a compensating action has something concrete 
 | Declares | Exactly one Tool; the arguments as they would execute; the Tool schema MAJOR version pinned by the Workflow version (rule W5); the class, which is the Tool's own (S2); a compensating action where that class is `write`, `destructive` or `financial`. |
 | Compiler validates | [`workflow-dsl.md`](workflow-dsl.md) section 5 enumerates the checks and is where they live: the Tool is registered in this Tenant's Tool Catalog, its schema MAJOR is pinned, the arguments conform to that major, and compensation is present where required. It also rejects a declared class that differs from the one the Catalog recorded at registration — a restatement that differs is a mismatch, never an override. Registration at compile time is not permission — invariant I5 — and registration state is re-read as an evaluation input at every invocation. |
 | At its boundary | Two evaluations under rule E1: one at the Step boundary, one before the invocation. The second additionally sees the Tool, its registration state, the grant set and the proposed action including its arguments. Whether the two collapse into one evaluation for this type is **unmade** and owned by [`../40-governance/policy-model.md`](../40-governance/policy-model.md). |
-| Failure modes | An interrupted invocation leaves the call in an unknown state, and unknown is not the same as not done — which is why compensation rather than blind retry is the mechanism, at Step Execution grain. A refusal is a governance outcome, not a fault. Registered metadata diverging from what the origin now serves MUST NOT be adopted silently ([`../40-governance/threat-model.md`](../40-governance/threat-model.md) T2). Reachability through a Connector rests on [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed**. |
+| Failure modes | An interrupted invocation leaves the call in an unknown state, and unknown is not the same as not done — which is why compensation rather than blind retry is the mechanism, at Step Execution grain. A refusal is a governance outcome, not a fault: a `deny` at either evaluation, or a gate either raises that is rejected or expires, follows the Step's refusal edge or ends the Run `Denied` ([`../40-governance/policy-model.md`](../40-governance/policy-model.md) V1, [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) J5). Registered metadata diverging from what the origin now serves MUST NOT be adopted silently ([`../40-governance/threat-model.md`](../40-governance/threat-model.md) T2). Reachability through a Connector rests on [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed**. |
 
-One authorization control has no stated subject. The grant edge the domain model draws runs from an
-*Agent version* to a Tool; a `tool` Step names the Tool directly, and whether that naming is itself
-the permission or Workflows need a grant subject of their own is **unmade**
-([`../40-governance/policy-model.md`](../40-governance/policy-model.md) A2,
-[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md)). Registration
-and the verdict hold either way; a missing grant is an audited refusal naming no Policy (A4).
+Naming the Tool is a declaration, never a grant. The Workflow holds capability grants on the same
+terms as an Agent, so the invocation needs a grant naming the Workflow and the Tool, read at the
+Tool enforcement point, as well as the registration and the verdict
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md),
+[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA19 to TA21). A
+missing grant is an audited refusal naming no Policy
+([`../40-governance/policy-model.md`](../40-governance/policy-model.md) A4).
 
 ## 7. `approval` — the governance core, made a node
 
@@ -215,25 +219,27 @@ thing an ADR would have to choose; section 13 registers it.
 
 | Aspect | |
 | --- | --- |
-| Compiler validates | That the boundary enforcement point is emitted and unsuppressed (rule E2), and that any declared rejection branch is an ordinary sequence of Steps, each carrying its own boundary evaluation. It cannot validate the chain, which does not exist until raise time. |
+| Compiler validates | That the boundary enforcement point is emitted and unsuppressed (rule E2), and that any declared rejection, expiry or refusal edge leads to an ordinary sequence of Steps, each carrying its own boundary evaluation ([`workflow-dsl.md`](workflow-dsl.md) L12). It cannot validate the chain, which does not exist until raise time. The Control Plane warns instead, at authoring time, where no Policy version in force supplies a chain at this Step, because a gate with no position is refused at raise ([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md), [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) C10). |
 | At its boundary | The same inputs as any Step boundary (rule N1). What differs is the verdict available to it: `require_approval`, or `deny`, and never `allow` — the rule above — with the Approval Request forming from the first of the two. |
-| Failure modes | Rejection; expiry, if a deadline mechanism is adopted at all; and withdrawal, which is the Run having already ended and left nothing to gate. Three requirements govern the suspension and are cited rather than restated: durability of a suspension that may last days is [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) rule G1, resumption *at* the gated action rather than before it is its rule G2, and the Policy Decision behind the gate must be durable before the gated action could be attempted ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)). |
+| Failure modes | Rejection, including a gate refused at raise because no matching Policy supplied a chain ([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md), [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) C10); expiry, where a Policy that raised the gate declares a decision deadline; and withdrawal, which is the Run having already ended and left nothing to gate. Three requirements govern the suspension and are cited rather than restated: durability of a suspension that may last days is [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) rule G1, resumption *at* the gated action rather than before it is its rule G2, and the Policy Decision behind the gate must be durable before the gated action could be attempted ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)). |
 
-**What a rejected or expired gate does to the Run is not decided, and not decided here.**
-[`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 8 owns
-it, classifies it as needing an ADR, and shows why: `Failed` today carries both a crash and a
-governance refusal, and ADR-0009 meters Runs by terminal outcome, so the two meter identically —
-which its rule J1 forbids. Four things hold on any answer, J1 to J4 in that section, counted there
-and not here. Two bear directly on this type: a declared rejection branch, if the language admits
-one, is ordinary execution, every Step on it crossing an enforcement point and inheriting none of
-the refused action's authorization (J2); and re-proposing a refused action raises a **new** request,
-a refused one being terminal (J3). J4 is the one a reader of this document alone would otherwise
-miss — a rejection is never proof that no side effect occurred, because Step Executions that already
-ran in this Run may have left one, and unknown is not the same as not done. An admission gate has no
-Step to branch from, so no answer covers it.
-[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2.4
-names this document as the decider, but the question spans the Run state machine, branch semantics
-here and a metered dimension, so section 13 repeats the ADR classification instead.
+**An `approval` Step may declare where its own rejected or expired gate leads.**
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) admits two edges on this
+type and on no other: a rejection edge, which the Run resumes onto when the request resolves
+`Rejected`, and an expiry edge, which it resumes onto when the request resolves `Expired` because
+its decision deadline, where the Policy that raised it sets one (ADR-0043), passed undecided.
+Without the edge the Run ends `Denied`, a governance refusal rather than a fault, and that
+document's rule J5 carries the requirement. Like every Step, this one may also declare a refusal
+edge, but that edge serves a `deny` at its boundary, never its own gate. Every other type sends a
+rejected or expired gate where a `deny` at the same point would go. Four more things hold on every
+path, J1 to J4 in that section, counted there and not here. Two bear directly on this type: a
+declared rejection or expiry edge leads to ordinary execution, every Step on it crossing an
+enforcement point and inheriting none of the refused action's authorization (J2); and re-proposing
+a refused action raises a **new** request, a refused one being terminal (J3). J4 is the one a reader
+of this document alone would otherwise miss — a rejection is never proof that no side effect
+occurred, because Step Executions that already ran in this Run may have left one, and unknown is not
+the same as not done. An admission gate has no Step to branch from, so a rejected one ends the Run
+`Denied` with no Step Execution.
 
 ## 8. `condition` — deterministic branching
 
@@ -308,42 +314,46 @@ written in YAML. The guard does not cover this axis, so
 the Expression Profile admits no user-defined function, bounds evaluation cost, and grows only by a
 profile version, which W1 keeps from altering a definition already published.
 
-## 12. `subworkflow` — nesting, and three questions nothing has decided
+## 12. `subworkflow` — nesting inside the Run
 
-Executes another Workflow version as a Step of this one — Orchestra's only nesting construct. The
-event protocol declines to emit subagent attribution for that reason: it would create an execution
-shape the domain model lacks
-([`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md)).
+Executes another Workflow version as a Step of this one. With `agent`, it is one of the two types
+that name a definition, and the version either one names executes inside the Run that reached the
+Step ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). The event
+protocol declines to emit subagent attribution for that reason: nesting creates no Run of its own to
+attribute ([`../30-protocol/event-protocol.md`](../30-protocol/event-protocol.md)).
 
-The domain model does not have this one either. It draws Steps as declared by a Workflow version,
-Step Executions as contained by a Run, and no edge from a Step to a definition. Three questions
-follow, none derivable.
+The domain model draws the edge from this Step to the Workflow version it names, and the three
+questions this section used to register are settled.
 
-**Does a sub-execution pin its own version?** Rule W2 pins a version at Run start. If the child is a
-separate Run it pins at *its* start, which can be later than the version current when the parent
-began — a published, immutable parent changing behaviour without its own version changing, which W1
-exists to prevent. W5 pins each *Tool* schema major a Workflow version references and is silent on a
-referenced Workflow version; the analogy argues for pinning in the parent, and an analogy is not a
-decision. And W4 stops new Runs, so retiring a child halts a parent still Active.
+**The child is pinned when the parent is published.** The Step names an exact Workflow version, and
+publishing the parent freezes that reference with the rest of it (W1). Nothing resolves it again, so
+every Run of the parent executes the child version it names, however many versions of the child are
+published later. Retiring the child stops the Runs that target it (W4), not its execution inside the
+parent's Runs, and the child cannot be archived while a version naming it is unarchived. When the
+child moves on, each version of the parent that still admits Runs surfaces a warning in the
+Control Plane, and a new version of the parent adopts the newer child
+([`../VERSIONING.md`](../VERSIONING.md) rule W6), as W5 has it for a Tool's MAJOR bump.
 
-**Is it a separate Run for metering and audit?**
-[ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) meters Runs by outcome and Step Executions
-as a separate dimension. If a sub-execution is a Run, an author changes the customer's bill by
-refactoring one definition into two, the business process unchanged. If not, the child's Step
-Executions belong to the parent Run and the audit trail must carry the nesting. Billing and
-semantics at once, and metering cannot be applied retroactively. The same fork decides whether the
-child pins its own Policy versions at its own admission under P6.
+**It is not a separate Run.** The child's Steps execute inside the parent Run, and their Step
+Executions are the parent Run's. There is no second admission and no second Policy pin: every
+evaluation inside the child runs under the Policy versions the Run pinned at admission (P6), and
+receives the child version beside the Run's own.
+[ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) meters the Run once, so dividing a process
+between two definitions leaves the Runs dimension unchanged. It raises two others: the child counts
+in Active Agents / Workflows once it runs, and the `subworkflow` Step is still a Step, which the
+Step Executions dimension counts. The audit trail carries the nesting: each Step Execution inside
+the child records the Step Execution it executes under.
 
-**What does cancelling the parent do to it?** Cancellation records the cancelling Principal and any
-Step Execution in flight, and is never proof no side effect occurred. Whether the child is
-cancelled, whether its Step Executions compensate, and under whose attribution, follow from fork
-one.
+**Cancelling the parent cancels the child.** The child is part of the Run, so cancellation reaches
+it on the same terms as the rest of the Run, compensation included
+([`execution-semantics.md`](execution-semantics.md) section 7), and it cannot be cancelled apart
+from its Run.
 
 | Aspect | |
 | --- | --- |
-| Compiler validates | Today, only that the reference resolves to a published Workflow version within the Tenant. A cyclic graph is rejected at compile time, but that check runs over the Steps one definition declares; whether it can reach a reference cycle running through two definitions depends on whether the reference pins a version, which is the question above. Whether it is pinned therefore still waits, and no nesting depth is decided, so a depth bound is not available as an answer either. |
-| At its boundary | One evaluation at the Step boundary, plus one at every Step inside the child. Whether the child *additionally* crosses a Run admission enforcement point is exactly the separate-Run question. |
-| Failure modes | Everything the child can fail at, plus the undefined propagation above. Until this settles, the honest statement is that `subworkflow` is specified as a reference and not as a semantics. |
+| Compiler validates | The reference names an exact Workflow version already published in this Tenant and not `Archived`. A reference can only name a version published before the parent, so a reference cycle across definitions cannot be formed; the cyclic-graph check still runs over the Steps one definition declares ([`workflow-dsl.md`](workflow-dsl.md) L11). No nesting depth is decided. |
+| At its boundary | One evaluation at the Step boundary, plus one at every Step inside the child. The child crosses no Run admission enforcement point of its own. |
+| Failure modes | Everything the child can fail at, with the same effect on the Run as the same failure anywhere else in it. Nesting adds no propagation rule of its own. |
 
 ## 13. Open questions
 
@@ -352,26 +362,21 @@ implementation. Rows marked *repeated* carry, unchanged, the owning document's c
 
 | Open question | What would decide it | ADR required? |
 | --- | --- | --- |
-| Whether a rejected or expired `approval` gate fails the Run or takes a declared rejection branch, and whether the language admits a rejection branch at all | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 8 owns it, with the Run state machine in [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2.4 and the metered outcome under ADR-0009 | **Yes** — *repeated* |
-| Whether a sub-execution is a separate Run — for version pinning, Policy pinning at admission, metering and the audit trail — and what cancelling the parent does to it | An ADR: it spans [`../VERSIONING.md`](../VERSIONING.md) section 8, the Run cardinality in [`../20-domain/domain-model.md`](../20-domain/domain-model.md), a metered dimension and the audit contract, and none of the four can answer it alone | **Yes** |
-| Whether an `agent` or `subworkflow` Step pins the version of the definition it names or resolves the Active one at run time, and what a retired child version does to a published parent still admitting Runs | [`workflow-dsl.md`](workflow-dsl.md) section 11 registers it and assigns it jointly here, read against [`../VERSIONING.md`](../VERSIONING.md) rules W1 to W3. Rule W5 pins Tool schema majors and is silent on a referenced definition; rule W4 supplies the drain behaviour that makes the answer visible | **Yes** — *repeated* |
-| Whether a Step may reference an Agent version at all, the domain model drawing no such edge and holding that a Run targets exactly one definition, and so whether a delegated execution crosses a Run admission enforcement point of its own | The same ADR as the `subworkflow` rows; it is the same missing edge in a different type | **Yes** |
 | Whether the compiler rejects a `tool` Step whose declared Side-Effect Class differs from the one the Tool Catalog records, or the language forbids restating the class at all | [`workflow-dsl.md`](workflow-dsl.md) section 5, which enumerates the compiler's checks and carries neither; [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule TA9 supplies the reason a restated class cannot be adopted | No |
 | What a Side-Effect Class means on the seven types that reach no Tool of their own, and whether the compiler constrains the declared value or accepts the author's assertion | [`../40-governance/policy-model.md`](../40-governance/policy-model.md), whose rule N1 makes the class a primary evaluation input, with [`workflow-dsl.md`](workflow-dsl.md) | **Yes** |
 | Whether untrusted content carries provenance through the platform, a `transform` being able to lift an untrusted string into a field a later Step treats as trusted | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9 carries it jointly with [`../30-protocol/`](../30-protocol/), assigned there by [`../40-governance/threat-model.md`](../40-governance/threat-model.md) | **ADR** if it reaches a public contract, else Document — *repeated* |
 | What a `condition` predicate that cannot evaluate does to the Step Execution and the Run, as distinct from a boundary Policy evaluation that cannot complete under A3 | The fault half of [`execution-semantics.md`](execution-semantics.md) section 10's taxonomy, which assigns it to `reliability.md` in [`../60-operations/`](../60-operations/); [`workflow-dsl.md`](workflow-dsl.md) owns the expression language it faults in | No |
 | Whether an `approval` Step is instead an author's hint that Policy may override, its boundary free to return `allow`, rather than a gate Policy routes but cannot remove | An ADR superseding the rule in section 7; [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) assigns the type here and its rule G1 fixes that only a `require_approval` verdict raises a request | **Yes** |
-| What a mid-Run `deny` does to a Run, which every Step boundary in every type can produce | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9 owns it, with [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | **Yes** — *repeated* |
-| Whether a `tool` Step naming a Tool is itself the permission, or Workflows need a grant subject of their own | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) with the definition language | **Yes** — *repeated* |
 | What satisfies a `parallel` join, and what a branch failure does to its siblings — cancellation, compensation, or completion | [`execution-semantics.md`](execution-semantics.md) | No |
 | What a Tool call the model chooses keys on for idempotency, compensation and metering — in an Agent Run, which has no Steps, and inside an `agent` Step, whose delegation is the only Step there is | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 registers it and [`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule E4 cites it, with the mechanics in [`execution-semantics.md`](execution-semantics.md) | No — *repeated* |
 | Where a compensating action is declared for a Tool call the model chooses, an `agent` Step's declaration covering the delegation rather than the calls | [`execution-semantics.md`](execution-semantics.md) section 11 registers it, with [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) and [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | **Yes** — *repeated* |
 | Whether the Step-boundary and Tool enforcement points collapse into one evaluation for a `tool` Step | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9 owns it, with this section | No — *repeated* |
 | What happens to a Run in flight when a Tool a `tool` Step names is de-registered | [`execution-semantics.md`](execution-semantics.md); registered by [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | No — *repeated* |
 | Whether a `wait` may be released by an external signal rather than elapsed time | A product decision read against ADR-0008's revisit criteria, which name complex event correlation as the demand that reopens the engine question | No |
-| What admitting a cyclic graph would require — a step limit, an iteration bound and an answer on non-termination — a cyclic graph being rejected at compile time until an ADR admits one, and a `subworkflow` reference cycle turning additionally on the pinning row above | [`workflow-dsl.md`](workflow-dsl.md) section 11, which owns graph shape and registers it | **Yes** — *repeated* |
+| What admitting a cyclic graph would require — a step limit, an iteration bound and an answer on non-termination — a cyclic graph being rejected at compile time until an ADR admits one. A reference cycle across definitions cannot be formed, every reference naming a version already published ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)) | [`workflow-dsl.md`](workflow-dsl.md) section 11, which owns graph shape and registers it | **Yes** — *repeated* |
 | Graph shape otherwise — whether a `condition` branch set must be exhaustive, and data flow between Steps | [`workflow-dsl.md`](workflow-dsl.md), which owns schema and graph shape | No |
 
-Three of the nineteen rows are one question in two guises: the domain model draws no edge from
-a Step to a definition, and both `agent` and `subworkflow` need one — the separate-Run row, the
-pinning row and the Agent-version row. Cheap now, expensive once Runs exist.
+Three rows that stood here were one question in two guises: whether a sub-execution is a separate
+Run, whether a Step pins the version it names, and whether a Step may name an Agent version at all.
+[ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md) answers all three: the
+Step names an exact version, pinned at publication, which executes inside the Run.

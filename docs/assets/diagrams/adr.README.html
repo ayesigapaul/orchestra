@@ -116,10 +116,21 @@ flowchart TD
   A9 -.-&gt;|superseded by| A39["ADR-0039&lt;br/&gt;Seats count Platform Users"]
   A30 --&gt; A39
 
+  A14 --&gt; A40["ADR-0040&lt;br/&gt;Run outcomes for refusal and compensation"]
+  A9 --&gt; A40
+  A14 --&gt; A41["ADR-0041&lt;br/&gt;Nested versions run inside the parent Run"]
+  A19 --&gt; A41
+  A40 --&gt; A41
+  A12 --&gt; A42["ADR-0042&lt;br/&gt;Declared Tools and capability grants"]
+  A40 --&gt; A42
+  A15 --&gt; A43["ADR-0043&lt;br/&gt;Approval chains and separation of duties"]
+  A30 --&gt; A43
+  A40 --&gt; A43
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A9,A22 superseded;
 </pre></div>
@@ -190,10 +201,21 @@ flowchart TD
   A9 -.-&gt;|superseded by| A39["ADR-0039&lt;br/&gt;Seats count Platform Users"]
   A30 --&gt; A39
 
+  A14 --&gt; A40["ADR-0040&lt;br/&gt;Run outcomes for refusal and compensation"]
+  A9 --&gt; A40
+  A14 --&gt; A41["ADR-0041&lt;br/&gt;Nested versions run inside the parent Run"]
+  A19 --&gt; A41
+  A40 --&gt; A41
+  A12 --&gt; A42["ADR-0042&lt;br/&gt;Declared Tools and capability grants"]
+  A40 --&gt; A42
+  A15 --&gt; A43["ADR-0043&lt;br/&gt;Approval chains and separation of duties"]
+  A30 --&gt; A43
+  A40 --&gt; A43
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A9,A22 superseded;</pre></details>
 </section>

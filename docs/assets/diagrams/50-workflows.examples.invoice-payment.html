@@ -57,7 +57,7 @@ flowchart TD
   P --&gt;|"require_approval"| AR["Approval Request raised&lt;br/&gt;Evidence Set captured, Run suspends"]
   AR --&gt;|"Approved"| T{"Before the invocation&lt;br/&gt;evaluated again"}
   T --&gt; PAY["erp.payment.create executes"]
-  AR --&gt;|"Rejected"| STOP["Payment never attempted&lt;br/&gt;Run outcome not decided"]
+  AR --&gt;|"Rejected"| STOP["Payment never attempted&lt;br/&gt;the Run ends Denied"]
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">flowchart TD
   ADM{"Run admission"} --&gt; F["fetch-invoice&lt;br/&gt;tool, read"]
@@ -67,7 +67,7 @@ flowchart TD
   P --&gt;|"require_approval"| AR["Approval Request raised&lt;br/&gt;Evidence Set captured, Run suspends"]
   AR --&gt;|"Approved"| T{"Before the invocation&lt;br/&gt;evaluated again"}
   T --&gt; PAY["erp.payment.create executes"]
-  AR --&gt;|"Rejected"| STOP["Payment never attempted&lt;br/&gt;Run outcome not decided"]</pre></details>
+  AR --&gt;|"Rejected"| STOP["Payment never attempted&lt;br/&gt;the Run ends Denied"]</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

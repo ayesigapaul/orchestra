@@ -1,11 +1,11 @@
 ---
 title: Gateway API
 doc_id: DOC-043
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Gateway API
@@ -214,11 +214,11 @@ paths.
 | --- | --- | --- | --- | --- |
 | Run | One execution of an Agent version or Workflow version | Submit, read, list; cancel, by a command (G28); attach the event stream | `policy-model.md` E1, V1; lifecycle section 2 | `run.v1` |
 | Agent, Workflow, and their versions | Stable named definitions; publishing freezes an immutable version | Author a draft, publish, set current; read and retire a version | ADR-0008; VERSIONING W1–W4 | `workflow-definition.v1`; none for Agent |
-| Approval Request | A gate raised by a `require_approval` verdict | Read; decide, by a command created against it (G28); never create | `policy-model.md` V2; `approval-workflows.md` | `approval-request.v1` |
+| Approval Request | A gate raised by a `require_approval` verdict | Read; decide, or reassign the chain of a pending one, each by a command created against it (G28); never create, expire or re-raise | `policy-model.md` V2; `approval-workflows.md`; [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) | `approval-request.v1` |
 | Evidence Set | The exact inputs the Agent relied on | Read, under a separate narrower authorization | `approval-workflows.md` E1–E6 | `approval-request.v1` |
 | Policy, Policy version | Tenant-authored rules, immutably versioned | Author a draft, publish; never edit a published version | ADR-0012; `policy-model.md` P5 | `policy-rule.v1` |
 | Tool | A capability registered in the Tenant's Tool Catalog | Register, re-register, read, list | Invariant I5; TA1–TA3, TA9 | None planned |
-| Capability grant | An Agent version's permission to call one Tool | Grant, revoke — audited separately from registration | Invariant I5; TA1–TA3, TA5 | None planned |
+| Capability grant | An Agent's or a Workflow's permission to call one registered Tool, within what its pinned version declares | Grant, revoke — audited separately from registration; a revocation stops the next invocation of a Run in flight | Invariant I5; TA1–TA3, TA5, TA19–TA23 | None planned |
 | Connector | Customer-deployed software proxying Tool traffic inward | Enrol, read health, revoke | ADR-0007 — **Proposed** | `connector-envelope.v1` is the tunnel, not this |
 | Model Binding | Surface, endpoint, credential reference, declared limits | Create, update, register or rotate a credential by reference | ADR-0006, ADR-0002; `threat-model.md` T5 | None planned |
 | Session Token | A short-lived scoped client credential | Mint and revoke, each a command (G28) | GLOSSARY; section 3 | None planned |
@@ -309,8 +309,10 @@ ADR-required. Section 9 repeats that classification unchanged.
 **G16 — A published version has no update and no delete operation, and their absence is the
 contract.** Publishing freezes an immutable version (W1); an operation that edited one would make
 every Run's pin a lie. Retirement drains rather than kills (W4). **Archival is not an operation at
-all**: it is caused by the last pinned Run reaching a terminal state, so no Principal acts and there
-is nothing for a caller to invoke — which is the whole of what this contract decides about it. Its
+all**: it is caused by the last pinned Run reaching a terminal state, or by the last version naming
+it being archived ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)), so
+no Principal acts and there is nothing for a caller to invoke — which is the whole of what this
+contract decides about it. Its
 Audit Record carries that cause and no Principal
 ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md), `audit-model.md` section
 9). The compiled artifact is retained and never returned (ADR-0005, `audit-model.md` section 3).
@@ -323,10 +325,11 @@ Checkpoint is never addressable (invariant I6). A rail-minted identifier MAY be 
 value where it lets a customer reconcile against their own provider-side records — under BYOK
 those are the customer's — but MUST NOT be typed, named or structured so as to expose the rail.
 
-A Workflow version pins the *major* version of each Tool schema it references (W5); a bump surfaces
-as an actionable warning and MUST NOT alter a published version. Whether an *Agent* version pins one
-is ADR-required in
-[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md).
+An Agent version and a Workflow version each pin the *major* version of each Tool schema they
+declare (W5); a bump surfaces as an actionable warning and MUST NOT alter a published version, its
+declaration or a capability grant. An invocation whose pinned major the Tool's origin no longer
+serves is a precondition deny (section 7;
+[`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA24).
 
 ### 5.3 Approval Requests and Evidence Sets
 
@@ -349,21 +352,31 @@ classification.
 **G18 — An approval resolution MUST NOT be represented as an `allow`.** The verdict was
 `require_approval` and the resolution is a separate governance fact (`policy-model.md` V3): audit
 must distinguish an action permitted by rule from one permitted by a human. What satisfies a chain,
-whether a deadline exists, escalation, delegation, reassignment and re-raise are **not decided**
-and are not invented here
-([`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) sections 5 to
-8). If a deadline is adopted, `Expired` MUST be distinct from `Rejected`.
+who may sit in one, reassignment and decision deadlines are decided by
+[ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) and stated in
+[`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) sections 5 to 7.
+One request carries the chain of every matching `require_approval` rule, and a gate no matching rule
+gives a chain is refused at raise rather than raised. Reassigning a chain of a pending request is an
+administrative act under an administrative grant, audited with its cause and the chain before and
+after; it never records a decision, and never makes the acting Principal eligible. **Expiry and
+re-raise are not operations**: a request expires when the earliest deadline its Policies declared
+passes, much as a version is archived when its last pinned Run ends (G16), and proposing the action
+again raises a new request from a new verdict. `Expired` MUST be distinct from `Rejected`.
 
 ### 5.4 Tools, the Tool Catalog and capability grants
 
-Registration is not permission (invariant I5, TA1). **Registering a Tool and granting an Agent
-version permission to call it MUST be distinct operations, separately authorized and separately
+Registration is not permission (invariant I5, TA1). **Registering a Tool and granting an Agent or a
+Workflow permission to call it MUST be distinct operations, separately authorized and separately
 audited**; a contract in which registration also permits invocation collapses what makes
 authorization deny-by-default. Reachability is not authority (TA8): a Tool's representation MUST NOT
 imply permission from the fact that Orchestra can reach its origin. The Side-Effect Class is
 declared at registration (TA9) and enumerated; adding a value is additive under R2 and R3, subject
-to G2. **Whether a capability grant is authored inside the immutable Agent version or as a resource
-of its own is ADR-required and undecided**, and this contract MUST NOT presume either answer.
+to G2. **A capability grant is a resource of its own, and the Tools a version declares are part of
+the version** ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)). A grant names
+an Agent or a Workflow and one registered Tool, never a version, and carries no condition on an
+invocation, a restriction on arguments being a Policy's. Revoking a grant MUST take effect at the
+next Tool enforcement point, Runs in flight included. How a grant is addressed on this contract
+waits on the endpoint shape section 9 registers.
 
 ### 5.5 Connectors and Model Bindings
 
@@ -463,8 +476,8 @@ that choice, and they bind every code added to the registry:
   distinguishable from a partially executed tool call, which is not; a boolean cannot express
   indeterminate, and unknown is not the same as not done.
 - **G22** — a governance refusal MUST be distinguishable from a fault (`policy-model.md` V1), and
-  `require_approval` MUST NOT be a failure at all: the Run is `Suspended` and the gate is a resource
-  (its V2).
+  `require_approval` MUST NOT be a failure at all: the Run is `Suspended`, or stays `Compensating`
+  where the gated action is a compensating action, and the gate is a resource (its V2).
 - **G23** — a refusal MUST NOT carry Policy rule text or the matched Policy version's content. It
   MAY carry an opaque decision reference; reading the decision is an audit read under section 5.6.
 - **G24** — the taxonomy MUST be at least two levels, so an unrecognised code degrades to a
@@ -473,9 +486,9 @@ that choice, and they bind every code added to the registry:
 | Outcome | What happened | Retry safety | Rule |
 | --- | --- | --- | --- |
 | Policy deny | A rule refused it; nothing was attempted | Never — re-attempting is not a retry | `policy-model.md` V1 |
-| Precondition deny | No Catalog registration, or no capability grant; names no Policy | Never | `policy-model.md` A4; `tool-authorization.md` TA6 |
+| Precondition deny | No Catalog registration, a Tool the pinned version does not declare, no capability grant standing for it, or a pinned schema major the origin no longer serves; names no Policy | Never | `policy-model.md` A4; `tool-authorization.md` TA6, TA21, TA24 |
 | Evaluation incomplete, or decision not durable | Fail closed; the gated action MUST NOT proceed | Safe — nothing ran | `policy-model.md` A3, N2 and D3; ADR-0013 |
-| Approval gate | Not a failure; the Run suspended | Not applicable | `policy-model.md` V2 |
+| Approval gate | Not a failure; the Run suspended, or stays `Compensating` where the gated action is a compensating action | Not applicable | `policy-model.md` V2 |
 | Quota wait | The customer's own provider-side ceiling; capacity, not fault | Wait, do not fail | ADR-0006 |
 | Model call failed | No effect outside Orchestra | Safe | ADR-0006 |
 | Tool call, outcome unknown | The far side may have acted | Indeterminate — never blind | Invariant I4 and ADR-0008, which hold whatever becomes of ADR-0007; `tool-authorization.md` TA18 is the connector-path instance |
@@ -509,12 +522,15 @@ major version, on a base URI provisional pending domain registration.
 implementation; **No** means a later document suffices. Rows marked *repeated* carry the owning
 document's classification unchanged. Two assignments are absent because this document answers them:
 **which normative document carries the cancellation authorization rule** — this one, section 5.1
-— and **whether the administrative API is the resource-oriented Gateway API** — it is, section
-6. A third question is answered rather than registered: **which credentials may establish a Run
-event stream** — any this contract accepts, G25. Two more have left the register: **the endpoint
-shape of this contract**, which
-[ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) decides and
-G26 to G29 state, and **whether a Session Token mint response may be stored under an
+— and **whether the administrative API is the resource-oriented Gateway API** — it is, section 6. A
+third question is answered rather than registered: **which credentials may establish a Run event
+stream** — any this contract accepts, G25. The row on capability grants has left too:
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) decides what a grant names, that
+a version's declared Tools are part of the version, and that an Agent version pins a Tool's schema
+major (sections 5.2 and 5.4). How a grant is addressed in a path stays with the endpoint-shape row.
+Two more have left the register: **the endpoint shape of this contract**, which
+[ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) decides and G26
+to G29 state, and **whether a Session Token mint response may be stored under an
 `Idempotency-Key`** — it may, carrying the mint's identifier and expiry and never the token, G30.
 
 | Question | What would decide it | ADR required? |
@@ -522,9 +538,6 @@ G26 to G29 state, and **whether a Session Token mint response may be stored unde
 | The `Idempotency-Key` retention window, and the outcome of a key reused with a different payload | A later revision of this document; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes the obligation and names no window | No |
 | What a Session Token's scope may contain, which leaves the End User cancellation row with an undefined term | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — *repeated* |
 | Session Token, Service Account and enrolment credential lifetimes, and what credential class a Service Account holds | A customer contract or design partner; [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) sections 3 and 9 fix only what they are not | No — *repeated*, condition included: that document's section 12 classifies it *No, unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies* — and this is that contract, so a lifetime landing here lands as a versioned obligation |
-| What a `deny` outside admission does to a Run in flight, which this contract must represent | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9, with the Run state machine | **ADR** — *repeated* |
-| Whether a rejected or expired gate fails the Run or takes a declared rejection branch, and whether an End User may sit in an Approval Chain | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 8, shared with `step-types.md` in [`../50-workflows/`](../50-workflows/); the second also touches the seat definition under ADR-0009 | **ADR** — *repeated* |
-| Whether the capability grant set is carried by the immutable Agent version, how a grant is addressed, and whether an Agent version pins a Tool's major schema version | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) once the grant subject is fixed | **ADR** — *repeated* |
 | The audit-retention period, and whether the rule is platform-wide, per Tenant or per record class | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 11, on a customer contract | **ADR** — *repeated* |
 | Audit export: format, transport, completeness proof, and self-serve versus operator-assisted | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 12 | No — *repeated* |
 | Whether an out-of-band replay endpoint exists alongside in-stream resumption — resumption itself is fixed by [`../VERSIONING.md`](../VERSIONING.md) section 5 and is not open, section 2 | [`event-protocol.md`](event-protocol.md) section 11 assigns it here, with its section 5; [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) leaves it open and is **Proposed** | No — *repeated* |

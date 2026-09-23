@@ -62,6 +62,10 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0037 | Per-tenant data keys extend beyond credentials to protected content — Evidence Sets, Tool results, retrieved context and Messages | Accepted |
 | 0038 | Tenant-configured egress leaves through one proxy, on a per-tenant allow-list derived from Model Bindings and registered Tool origins | Accepted |
 | 0039 | A seat is a Platform User; Service Accounts are measured and never billed, and a Platform Operator is never a seat | Accepted |
+| 0040 | A governance refusal ends a Run Denied unless a declared edge or the model carries it on; a compensation outcome records whether its work was undone | Accepted |
+| 0041 | A nested Agent or Workflow version executes inside its parent Run, pinned when the parent version is published | Accepted |
+| 0042 | Versions declare the Tools they may call; a capability grant names the Agent or Workflow, is read at every Tool invocation and is revocable at once | Accepted |
+| 0043 | An Approval Chain's positions are each satisfied by one eligible Platform User, and any rejection is decisive; the human who initiated the Run never approves it; one request carries every matching rule's chain; chains are reassigned by hand only, never onto the reassigner; a Policy may declare a decision deadline | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

@@ -30,13 +30,13 @@
     },
     "state": {
       "enum": ["Pending", "Running", "Suspended", "Succeeded", "Failed", "Cancelled", "Denied"],
-      "description": "Orchestra's Run state, never a projection of runtime internals.",
-      "$comment": "Compensating is deliberately absent. lifecycle-state-machines.md section 2.4 marks it Provisional and leaves open whether a Run carries an observable roll-up state while its Step Executions compensate; event-protocol.md section 3.2 makes the same exclusion so that one answer exists rather than two. Consumers branch across this set exhaustively, so admitting Compensating later is MAJOR, not the MINOR that VERSIONING R2 would otherwise make an added enum value."
+      "description": "Orchestra's Run state, never a projection of runtime internals. A terminal state says why the Run ended: Succeeded, it completed as defined; Failed, a fault ended it; Cancelled, a Principal stopped it; Denied, a governance refusal ended it, at admission or later. Whether its work was undone is the compensation member, never the state.",
+      "$comment": "Compensating is deliberately absent. execution-semantics.md X22 settles that a Run carries it as an observable roll-up state while its Step Executions compensate, and lifecycle-state-machines.md section 2 draws it, but whether a wire contract enumerates it is open in event-protocol.md section 11, and this set makes the same exclusion as event-protocol.md section 3.2 so that one answer exists rather than two. Consumers branch across this set exhaustively, so admitting Compensating later is MAJOR, not the MINOR that VERSIONING R2 would otherwise make an added enum value."
     },
     "target": {
       "type": "object",
       "description": "The definition version this Run pinned at admission and executes for its whole life.",
-      "$comment": "Domain model section 4 — a Run targets exactly one of the two, never both and never neither. The pin is immutable: VERSIONING W2 and W3, lifecycle section 2.3. There is no migration transition and there will never be one.",
+      "$comment": "Domain model section 4 — a Run targets exactly one of the two, never both and never neither. The pin is immutable: VERSIONING W2 and W3, lifecycle section 2.3. There is no migration transition and there will never be one. An agent or subworkflow Step in the target executes the version it names inside this Run, pinned when the target version was published (VERSIONING W6, ADR-0041), so no Run has a parent Run and no member here names one.",
       "oneOf": [
         { "$ref": "#/$defs/target_agent" },
         { "$ref": "#/$defs/target_workflow" }
@@ -45,7 +45,7 @@
     "pinned_policy_versions": {
       "type": "array",
       "description": "The Policy versions in force at admission, pinned for the life of the Run.",
-      "$comment": "policy-model.md P6 — editing a Policy MUST NOT change the verdict a Run in flight receives. A Run suspended at an Approval Request for days resumes under the versions it was admitted under. Whether an immediately effective revocation path may override the pin is registered open in tool-authorization.md and policy-model.md.",
+      "$comment": "policy-model.md P6 — editing a Policy MUST NOT change the verdict a Run in flight receives. A Run suspended at an Approval Request for days resumes under the versions it was admitted under. The pin covers Policy versions only: a capability grant is not pinned, and ADR-0042 makes revoking one take effect at the Run's next Tool enforcement point (tool-authorization.md TA22).",
       "items": { "$ref": "#/$defs/policy_version_ref" }
     },
     "suspension": {
@@ -68,7 +68,61 @@
           "minLength": 1,
           "description": "The Step whose boundary suspended the Run, where one applies."
         },
+        "step_path": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "The identifiers of the Steps leading from the Run's target definition to the Step named by step_id, outermost first and ending with step_id. Present whenever step_id is.",
+          "$comment": "ADR-0041 — an agent or subworkflow Step executes the version it names inside this Run, and a Step identifier is unique only within the version that declares it (workflow-dsl.md L6), so step_id alone cannot tell a Step inside a nested execution from a Step of the target with the same identifier. Optional in the schema only because requiring it would tighten v1, which VERSIONING section 6 forbids in a MINOR change."
+        },
         "suspended_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "refusal": {
+      "type": "object",
+      "description": "Present when state is Denied: where the Run was refused, and what refused it. Absent otherwise.",
+      "$comment": "ADR-0040 and lifecycle-state-machines.md section 2.6. Denied means ended by a governance refusal, at admission or later, so the state alone no longer says that no Step Execution occurred. Whether a gate was Rejected or Expired is carried by the Approval Request and not restated here (approval-workflows.md D1), so this member references the request. gateway-api.md G23: a refusal references decisions and never carries rule text or a matched Policy version's content.",
+      "required": ["enforcement_point", "policy_decision_id"],
+      "properties": {
+        "enforcement_point": {
+          "enum": ["run_admission", "step_boundary", "tool_invocation"],
+          "description": "Where the refusing verdict was returned."
+        },
+        "policy_decision_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Policy Decision behind the refusal: a deny, or the require_approval that raised the gate whose resolution ended the Run."
+        },
+        "approval_request_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Present when a gate's resolution ended the Run. The request's own state says whether it was Rejected or Expired."
+        },
+        "step_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Step at whose boundary, or at whose Tool invocation, the Run was refused, where one applies."
+        }
+      }
+    },
+    "compensation": {
+      "type": "object",
+      "description": "Whether the Run's work was undone. Present once the Run is in a terminal state, beside the state that says why it ended; neither is derived from the other.",
+      "$comment": "ADR-0040 and execution-semantics.md X33 to X35. The prose requires this member on every terminal Run. It is absent from every required list only because adding it there would tighten an existing constraint within v1, which VERSIONING.md section 6 forbids, so the conformance suite checks it instead. A Run that compensates ends in the state it was heading for, so a cancelled Run that compensated is Cancelled, and this member says what compensation achieved. A compensating action awaiting approval keeps the Run Compensating, and a rejected or expired request leaves its effect unresolved.",
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {
+          "enum": ["not_required", "compensated", "unresolved"],
+          "description": "not_required: nothing the Run did called for compensation. compensated: every compensating action it called for completed. unresolved: at least one did not.",
+          "$comment": "Consumers branch across this set exhaustively, so adding a value later is MAJOR, as for the state enum. Under gateway-api.md G2 a consumer meeting a value it does not recognise reads it as unknown, never as compensated."
+        },
+        "unresolved_step_execution_ids": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Each Step Execution whose effect remains, when outcome is unresolved.",
+          "$comment": "A Tool invocation in an Agent Run, or one the model chose inside an agent Step, has no Step Execution to name. What an unresolved outcome names for it waits on the anchor domain-model.md section 11 registers, and a member for it is additive when that lands.",
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "admission_decision_id": {
@@ -80,7 +134,7 @@
     "submitted_at": { "$ref": "#/$defs/timestamp" },
     "started_at": {
       "$ref": "#/$defs/timestamp",
-      "description": "When admission returned allow and execution began. Absent on a Denied Run."
+      "description": "When admission returned allow and execution began. Absent on a Run that never began executing, which includes every Run denied at admission."
     },
     "ended_at": {
       "$ref": "#/$defs/timestamp",

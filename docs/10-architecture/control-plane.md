@@ -1,11 +1,11 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.17.0
+version: 0.18.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Control Plane
@@ -112,7 +112,7 @@ section 10 takes and section 13 registers.
 | Policies | Author and publish rules; never edit a live one | Writes Drafts and frozen versions; reads the decisions each produced | [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md), [`policy-model.md`](../40-governance/policy-model.md) |
 | Approvals | Decide a request on its Evidence Set | Reads the request; writes exactly one decision | [`approval-workflows.md`](../40-governance/approval-workflows.md); its rendering rests on [ADR-0010](../adr/adr-0010-a2ui-genui-interchange.md) — **Proposed** |
 | Audit | Query the trail; export it | Reads only — and the read produces a record | [`audit-model.md`](../40-governance/audit-model.md) sections 8 and 12 |
-| Tool Catalog | Register and re-register a Tool; grant and revoke an Agent version's capability | Writes registrations and grants — two acts, audited separately | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) I5, [`tool-authorization.md`](../40-governance/tool-authorization.md) TA1–TA3 |
+| Tool Catalog | Register and re-register a Tool; grant and revoke an Agent's or a Workflow's capability | Writes registrations and grants — two acts, audited separately | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) I5, [`tool-authorization.md`](../40-governance/tool-authorization.md) TA1–TA3 and TA19–TA26 |
 | Connectors | *If ADR-0007 binds*: enrol, revoke, watch health | Writes enrolment; reads health and version skew | [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) — **Proposed**, so whether this surface exists at all is section 13 |
 | Credentials | Register, rotate, revoke — never view | Writes by reference; no read path to any Principal | [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md), [`threat-model.md`](../40-governance/threat-model.md) T5, [`identity-and-access.md`](identity-and-access.md) section 10 |
 | Usage | Read metered dimensions and token attribution | Reads only | [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) |
@@ -146,12 +146,14 @@ registered **ADR** in [`data-plane.md`](data-plane.md) section 11 and
 Three consequences land here. **"What is live" has no single answer**, because a superseded version
 still governs every Run pinned to it, so the surface shows a set of versions and their in-flight
 populations. **A Retired version can stay undrainable indefinitely**, since a Run can suspend at an
-approval for an unbounded time; a force-drain is cancellation of every Run pinned to the
-version and nothing else, settled by `execution-semantics.md` X6 in
-[`../50-workflows/`](../50-workflows/). And **two staleness signals are
+approval for an unbounded time and a version cannot be archived while a version naming it is
+unarchived ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)); a
+force-drain is cancellation of every Run pinned to the version and nothing else, settled by
+`execution-semantics.md` X6 in [`../50-workflows/`](../50-workflows/). And **staleness signals are
 assigned here by name** — a Tool's MAJOR schema bump surfaces as a control-plane warning
-([VERSIONING](../VERSIONING.md) W5), and a Connector below the minimum supported protocol version
-raises a control-plane alert (section 9 there).
+([VERSIONING](../VERSIONING.md) W5), and so does a published version naming an Agent or Workflow
+that has moved on (W6), while a Connector below the minimum supported protocol version raises a
+control-plane alert (section 9 there).
 
 ## 6. Policy authoring, and the friction ADR-0012 assigned here
 
@@ -273,22 +275,28 @@ declared, discovered, or both, is undecided.
 
 ## 10. Tool Catalog and Connectors
 
-Registration is not permission: a Tool existing in a Tenant's Catalog and an Agent version being
-permitted to call it are two relationships, two administrative acts, audited separately
+Registration is not permission: a Tool existing in a Tenant's Catalog and an Agent or a Workflow
+being permitted to call it are two relationships, two administrative acts, audited separately
 ([`../20-domain/domain-model.md`](../20-domain/domain-model.md) I5,
-[`tool-authorization.md`](../40-governance/tool-authorization.md)). Grant syntax and grant subject
-are an ADR that document registers and this one cannot pre-empt, so the surface is specified no
-further than those two acts until it is taken.
+[`tool-authorization.md`](../40-governance/tool-authorization.md)).
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) fixes the second act's shape. A
+version declares the Tools it may call, and publication freezes that ceiling; a capability grant
+names the Agent or Workflow and one registered Tool, and a revocation made here takes effect at the
+next Tool enforcement point, Runs in flight included. The surface therefore administers grants
+against definitions, never against versions. Grant syntax stays with the schema work
+[`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 8 lists.
 
-**Whether a registration may itself be Workspace-scoped is open; the shape it would take is not.**
-The Catalog is tenant-scoped ([`../GLOSSARY.md`](../GLOSSARY.md)), and
-[`policy-model.md`](../40-governance/policy-model.md) P2 already fixes how a tenant-scoped record
-narrows: a mandatory Tenant reference and an optional Workspace reference, scoping administration
-and visibility and never isolation. So the option costs nothing structurally, and taking it here
-would
-strand it from the grant subject, since a registration narrower than the grants naming it decides
-nothing on its own. [`identity-and-access.md`](identity-and-access.md) assigns the question to this
-document and offers to merge it with the grant-subject ADR instead; section 13 takes that offer.
+**A registration is Tenant-scoped, and a Workspace narrows only which Tools a grant may name.** The
+Catalog is tenant-scoped ([`../GLOSSARY.md`](../GLOSSARY.md)), and a Tool registration carries no
+Workspace reference, as a component catalog registration carries none
+([`../30-protocol/ui-protocol.md`](../30-protocol/ui-protocol.md) CC1). Delegated administration
+gets its Workspace control where [`identity-and-access.md`](identity-and-access.md) section 8 puts
+it: a Workspace narrows which Tools an administrator delegated to it may name in a capability grant,
+checked when the grant is authored and never at an enforcement point
+([`tool-authorization.md`](../40-governance/tool-authorization.md) TA4 and TA26). A registration
+narrower than the grants naming it would decide nothing on its own, and
+[`policy-model.md`](../40-governance/policy-model.md) P2 already gives the shape a Workspace
+reference would take, so adding one later is additive under [VERSIONING](../VERSIONING.md) R2.
 
 **A registered question, answered by derivation.** That document's section 10 asks whether a
 registered Tool's Side-Effect Class may be changed once grants exist, and names the Control Plane
@@ -299,9 +307,11 @@ for definitions and Tool schemas, ADR-0012 for Policies. An in-place edit would 
 flight is governed by, with no new version for a record to name and nothing in the trail showing the
 swap: the failure the pinning rules exist to prevent, arriving through a field nobody versioned. The
 change is therefore a re-registration producing a new registered record, audited like any other
-administrative act. Two limits — this document is informative, so the rule binds only once
-`tool-authorization.md` carries it, and what happens to *existing grants* is the grant-subject
-decision already marked there as needing an ADR.
+administrative act, and `tool-authorization.md` TA23 carries the rule. What happens to *existing
+grants* is [ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)'s: they stop
+satisfying, are retained and unsatisfiable, surface as a staleness warning beside the one
+`execution-semantics.md` X30 requires, and must be granted again, because a grant is consent to the
+Tool as it was classed.
 
 The **Connector** half rests on
 [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed** and
@@ -401,7 +411,11 @@ components and must be recorded before implementation; **No** means a later docu
 One question assigned here is absent because section 10 answers it: whether a Tool's registered
 Side-Effect Class may change in place, which
 [`tool-authorization.md`](../40-governance/tool-authorization.md) section 10 routes to the Control
-Plane specification. Section 7 also answers whether approval throughput is surfaced, but that is an
+Plane specification. Two more are gone because section 10 records their answers: what a change of
+class does to existing grants, which
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) decides, and whether a
+registration may itself be Workspace-scoped, which it may not. Section 7 also answers whether
+approval throughput is surfaced, but that is an
 answer offered rather than an assignment discharged —
 [`approval-workflows.md`](../40-governance/approval-workflows.md) section 10 names itself as the
 decider and keeps the row. Rows below marked *repeated* carry the owning document's classification
@@ -413,10 +427,8 @@ unchanged.
 | Whether a Draft Policy or definition can be evaluated against recorded inputs before publication, and what such an evaluation records given that it governs nothing | Section 6, then [`audit-model.md`](../40-governance/audit-model.md) A6, which owns who writes a record and when | No |
 | How an approver is reached — notification and delivery channel | A product decision no ADR names; the queue in section 7 is the floor and out-of-band delivery is additive | No |
 | Where the approval surface schema is specified, and whether the term gains a glossary entry | `ui-protocol.md` in [`../30-protocol/`](../30-protocol/), once ADR-0010 validation step 2 is attempted | No |
-| Whether existing grants carry to a Tool re-registered with a different Side-Effect Class | The grant-subject decision registered in [`tool-authorization.md`](../40-governance/tool-authorization.md) | **ADR** |
 | The Tenant creation operation's specification — its path, members and codes, how the Platform Operator's credential and the first administrator's address travel, how the first sign-in is observed, the Organization's alias, name and domains, and whether an invitation expires and how a wrong one is replaced — and what Orchestra's provisioning client is | A document in [`../30-protocol/`](../30-protocol/) and Tenant User Management's OpenAPI document, before the operation ships; [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md) fixes who creates a Tenant, and for whom | No |
 | Which side of the implementation-language boundary the Definition Compiler sits on, and what artifact crosses into the Data Plane | ADR-0005 requires the boundary be a versioned internal contract and places neither side; [`containers.md`](containers.md) section 12 and [`data-plane.md`](data-plane.md) section 11 carry the same row | **ADR** — *repeated* |
-| Whether a Tool registration may itself be Workspace-scoped, given one Catalog per Tenant | Section 10 derives the shape from [`policy-model.md`](../40-governance/policy-model.md) P2 but not the choice; [`identity-and-access.md`](identity-and-access.md) offers to merge it with the grant-subject decision [`tool-authorization.md`](../40-governance/tool-authorization.md) marks ADR-required | No — unless it merges with that ADR, *repeated* |
 | Whether reconciliation against the audit log is a tenant-readable view here or an operator-assisted procedure, and what identifier the join uses | [`audit-model.md`](../40-governance/audit-model.md) section 7, which fixes what each side must carry and leaves the surface open, with the dispute runbook ADR-0009 calls for | No |
 | Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be when a check relies on it | A design partner; [`identity-and-access.md`](identity-and-access.md) assigns it here and no ADR names one, so no input exists pre-customer; [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) fixes that a group holds a role only through a mapping | No — *repeated* |
 | How a Platform User is deprovisioned, and what becomes of grants held by a Principal who can no longer authenticate | The same assignment from [`identity-and-access.md`](identity-and-access.md); the domain model fixes that a Principal outlives its credentials, not what removes its authority | No — *repeated* |

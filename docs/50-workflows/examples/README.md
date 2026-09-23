@@ -1,7 +1,7 @@
 ---
 title: "Worked Examples"
 doc_id: DOC-064
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -72,17 +72,19 @@ answer matters.
 
 Each example ends with the questions it runs into. Most are registered in the document that owns
 them and are repeated so that a reader sees where the specification stops, rather than reading an
-answer the example quietly chose. Four recur in all three:
+answer the example quietly chose. Two recur in all three:
 
 - What a rejected or expired gate does to the Run —
   [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 8, ADR required.
 - How a Policy is written. The language is decided — CEL under the Expression Profile
   ([ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)) — but the
   profile's inputs are not yet specified, so every Policy below is still written in prose.
-- Whether the Principal who started a Run may approve its gate —
-  [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 6, ADR required.
-- What satisfies an Approval Chain —
-  [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 5, ADR required.
+
+Two more recurred until
+[ADR-0043](../../adr/adr-0043-approval-chains-and-separation-of-duties.md) settled them. The
+Principal who started a Run is never eligible to approve its gate, and one approval from any
+Platform User eligible at a position satisfies that position
+([`approval-workflows.md`](../../40-governance/approval-workflows.md) sections 5 and 6).
 
 Walking the processes through surfaced two questions nothing had registered. Both are registered in
 the examples that found them: an approved payment re-raising its own gate, in

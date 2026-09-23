@@ -1,11 +1,11 @@
 ---
 title: Threat Model
 doc_id: DOC-055
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0043]
 ---
 
 # Threat Model
@@ -77,7 +77,7 @@ Controls referenced by more than one threat, stated once. Each is a derivation f
 
 | ID | Control | Grounding |
 | --- | --- | --- |
-| C1 | Capability authorization is deny-by-default. Registration in the Tool Catalog grants nothing; an Agent version's permission to call a Tool is a separate, separately audited act. Both are inputs to the enforcement point rather than gates in front of it, and a failed precondition yields a recorded `deny` naming no Policy | Invariant I5, [`policy-model.md`](policy-model.md) A2 and A4, [`tool-authorization.md`](tool-authorization.md) TA6 |
+| C1 | Capability authorization is deny-by-default. Registration in the Tool Catalog grants nothing, and neither does a version declaring a Tool; an Agent's or a Workflow's permission to call a Tool is a capability grant, a separate, separately audited act, whose revocation stops the next invocation of a Run in flight. Registration, declaration and grant are inputs to the enforcement point rather than gates in front of it, and a failed precondition yields a recorded `deny` naming no Policy | Invariant I5, [`policy-model.md`](policy-model.md) A2 and A4, [`tool-authorization.md`](tool-authorization.md) TA6 and TA19 to TA22 |
 | C2 | A Policy Enforcement Point is crossed at Run admission, before every Tool invocation, and at every Workflow Step boundary. The compiler emits the Step-boundary one, so no way of writing a definition omits it; admission and the Tool PEP sit on the platform path, which a definition cannot reach either | ADR-0005, ADR-0008, [`policy-model.md`](policy-model.md) E1–E4 |
 | C3 | The Agent's justification, urgency claim and self-declared classification MUST NOT be policy inputs. Validated arguments are inputs — they are the object of judgement; the model's account of them is not | ADR-0003, [`policy-model.md`](policy-model.md) S1, S2 |
 | C4 | Every Tool and Step declares a Side-Effect Class, and it is a primary policy input | GLOSSARY |
@@ -190,9 +190,10 @@ authority reaching the Tool is the Agent's, and the Agent has no native reason t
 request prompted it.
 
 **Controls.** The grant model belongs to [`tool-authorization.md`](tool-authorization.md) and is not
-restated here. Three requirements bear directly: Catalog registration state and the Agent version's
-grant set are inputs to the enforcement point rather than gates in front of it, so a missing grant
-is an audited refusal and never a silent gap (C1); every Tool invocation MUST record both the
+restated here. Three requirements bear directly: Catalog registration state, the pinned version's
+declaration and the capability grants naming its definition are inputs to the enforcement point
+rather than gates in front of it, so a missing grant is an audited refusal and never a silent gap
+(C1); every Tool invocation MUST record both the
 acting Agent version and the Principal on whose behalf the Run executes (invariant I2, C7); and
 Policy MUST be able to discriminate on that Principal, because a language that cannot express *this
 Agent, for this class of requester* cannot express the deputy problem at all. That is an
@@ -377,9 +378,10 @@ routine. Expiry resolves as approval.
 
 - Expiry MUST NOT resolve as approval. A deadline passing undecided MUST be an outcome distinct from
   a decision: "a human declined" and "nobody looked" are different facts about a control, and an
-  audit that conflates them cannot report on it. Whether a deadline exists at all is **not decided**
-  and needs an ADR — [`approval-workflows.md`](approval-workflows.md) section 7's classification,
-  adopted here rather than restated.
+  audit that conflates them cannot report on it. A deadline exists only where a Policy declares
+  one, and the Tenant authors its duration
+  ([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md),
+  [`approval-workflows.md`](approval-workflows.md) section 7).
 - Every change to a Policy — which is what determines a chain — every chain amendment after raise,
   and every capability grant and revocation is an audited governance event attributable to exactly
   one Principal. The enumeration belongs to [`audit-model.md`](audit-model.md) section 3 and is not
@@ -395,30 +397,44 @@ routine. Expiry resolves as approval.
   [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) accepts knowingly, and it is
   not to be worked around at the gate.
 - Batching several requests into one decision, standing approvals, and automatic approval below a
-  bound are **not adopted** ([`approval-workflows.md`](approval-workflows.md) section 10). Each
+  bound are **not permitted** ([`approval-workflows.md`](approval-workflows.md) section 10). Each
   removes the per-decision Evidence Set that makes C8 load-bearing, and a standing approval detaches
   the decision from the action it authorises altogether — an approval given before the Evidence Set
-  exists cannot have been decided on it. Any of them needs an ADR before it needs a policy language;
-  section 14 registers it.
+  exists cannot have been decided on it. A bound below which no human is needed is a Policy that
+  returns `allow`, recorded as an allow ([`policy-model.md`](policy-model.md) V3), and adopting any
+  of the three would need an ADR.
 - The approval surface presents the Evidence Set rather than only the proposed action and the
   Agent's justification, and presents it faithfully — rule E5 of
   [`approval-workflows.md`](approval-workflows.md), which owns the set (C8, T1). Approvals raised
   and resolved are metered
   ([ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md)); those counts are the fatigue signal
   and SHOULD be reported to the tenant.
-- Whether a break-glass path exists is **not decided**. If one is introduced it MUST be an
-  attributable, audited governance event carrying a recorded justification, and it needs an ADR: a
-  deliberate hole in the primary control is costly to reverse.
-- Whether the Principal who caused a request may also decide it is **not decided**, and is
-  registered rather than invented: an approval control that cannot express separation of duties
-  fails the review it exists to pass. It needs an ADR, on the argument
-  [`approval-workflows.md`](approval-workflows.md) section 6 makes: the default is a security
-  posture rather than a preference, and changing it later silently changes what existing Policies
-  mean.
+- No break-glass path exists. A deliberate hole in the primary control is costly to reverse, so an
+  emergency uses governed acts instead: reassigning the chain by hand, or a new Policy version and a
+  new Run ([`approval-workflows.md`](approval-workflows.md) section 10).
+- The Principal a Run records at admission is never eligible to decide a request gating that Run,
+  and one Principal counts at most once across a request. Both rules compare the Person behind a
+  Principal wherever the identity provider verified it, so a human who started a Run through one
+  Principal cannot decide through another. All of it is platform rule that no Policy can override
+  ([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md),
+  [`approval-workflows.md`](approval-workflows.md) section 6), because an approval control that
+  cannot express separation of duties fails the review it exists to pass.
+- Only a Platform User decides a request. An End User's identity is the customer backend's
+  assertion (B1), which is too weak for the gate, so no Approval Chain resolves to one.
+- A request routed to an unavailable chain stays closed, never open. A Principal holding the
+  administrative grant for it reassigns the chain by hand and never onto themselves, and every
+  reassignment is audited with its cause and the chain before and after, in the same surface as the
+  approvals it changes.
 
 **Residual risk.** Policy is tenant-authored by design, so a loosely configured control is loosely
 enforced and the platform will faithfully record its own correct enforcement of a weak rule.
 Orchestra can make configuration visible, audited and metered. It cannot make an approver read.
+Reassignment is itself a lever over the control: a Principal holding the grant for it can route an
+open request to a Platform User the Policy did not name, though never to themselves, which the
+record shows but does not prevent. And separation of duties joins two Principals only through a
+Person the identity provider verified, so one human who starts a Run through a Service Account, or
+through an End User identity a customer's backend asserts, and decides as a Platform User is two
+actors to the platform; a Policy narrowing who is eligible is the only control there.
 
 ## 13. What is not modelled
 
@@ -445,15 +461,10 @@ classification is the one repeated here.
 | How a rule discriminating on a model-authored argument selects the restrictive branch on a value that is present and well formed but unverifiable — an absent or malformed value being settled by ADR-0035, where an expression that errors never allows | [`policy-model.md`](policy-model.md), with the provenance row above | Later document |
 | What happens when registered Tool metadata diverges from what the origin now serves — a precedence rule between registered and served metadata | [`tool-authorization.md`](tool-authorization.md), with the Tool registration specification in [`../10-architecture/`](../10-architecture/) | Later document |
 | Whether a Tool is invoked with the Agent's authority or with a delegated End User identity | [`tool-authorization.md`](tool-authorization.md) | **ADR required** — spans identity, connector and the origin contract |
-| Whether an immediately effective revocation path exists for a capability grant, and whether it overrides a Run's pinned version | [`tool-authorization.md`](tool-authorization.md), with the incident-response requirements this document does not carry | **ADR required** — that document's classification; it is what an incident response asks first |
 | The Connector's share of the egress allow-list. The default-deny posture is settled normatively in section 10, and the shape for the model broker and Tool invocation by [ADR-0038](../adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) | The Connector design in [`../10-architecture/`](../10-architecture/), after ADR-0007 binds | **ADR required** — it extends ADR-0038 to a fourth outbound edge; void if ADR-0007 is rejected |
 | Which stores exist outside the row-level-secured datastore, and how each is tenant-scoped and CI-checked | `multi-tenancy.md` in [`../10-architecture/`](../10-architecture/) | Later document |
 | How Orchestra authorizes issuing a Platform Operator's administrative grant, and who may issue one — the grant always carrying an end time and a recorded support case or incident, with no consent from the Tenant ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 12, with this document | Later document — but before the first security review |
 | Credential and Session Token lifetimes and rotation intervals | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | Later document; a customer contract will force it first |
 | Audit and Evidence Set retention periods, which bound how long any record relied on here can be produced | [`audit-model.md`](audit-model.md) | **ADR required** — that document's classification; it spans storage, erasure, the definition lifecycle and metering |
 | Whether credential custody is write-only, or a read-back path exists on an audited access path | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/), constrained by ADR-0002 and C6 | Later document |
-| Whether a decision deadline exists at all, and whether a request may be re-raised after expiry | [`approval-workflows.md`](approval-workflows.md) | **ADR required** — that document's section 7 classification; it decides whether Orchestra makes any liveness promise about a suspended Run |
-| Whether the Principal who caused a request may decide it, and whether one Principal may hold two chain positions | [`approval-workflows.md`](approval-workflows.md) | **ADR required** — that document's section 6 classification; a security posture, and deadlock reaches the Run state machine |
-| Whether batching, standing approvals or automatic approval below a bound are ever permitted | This document's T8 analysis, which does not adopt them, then [`approval-workflows.md`](approval-workflows.md) section 10 and a policy-language decision | **ADR required** — a deliberate weakening of the primary control, on the same test as break-glass |
-| Whether a break-glass path exists at all | [`approval-workflows.md`](approval-workflows.md), on this document's T8 analysis | **ADR required** — a deliberate hole in the primary control |
 | Whether Connector local audit is exported and reconciled with the platform trail | [`audit-model.md`](audit-model.md), `connector.md` in [`../10-architecture/`](../10-architecture/) | Later document; void if ADR-0007 is rejected |

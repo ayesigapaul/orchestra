@@ -1,7 +1,7 @@
 ---
 title: "Example: Purchase Approval"
 doc_id: DOC-066
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -20,7 +20,14 @@ author never asked for. Here, the author places the gate, and Policy cannot take
 
 A purchase request is fetched and an Agent assesses it. A `condition` routes it: requests that pass
 go to an explicit approval and then to a purchase order; everything else goes straight to a
-notification. The requester is told either way.
+notification. The requester is told either way the request is routed, but not if the approval is
+rejected: `approve` declares no rejection edge, so a rejection ends the Run `Denied` before
+`notify` ([ADR-0040](../../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)).
+
+The Agent is `procurement-analyst@2`. Publishing `purchase-approval@3` pinned that version, and it
+executes inside this Run rather than as a Run of its own
+([ADR-0041](../../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)), so every Run of
+`@3` assesses with `@2`, however many versions of the Agent are published later.
 
 ```mermaid
 flowchart TD
@@ -43,7 +50,7 @@ flowchart TD
 | 3 | `assess` Step boundary, then each Tool the Agent chooses | The delegation, then each call against the grant set | Any | Step Execution; Tool invocation per call |
 | 4 | `route` Step boundary | Class `read`. The predicate itself is evaluated over data already in the Run, not by Policy | Any; `allow` here | Step Execution, with the branch taken |
 | 5 | `approve` Step boundary | The Step's type — an `approval` boundary — and the Run's inputs | **`require_approval` or `deny` only** ([`policy-model.md`](../../40-governance/policy-model.md) V4) | Approval Request raise, with the chain derived from Policy; Run enters `Suspended`, reason approval |
-| 6 | Not an evaluation — a human decision | The chain's Principals | `Approved` or `Rejected` | Each decision; the resolution |
+| 6 | Not an evaluation — a human decision | The Platform Users eligible at each position — never the Platform User who submitted the request, whom the Run records at admission, nor anyone standing on the same verified Person ([`approval-workflows.md`](../../40-governance/approval-workflows.md) C13, C15) | `Approved`, `Rejected`, or `Expired` where the Policy declares a deadline | Each decision, with its position; the resolution |
 | 7 | `issue-po` Step boundary, then before `erp.purchase_order.create` | Class `financial`; the proposed action and its arguments | Any — **including a second `require_approval`** | Step Execution; Tool invocation |
 | 8 | `notify`, both evaluations | Class `external-communication` | Any | Step Execution; Tool invocation |
 
@@ -91,8 +98,5 @@ retried blindly (X17), and a failed void does not trigger compensation of the vo
 | --- | --- | --- |
 | What an Approval Request raised at an `approval` Step names as its proposed action — the gate, or the Step that follows — and whether approving it covers `issue-po` | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 3, with [`../step-types.md`](../step-types.md) section 7 | Not yet classified — **new here** |
 | Whether an approval at one Step may satisfy a later Step's boundary for the same action, or a second request is correct | [`approval-workflows.md`](../../40-governance/approval-workflows.md), which owns everything after the raise | Not yet classified — **new here** |
-| What a rejected gate does to the Run, and whether the language admits a rejection branch | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 8, jointly with [`../step-types.md`](../step-types.md) section 7 | **Yes** — repeated |
-| Whether the requester may approve their own purchase | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 6 | **Yes** — repeated |
 | If `notify` fails after the purchase order was issued, whether that failure compensates `issue-po` — voiding a valid order because an email bounced | [`../execution-semantics.md`](../execution-semantics.md) section 6, which owns what triggers compensation | Not yet classified — **new here** |
 | How the `route` predicate is written in the document, now that it is an Expression Profile expression, and what a predicate that cannot evaluate does to the Run | [`../workflow-dsl.md`](../workflow-dsl.md) section 11 and [`../step-types.md`](../step-types.md) section 13 | As classified there |
-| Whether the `assess` Step pins `procurement-analyst@2` or resolves the Active version at run time | [`../workflow-dsl.md`](../workflow-dsl.md) section 11 | **Yes** — repeated |

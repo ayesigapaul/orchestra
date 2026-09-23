@@ -101,7 +101,7 @@ stateDiagram-v2
   Published --&gt; Active: set as current
   Active --&gt; Published: superseded by a newer version
   Published --&gt; Retired: no new runs admitted
-  Retired --&gt; Archived: all in-flight runs drained
+  Retired --&gt; Archived: all in-flight runs drained, and no unarchived version names it
   Archived --&gt; [*]: audit retention expires
   note right of Retired
     In-flight runs continue
@@ -115,7 +115,7 @@ stateDiagram-v2
   Published --&gt; Active: set as current
   Active --&gt; Published: superseded by a newer version
   Published --&gt; Retired: no new runs admitted
-  Retired --&gt; Archived: all in-flight runs drained
+  Retired --&gt; Archived: all in-flight runs drained, and no unarchived version names it
   Archived --&gt; [*]: audit retention expires
   note right of Retired
     In-flight runs continue

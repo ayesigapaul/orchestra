@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Entity Lifecycle State Machines — diagrams</title>
+<title>ADR-0040: A governance refusal ends a Run in Denied unless a declared edge or the model carries it on, and a compensation outcome records whether its work was undone — diagrams</title>
 <style>
 :root { color-scheme: light dark; --bg: #fafaf9; --fg: #1c1917; --muted: #57534e; --card: #ffffff;
   --line: #e7e5e4; --link: #1d4ed8; }
@@ -38,16 +38,16 @@ ul.docs li:first-child { border-top: 0; }
 .count { color: var(--muted); font-size: 13px; white-space: nowrap; }
 </style>
 </head>
-<!-- Generated from docs/20-domain/lifecycle-state-machines.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
+<!-- Generated from docs/adr/adr-0040-run-outcomes-for-refusal-and-compensation.md by scripts/build-diagrams.mjs. Do not edit: change the Markdown, then re-run the script. -->
 <body>
 <header>
-  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../20-domain/lifecycle-state-machines.md">Source document</a></p>
-  <h1>Entity Lifecycle State Machines</h1>
-  <p class="meta">docs/20-domain/lifecycle-state-machines.md · 4 diagrams</p>
+  <p class="crumbs"><a href="index.html">All diagrams</a> · <a href="../../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md">Source document</a></p>
+  <h1>ADR-0040: A governance refusal ends a Run in Denied unless a declared edge or the model carries it on, and a compensation outcome records whether its work was undone</h1>
+  <p class="meta">docs/adr/adr-0040-run-outcomes-for-refusal-and-compensation.md · 1 diagram</p>
 </header>
 <main>
 <section class="diagram" id="diagram-1">
-  <h2>2. Run</h2>
+  <h2>Compensating ends where the Run was heading</h2>
   <div class="frame"><pre class="mermaid">
 stateDiagram-v2
   [*] --&gt; Pending: run submitted
@@ -109,109 +109,6 @@ stateDiagram-v2
   note left of Compensating
     A compensating action awaiting approval
     keeps the Run Compensating.
-  end note</pre></details>
-</section>
-<section class="diagram" id="diagram-2">
-  <h2>3. Approval Request</h2>
-  <div class="frame"><pre class="mermaid">
-stateDiagram-v2
-  [*] --&gt; Pending: require_approval verdict raises the request
-  Pending --&gt; Approved: the Approval Chain requirement is satisfied
-  Pending --&gt; Rejected: a decisive rejection is recorded
-  Pending --&gt; Expired: the decision deadline its Policy declared passes undecided
-  Pending --&gt; Withdrawn: the gated Run ended for another reason
-  Approved --&gt; [*]
-  Rejected --&gt; [*]
-  Expired --&gt; [*]
-  Withdrawn --&gt; [*]
-</pre></div>
-  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
-  [*] --&gt; Pending: require_approval verdict raises the request
-  Pending --&gt; Approved: the Approval Chain requirement is satisfied
-  Pending --&gt; Rejected: a decisive rejection is recorded
-  Pending --&gt; Expired: the decision deadline its Policy declared passes undecided
-  Pending --&gt; Withdrawn: the gated Run ended for another reason
-  Approved --&gt; [*]
-  Rejected --&gt; [*]
-  Expired --&gt; [*]
-  Withdrawn --&gt; [*]</pre></details>
-</section>
-<section class="diagram" id="diagram-3">
-  <h2>4. Workflow version</h2>
-  <div class="frame"><pre class="mermaid">
-stateDiagram-v2
-  [*] --&gt; Draft: authoring begins
-  Draft --&gt; Published: publish — the version is frozen
-  Draft --&gt; [*]: discarded before publication
-  Published --&gt; Active: set as current for new runs
-  Active --&gt; Published: a newer version becomes current
-  Published --&gt; Retired: no new runs admitted
-  Retired --&gt; Archived: the last pinned run reached a terminal state, and every version naming it is archived
-  Archived --&gt; [*]: audit retention expires
-  note right of Retired
-    In-flight runs continue on
-    the version they pinned.
-  end note
-</pre></div>
-  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
-  [*] --&gt; Draft: authoring begins
-  Draft --&gt; Published: publish — the version is frozen
-  Draft --&gt; [*]: discarded before publication
-  Published --&gt; Active: set as current for new runs
-  Active --&gt; Published: a newer version becomes current
-  Published --&gt; Retired: no new runs admitted
-  Retired --&gt; Archived: the last pinned run reached a terminal state, and every version naming it is archived
-  Archived --&gt; [*]: audit retention expires
-  note right of Retired
-    In-flight runs continue on
-    the version they pinned.
-  end note</pre></details>
-</section>
-<section class="diagram" id="diagram-4">
-  <h2>5. Connector</h2>
-  <div class="frame"><pre class="mermaid">
-stateDiagram-v2
-  [*] --&gt; Enrolling: enrolment record created, credential issued
-  Enrolling --&gt; Healthy: first session established, version negotiated in window
-  Enrolling --&gt; Refused: negotiated version outside the supported window
-  Healthy --&gt; Degraded: a degradation signal is observed
-  Degraded --&gt; Healthy: the signal clears
-  Healthy --&gt; Offline: the outbound session is lost
-  Degraded --&gt; Offline: the outbound session is lost
-  Offline --&gt; Healthy: session re-established, version renegotiated in window
-  Offline --&gt; Refused: renegotiation falls outside the supported window
-  Refused --&gt; Healthy: an upgraded connector reconnects in window
-  Healthy --&gt; Revoked: enrolment revoked
-  Enrolling --&gt; Revoked: enrolment revoked
-  Degraded --&gt; Revoked: enrolment revoked
-  Offline --&gt; Revoked: enrolment revoked
-  Refused --&gt; Revoked: enrolment revoked
-  Revoked --&gt; [*]
-  note right of Revoked
-    Reachable from every
-    non-terminal state.
-  end note
-</pre></div>
-  <details><summary>Mermaid source</summary><pre class="src">stateDiagram-v2
-  [*] --&gt; Enrolling: enrolment record created, credential issued
-  Enrolling --&gt; Healthy: first session established, version negotiated in window
-  Enrolling --&gt; Refused: negotiated version outside the supported window
-  Healthy --&gt; Degraded: a degradation signal is observed
-  Degraded --&gt; Healthy: the signal clears
-  Healthy --&gt; Offline: the outbound session is lost
-  Degraded --&gt; Offline: the outbound session is lost
-  Offline --&gt; Healthy: session re-established, version renegotiated in window
-  Offline --&gt; Refused: renegotiation falls outside the supported window
-  Refused --&gt; Healthy: an upgraded connector reconnects in window
-  Healthy --&gt; Revoked: enrolment revoked
-  Enrolling --&gt; Revoked: enrolment revoked
-  Degraded --&gt; Revoked: enrolment revoked
-  Offline --&gt; Revoked: enrolment revoked
-  Refused --&gt; Revoked: enrolment revoked
-  Revoked --&gt; [*]
-  note right of Revoked
-    Reachable from every
-    non-terminal state.
   end note</pre></details>
 </section>
 </main>

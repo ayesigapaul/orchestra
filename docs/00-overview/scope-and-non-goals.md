@@ -1,11 +1,11 @@
 ---
 title: Scope and Non-Goals
 doc_id: DOC-014
-version: 0.14.1
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
+depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0043]
 ---
 
 # Scope and Non-Goals
@@ -238,9 +238,12 @@ That argument carries forward from ADR-0003 and is unchanged. What has changed i
 differentiator: the survey finds a hyperscaler stating the same design principle in almost the same
 words, so it is a market requirement Orchestra must meet, not a position it holds alone.
 
-Administered approvals — chains, delegation, escalation, as tenant configuration data rather than a
-code-level interrupt — are the one capability in this layer ADR-0015 still rates **potential**
-differentiation. No product surveyed was found to offer approval as tenant data over a Run — though
+Administered approvals — chains of positions, reassignment and decision deadlines, as tenant
+configuration data rather than a code-level interrupt — are the one capability in this layer
+ADR-0015 still rates **potential** differentiation. Standing delegation and automatic escalation are
+not built, and either can be added later
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md)). No product surveyed was
+found to offer approval as tenant data over a Run — though
 prior-art-survey section 9 is explicit that this was suspected for all of them and tested for none,
 so it is a narrow lead held on untested ground. The survey's "thin ice to build a category on"
 belongs to the audit row rather than this one; what covers this one is ADR-0015's own risk row, "the
@@ -438,7 +441,7 @@ build toward it or promise it.
 | Whether the run supervisor is glue or a substantial distributed runtime | The sizing exercise [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) names as its first follow-on, before an MVP is committed to |
 | Whether the MVP's first vertical slice can be committed to | Its contents are settled by [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) — one Workflow whose every consequential step is provably governed, not a connectivity demonstration — but that document declines to be a plan until the supervisor is sized |
 | Whether BYOK means spend control or data non-egress | Design-partner validation, named in [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) and ADR-0007 |
-| Compensation semantics beyond the requirement to declare them | [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md), which also owns the Step Execution retry that job-level retry MUST NOT be conflated with |
+| Compensation semantics beyond the requirement to declare them, and beyond the terminal state and compensation outcome that [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) fixes | [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md), which also owns the Step Execution retry that job-level retry MUST NOT be conflated with |
 | Price points, tier boundaries and what a seat costs | Observed usage, once customers exist — [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) |
 
 ## 5. Status

@@ -1,11 +1,11 @@
 ---
 title: UI Protocol
 doc_id: DOC-044
-version: 0.15.0
+version: 0.16.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0043]
 ---
 
 # UI Protocol
@@ -178,7 +178,7 @@ They are unrelated and MUST NOT be conflated in a schema, an API or a control-pl
 
 | | Requirement |
 | --- | --- |
-| **CC1** | A component catalog is a registered, versioned, **Tenant-scoped** document declaring each permitted component type and the schema its properties MUST satisfy, and registering one is an administrative act by a Platform User. Tenant-scoped, because US6 requires a surface to be validated against the catalog of the Tenant that owns the Run and no document states how a Workspace catalog would compose with its Tenant's. Whether a registration may itself be Workspace-scoped is open on exactly the terms [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 10 holds it open for a Tool registration, and this document's section 10 repeats that row. |
+| **CC1** | A component catalog is a registered, versioned, **Tenant-scoped** document declaring each permitted component type and the schema its properties MUST satisfy, and registering one is an administrative act by a Platform User. Tenant-scoped, because US6 requires a surface to be validated against the catalog of the Tenant that owns the Run and no document states how a Workspace catalog would compose with its Tenant's. A registration carries no Workspace reference, exactly as [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 10 fixes for a Tool registration; adding one later would be additive under [`../VERSIONING.md`](../VERSIONING.md) R2. |
 | **CC2** | Registration is not authorship. An Agent MUST NOT extend or amend its Tenant's catalog, and a catalog entry MUST NOT be introduced from model output, Tool output, retrieved content or a UI Action. This is [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA7 — the grant set is closed at evaluation time — read over the catalog, on the same premise: policy, not prompts, is the security boundary ([ADR-0003](../adr/adr-0003-governance-layer-positioning.md)). |
 | **CC3** | The catalog is closed by lookup, not by a closed schema: an allow-list of *values* checked at validation time. Two independent requirements follow over two different constructs, and satisfying one does not satisfy the other. The component-type field MUST NOT be a closed enum, because a closed enum is not covered by the must-ignore rule ([`event-protocol.md`](event-protocol.md) C2), so the type stays an open string on the wire while the allow-list stays closed behind it. Separately, `additionalProperties` MUST NOT be `false` on any wire-facing object ([`../VERSIONING.md`](../VERSIONING.md) section 6). |
 | **CC4** | A custom customer component MUST be explicitly registered, carries its own schema, and is validated identically. A component type that renders customer-supplied content is still a description, never an escape hatch from US1. |
@@ -192,14 +192,14 @@ the registered question *where the approval surface schema is specified* is answ
 specification is this section, and the schema named in section 9 will carry it.
 [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) owns the Approval
 Request — how it is raised, what the Evidence Set is, who may satisfy the chain, what a resolution
-means. **This document owns only the surface.** Rules cited as E1–E6, C1–C6 and D1–D4 are that
+means. **This document owns only the surface.** Rules cited as E1–E6, C1–C16 and D1–D4 are that
 document's, referenced and not restated.
 
 **AS1 — What it MUST express.** The surface MUST present, as distinct and separately identifiable
 regions: the proposed action — the Tool or Step, its Side-Effect Class, and the arguments as they
 would execute; the Evidence Set, each item with its provenance under E6; the causing Policy Decision
-by Policy version; the Approval Chain as resolved at raise and the viewing Principal's position in
-it; and the decision affordances.
+by Policy version; every Approval Chain the request carries, as resolved at raise and as reassigned
+since, with the positions the viewing Principal is eligible at; and the decision affordances.
 
 **AS2 — The platform composes it; the Agent does not.** Every part MUST be derived by the platform
 from the Approval Request record. The single exception is the Agent's own justification, which MAY
@@ -241,9 +241,12 @@ admits as decisions — today `Approved` and `Rejected`, so approve and reject. 
 its register holds *request more information* open and section 10 repeats the row — the affordance
 joins the AS1 set, which under AS4 an older renderer fails closed on rather than ignores, making it
 a MAJOR change to the approval surface under [`../VERSIONING.md`](../VERSIONING.md) R1 rather than
-the additive one R2 describes. The surface MUST NOT offer an affordance to a Principal outside the
-chain, nor in an ordered chain before every Principal ahead has decided (C6) — and rendering one
-anyway proves nothing, because satisfaction is decided server-side under section 7.
+the additive one R2 describes. The surface MUST NOT offer an affordance to a Principal who is not
+eligible at an open position — one outside every chain the request carries, the Principal the Run
+records at admission (C13), one who has already approved at another position (C14), or one standing
+on the same verified Person as either (C15) — nor at a position of an ordered chain before every
+position ahead of it is satisfied (C6). Rendering one anyway proves nothing, because satisfaction is
+decided server-side under section 7.
 
 **AS6 — Reconstructible.** AS2 makes the surface a function of the Approval Request record and a
 versioned surface definition, so the surface definition version in force MUST be recorded with the
@@ -271,7 +274,7 @@ repeats it with gateway-api's classification rather than closing another documen
 | | Requirement |
 | --- | --- |
 | **UA1** | A UI Action MUST be validated server-side against the schema of the surface instance that raised it, and MUST reference that instance. An action naming a surface never emitted, emitted for another Run, or emitted for another Tenant MUST be refused. |
-| **UA2** | **A UI Action MUST NOT be trusted as authorization.** It is an input to policy, never a substitute for a verdict. That an affordance was rendered, and that a well-formed action arrived, proves only that a Principal pressed something. An Agent MUST NOT acquire a capability from a UI Action ([`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA7), and an approval decision carried by one MUST be re-evaluated server-side against the Approval Chain as resolved at raise, the acting Principal's authenticated identity, and the request's current state. |
+| **UA2** | **A UI Action MUST NOT be trusted as authorization.** It is an input to policy, never a substitute for a verdict. That an affordance was rendered, and that a well-formed action arrived, proves only that a Principal pressed something. An Agent MUST NOT acquire a capability from a UI Action ([`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) TA7), and an approval decision carried by one MUST be re-evaluated server-side against every Approval Chain the request carries, as resolved at raise and as reassigned since, the acting Principal's authenticated identity, and the request's current state. |
 | **UA3** | Every UI Action resolves to exactly one Principal with the authenticated identity behind them (invariant I2, [`../20-domain/domain-model.md`](../20-domain/domain-model.md)). Where the actor is an End User, the Session Token is the authority and nothing else ([`gateway-api.md`](gateway-api.md) G4, on relationship R4 of [`../10-architecture/system-context.md`](../10-architecture/system-context.md)). |
 | **UA4** | A UI Action against a resolved Approval Request MUST be refused rather than applied, and the refusal recorded. A terminal request is permanently terminal (D3). |
 | **UA5** | A UI Action changes state, so the Gateway's rules for a state-changing request apply unchanged and are cited rather than restated: `Idempotency-Key` is request deduplication at the API boundary and MUST NOT be derived from, or mapped onto, a Step Execution's idempotency key ([`gateway-api.md`](gateway-api.md) G10, invariant I4); a replayed approval decision MUST NOT record a second decision (that document's G11, with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) A3); and an idempotent replay is not a retry of a side effect, since returning a stored response is safe where re-attempting a partially executed Tool call is not, and the two MUST NOT share a code path (that document's G12). What is this document's to add: a replayed action MUST resolve to the same surface instance under UC4, so that a replay is recognisable as the same act on the same gate. |
@@ -370,7 +373,6 @@ carry the owning document's classification unchanged and are not revised here.
 | Whether untrusted content carries provenance inside the model context, of which UI Action free text is one source | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) jointly with this document, assigned by [`../40-governance/threat-model.md`](../40-governance/threat-model.md) | **Yes** if it reaches a public contract, else No — *repeated* |
 | Where the UI profile, a component catalog and a surface definition enter the artefacts that carry versions, and whether a Run pins its catalog version as invariant I3 pins the definition version it started with | [`../VERSIONING.md`](../VERSIONING.md), which enumerates those artefacts and carries none of the three; section 4 asserts the profile's version, CC6 records the catalog's and AS6 the surface definition's, and no enumeration admits them | No |
 | Whether declarative UI representations reach the Gateway contract at all, or only this document's | [`gateway-api.md`](gateway-api.md), on ADR-0010 validation step 2, **Proposed** and outstanding | No — *repeated* |
-| Whether a component catalog registration may itself be Workspace-scoped, given one catalog per Tenant under CC1 | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 10, which holds the same question open for a Tool registration and derives the shape but not the choice | No — unless it merges with that ADR, *repeated* |
 | Which rows the audit enumeration needs for a refused UI Surface and a refused UI Action | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3, the enumeration by its own rule; a refusal no Principal caused records its cause and no Principal ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | No |
 | Whether an approval surface may ever be presented through a renderer Orchestra does not ship, and what conformance MUST be demonstrated first | The renderer-path decision above, with the front-end platform; AS4 binds where Orchestra ships the renderer, and section 3 defers every other case out of the first slice | No |
 

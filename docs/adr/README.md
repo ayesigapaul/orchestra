@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.32.0
+version: 0.33.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -66,6 +66,10 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0037](adr-0037-per-tenant-keys-for-protected-content.md) | Per-tenant data keys extend beyond credentials to protected content | Accepted | 2026-09-13 |
 | [0038](adr-0038-egress-proxy-on-a-per-tenant-allow-list.md) | Tenant-configured egress leaves through one proxy, on a per-tenant allow-list derived from configuration | Accepted | 2026-09-13 |
 | [0039](adr-0039-seats-count-platform-users.md) | A seat is a Platform User, and Service Accounts are measured without being billed | Accepted | 2026-09-13 |
+| [0040](adr-0040-run-outcomes-for-refusal-and-compensation.md) | A governance refusal ends a Run in Denied unless a declared edge or the model carries it on, and a compensation outcome records whether its work was undone | Accepted | 2026-09-13 |
+| [0041](adr-0041-nested-versions-execute-inside-the-parent-run.md) | A nested Agent or Workflow version executes inside its parent Run, pinned when the parent version is published | Accepted | 2026-09-13 |
+| [0042](adr-0042-declared-tools-and-capability-grants.md) | Versions declare the Tools they may call, and capability grants are separate acts, read at every invocation and revocable at once | Accepted | 2026-09-13 |
+| [0043](adr-0043-approval-chains-and-separation-of-duties.md) | An Approval Chain is satisfied position by position by Platform Users other than the human who initiated the Run, is reassigned only by hand, and expires only at a deadline its Policy declares | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -137,10 +141,21 @@ flowchart TD
   A9 -.->|superseded by| A39["ADR-0039<br/>Seats count Platform Users"]
   A30 --> A39
 
+  A14 --> A40["ADR-0040<br/>Run outcomes for refusal and compensation"]
+  A9 --> A40
+  A14 --> A41["ADR-0041<br/>Nested versions run inside the parent Run"]
+  A19 --> A41
+  A40 --> A41
+  A12 --> A42["ADR-0042<br/>Declared Tools and capability grants"]
+  A40 --> A42
+  A15 --> A43["ADR-0043<br/>Approval chains and separation of duties"]
+  A30 --> A43
+  A40 --> A43
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A9,A22 superseded;
 ```

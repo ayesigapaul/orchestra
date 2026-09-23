@@ -1,7 +1,7 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.8.0
+version: 0.9.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -111,7 +111,7 @@ of client errors, 500 for a mix that includes a server error.
 | --- | --- |
 | `request` | The request itself: its media type, method, parameters or body |
 | `auth` | Authentication, or an administrative grant the caller lacks |
-| `governance` | A refusal on its merits by Policy or a missing capability grant — never a fault |
+| `governance` | A refusal on its merits by Policy, or a failed precondition such as a missing capability grant — never a fault |
 | `resource` | The addressed resource: absent, invisible to this caller, or in a conflicting state |
 | `quota` | A limit that makes the caller wait |
 | `upstream` | A dependency outside this service |
@@ -161,7 +161,7 @@ same one.
 | `auth.unauthenticated` | 401 | `unsafe` | A valid credential is required | No credential, or one that failed verification; `WWW-Authenticate` accompanies it |
 | `auth.forbidden` | 403 | `unsafe` | This operation needs a grant the caller does not hold | Authenticated, but without the administrative grant the operation needs |
 | `governance.policy_denied` | 403 | `unsafe` | A Policy refused this action | A Policy refused the action; `meta.decision_ref` may accompany it |
-| `governance.precondition_denied` | 403 | `unsafe` | This action is not registered or not granted | No Tool Catalog registration or no capability grant; names no Policy |
+| `governance.precondition_denied` | 403 | `unsafe` | A precondition for this action does not hold | No Tool Catalog registration, a Tool the pinned version does not declare, no capability grant standing for it, or a pinned schema major the origin no longer serves; names no Policy |
 | `resource.not_found` | 404 | `unsafe` | The resource does not exist | No such resource, or none this caller may know exists — including an unknown path |
 | `resource.conflict` | 409 | `unsafe` | The resource's state forbids this operation | The resource is in a state that forbids the operation |
 | `quota.exceeded` | 429 | `safe` | A limit was reached | A limit was reached; `Retry-After` says when to try again |

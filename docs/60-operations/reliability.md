@@ -1,7 +1,7 @@
 ---
 title: Reliability
 doc_id: DOC-072
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -64,9 +64,9 @@ usage recorded under the wrong outcome cannot be reclassified once invoiced.
 
 | Class | What it is | Fault? | Attemptable? | Metered as |
 | --- | --- | --- | --- | --- |
-| **Refusal** | A control operated and declined the action | No | Never — a re-proposal is a new evaluation | A Run outcome distinct from failure (J1); the outcome vocabulary itself is **ADR**-blocked, section 13 |
+| **Refusal** | A control operated and declined the action | No | Never — a re-proposal is a new evaluation | `Denied` where a policy `deny`, a precondition `deny` or a rejected or expired gate ends the Run, never `Failed` (J1, [ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)); where a connector refusal lands turns on section 13's evaluation-input row |
 | **Wait** | Capacity, or a human decision, that the system is scheduled around | No — nothing failed | Not applicable | Nothing of its own for a capacity wait, the Run still `Running`; an approval gate raises and resolves an Approval Request, which ADR-0009 meters under **Approvals** |
-| **Fault** | Something broke | Yes | Only where the action provably never left Orchestra, and only where a component holds retry | A Run outcome distinct from a refusal (J1), on the same **ADR**-blocked vocabulary |
+| **Fault** | Something broke | Yes | Only where the action provably never left Orchestra, and only where a component holds retry | `Failed` where it ends the Run, distinct from a refusal (J1, ADR-0040) |
 | **Degradation** | The platform serves, but a guarantee is weakened | No — not of any one Run | Not applicable | Nothing for an audit-write or replication degradation; a Connector's health is itself a metered dimension under ADR-0009 (F18) |
 
 **F3 — Classification follows what happened, never what is convenient to report.**
@@ -128,10 +128,10 @@ constrains; section 9 is where it is hardest to see.
 one raises a **new** Approval Request (J3). Routing either through a retry mechanism converts a
 decision into a loop.
 
-**Where the refusal outcome lands is not this document's to decide.** J1 does not hold under the Run
-state machine as drawn — `Failed` carries both a crash and an unfavourable gate resolution — and the
-fix needs a terminal state or outcome dimension that does not exist, marked **ADR** by
-`approval-workflows.md` section 8 and repeated in the register.
+**Where the refusal outcome lands is not this document's to decide, and it is decided.**
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) ends a Run on a governance
+refusal in `Denied` and on a fault in `Failed`, so J1 holds, and F4 has a separation in the records
+to rely on.
 
 ## 5. A quota wait is not an error
 
@@ -204,9 +204,9 @@ It is not a `deny`.** Four reasons, the first decisive:
 - **It is J1's defect mirrored.** A fault recorded as a refusal inflates the governance-refusal
   count with outages, and audit is a product surface: a customer reading `deny` learns that a rule
   refused their action. The two also meter differently under ADR-0009.
-- **It needs no Run transition that does not exist.** A mid-Run `deny` has none and is
-  **ADR**-blocked in three registers; a failed Step Execution is the ordinary fault path, so
-  choosing `deny` would drag every outage into that unresolved decision.
+- **It keeps outages off the refusal path.** A mid-Run `deny` follows a refusal edge, ends the Run
+  `Denied`, or returns to the model (ADR-0040), while a failed Step Execution is the ordinary fault
+  path; choosing `deny` would send every outage down the path a governance refusal takes.
 
 **F11 — Evaluation failure and decision-write failure are one class and two causes, and stay
 distinguishable.** They halt the action identically and differ in what can be recorded: an
@@ -334,8 +334,9 @@ closing that gap with the connector's current state.
 **F21 — An outage can strand compensation.** A compensating action is an ordinary business action
 reaching an ordinary Tool (X16), so where that Tool sits behind the connector that just failed,
 compensation is unavailable for the reason the original action was. The result is a Run with a known
-unresolved side effect — `execution-semantics.md` section 6.2's condition, marked **ADR** there, and
-likelier by this route than by the de-registration route that document reaches it through.
+unresolved side effect: its compensation outcome is `unresolved`, naming the Step Execution
+(`execution-semantics.md` X33), and this route is likelier than the de-registration route that
+document reaches it through.
 
 **What separates `Degraded` from `Healthy` is not decided here.** The lifecycle names three
 candidates: elevated tool-invocation error rate, partial Tool reachability, and skew near the edge
@@ -377,7 +378,7 @@ the constraint, so whoever eventually sets a figure inherits it rather than a bl
 | --- | --- | --- |
 | Attempt budget, contained position | One attempt, or the class is pointless | F2 — every attempt writes a Policy Decision with a durable write, so the budget multiplies enforcement latency and audit volume in a store `audit-model.md` section 4 says is already dominated by allows |
 | Attempt budget, indeterminate position | Not a figure at all: the position admits no attempt, by the opening rule and section 6 | Not applicable |
-| Elapsed time across attempts | The origin's own recovery behaviour | The caller's timeout at the Gateway, and any deadline a racing Approval Request carries — both undecided, in `gateway-api.md` section 1, which fixes that no timeout is decided anywhere, and `approval-workflows.md` section 7 |
+| Elapsed time across attempts | The origin's own recovery behaviour | The caller's timeout at the Gateway, undecided in `gateway-api.md` section 1, which fixes that no timeout is decided anywhere; and any decision deadline a racing Approval Request carries, which exists only where the Tenant's Policy declares one (`approval-workflows.md` section 7) |
 | Backoff | The origin's recovery behaviour | The attempt budget. Under BYOK, backoff against a Quota Envelope is scheduling and not backoff (F7); the two must not be composed |
 | Health-check interval, degradation threshold | What the customer's own operator can act on — faster than a human response is telemetry, not an alert | How long a Run may sit against a connector that cannot serve it, which F19 makes short by choosing failure over waiting; F18 bounds the shape |
 | Service level objective, error budget | A commitment in a contract nobody has signed | ADR-0013 and ADR-0034 make the availability of the datastore an enforcing service commits to the ceiling for every governed action it gates; F4 keeps a Tenant's own governance configuration out of the denominator |
@@ -408,8 +409,6 @@ owning document's classification unchanged.
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
-| Where a governance refusal lands as a Run outcome, `Failed` today carrying both a refusal and a crash | `approval-workflows.md` section 8 with the Run state machine and an ADR-0009 outcome dimension; F4 and F10 both assume a separation neither can create | **ADR** — *repeated* |
-| Whether compensation can fail terminally, and what a Run carrying a known unresolved side effect is called | `execution-semantics.md` section 6.2; F21 reaches the same condition by the connector route and adds urgency, not an answer | **ADR** — *repeated* |
 | Retry counts, backoff, attempt budgets and any bound on attempts | This document, once an implementation exists to measure against; section 11 states the bounds and section 6 admits no attempt at all in the indeterminate position | No — assigned here by `execution-semantics.md`, escalated as unanswerable pre-implementation |
 | Whether the bracket marking a degraded audit period is itself an Audit Record class | `audit-model.md` section 3, which is the enumeration of audited events; F13 and F14 fix what it must survive and carry | No |
 | How a degraded period is **detected and ended**, and whether any duration bound halts execution | This document, on the path F13 names, which ADR-0034 fixes — detection and closure ride it. A halting bound would reintroduce the coupling ADR-0013's split exists to remove: operational audit volume able to halt a Run after all | No |

@@ -1,11 +1,11 @@
 ---
 title: Policy Model
 doc_id: DOC-051
-version: 0.8.0
+version: 0.9.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Policy Model
@@ -86,9 +86,11 @@ life it is evaluated under the Expression Profile major it was published against
 pins its definition version (domain model I3, [`../VERSIONING.md`](../VERSIONING.md) rules W2 and
 W3) and for the same reason: editing a Policy MUST NOT change the verdict a Run in flight receives
 ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)). A Run suspended at an Approval
-Request for days resumes under the Policy versions it was admitted under. Whether an immediately
-effective revocation path may override that pin is registered for capability grants in
-[`tool-authorization.md`](tool-authorization.md) and is the same question here.
+Request for days resumes under the Policy versions it was admitted under. The pin covers Policy
+versions and nothing else, and was never meant to preserve a capability an administrator has
+withdrawn: a revoked capability grant stops the next Tool invocation of a Run in flight, because a
+revocation only narrows ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md),
+[`tool-authorization.md`](tool-authorization.md) TA22).
 
 ## 2. The three verdicts
 
@@ -96,7 +98,7 @@ effective revocation path may override that pin is registered for capability gra
 | --- | --- | --- | --- |
 | `allow` | The gated action proceeds. | Nothing | A Policy Decision. Always. |
 | `deny` | The gated action MUST NOT execute. | Nothing | A Policy Decision. |
-| `require_approval` | The Run suspends at the gate. | One Approval Request | A Policy Decision. |
+| `require_approval` | The Run suspends at the gate, or stays `Compensating` where the gated action is a compensating action. | One Approval Request | A Policy Decision. |
 
 Throughout, *the gated action* is the proposed action ([`../GLOSSARY.md`](../GLOSSARY.md)) seen from
 the enforcement point that gates it. The two terms name one thing, not two.
@@ -106,18 +108,37 @@ and no Step Execution ever occurs
 ([`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2).
 At a Step boundary or before a Tool invocation the gated action MUST NOT be attempted — not
 attempted and rolled back, not attempted and discarded. Denial precedes the side effect or it is not
-denial. What a `deny` outside admission then does to the *Run* — a terminal refusal, a declared
-branch, or a failed Step Execution — does not follow from the verdict and is not decided here. The
-Run state machine has no transition for it either
-([`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md)
-section 2.4); it is registered in section 9.
+denial. What a `deny` outside admission then does to the Run is fixed by
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md), and it is never recorded
+as a fault:
+
+- **At a Workflow Step** — its boundary, or the Tool enforcement point before the invocation a
+  `tool` Step names — the Run MUST follow the refusal edge the Step declares. Otherwise it MUST end
+  in `Denied`, recording the enforcement point and this Policy Decision, after compensating where
+  compensation is due.
+- **For a Tool invocation the model chose**, in an Agent Run or inside an `agent` Step, the refusal
+  MUST be returned to the model as that invocation's outcome, and the Run continues. The refusal
+  MUST NOT carry rule text or the matched Policy version's content
+  ([`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) G23). Every further call crosses
+  the Tool enforcement point again (E4), and re-proposing the refused action is a new evaluation
+  (E6).
+
+A declared refusal edge is ordinary governed execution, and inherits none of the refused action's
+authorization ([`approval-workflows.md`](approval-workflows.md) J2). A gate raised at either point
+that is rejected or expires goes the same way (its J5). This rule holds on every path, because the
+denied action is never attempted
+([`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section
+2.6).
 
 **V2 — `require_approval` raises exactly one Approval Request**, carrying the proposed action, the
 Evidence Set the Agent relied on, and an Approval Chain derived from Policy. Where several matching
 rules return `require_approval`, that request's chain requires the chain of every one of them, and
-none stands in for another (D4). The Run suspends, and may stay suspended for days. What satisfies a
-chain, whether a deadline exists, and how escalation and delegation work are **not decided here**;
-they belong to [`approval-workflows.md`](approval-workflows.md).
+none stands in for another (D4). The Run suspends — a compensating action's gate instead keeps it
+`Compensating` ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)) — and may
+stay suspended for days. The Policy declares the chain and, optionally, a decision deadline. What
+satisfies those chains, how one is reassigned and what expiry does are decided by
+[ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md), which
+[`approval-workflows.md`](approval-workflows.md) states.
 
 **V3 — An approval resolution does not retroactively change the verdict.** The verdict was
 `require_approval` and the resolution is a separate governance fact with its own record and its own
@@ -130,7 +151,11 @@ human, and collapsing the two destroys the fact a reviewer came for.
 at this point in the process; Policy decides the Approval Chain, the routing and the approvers, and
 whether the action is refused outright — it does not decide whether the gate exists. A step type
 whose gate a non-matching Policy silently removes is not a type, it is a comment, and an author who
-placed it there would have no way to tell the difference until an audit.
+placed it there would have no way to tell the difference until an audit. Where the narrowing leaves
+a gate that no matching rule gives an Approval Chain, the request is refused at raise rather than
+raised, because a gate with no position could never be satisfied
+([ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md),
+[`approval-workflows.md`](approval-workflows.md) C10).
 
 This is the only place the verdict set is narrowed, and it is narrowed in the conservative
 direction: more gates, never fewer. The argument is set out in
@@ -195,14 +220,14 @@ flowchart TD
 
   subgraph EVAL["What each one does — identical at all three"]
     direction TB
-    IN["Inputs (N1): Principal and subtype, Tenant, Workspace, pinned definition version, pinned Policy versions, Tool Catalog registration state, the Agent version's grant set, Step, Side-Effect Class, Tool, proposed action"] --> RULE["Evaluate the Tenant's Policies. Deny by default. A failed precondition denies without reaching a Policy (A4)."]
+    IN["Inputs (N1): Principal and subtype, Tenant, Workspace, pinned definition version, pinned Policy versions, Tool Catalog registration state, the pinned version's declared Tools, the grants naming its definition, Step, Side-Effect Class, Tool, proposed action"] --> RULE["Evaluate the Tenant's Policies. Deny by default. A failed precondition denies without reaching a Policy (A4)."]
     RULE --> VD{"Exactly one verdict"}
     VD -->|allow| REC["Policy Decision durable first — it is an Audit Record, allows included (ADR-0012, ADR-0013)"]
     VD -->|deny| REC
     VD -->|require_approval| REC
     REC -->|allow| ALLOW["The gated action proceeds"]
     REC -->|deny| DENY["The gated action MUST NOT execute"]
-    REC -->|require_approval| APPR["One Approval Request; the Run suspends"]
+    REC -->|require_approval| APPR["One Approval Request; the Run suspends, or stays Compensating for a compensating action"]
   end
 
   PEP_ADMIT -.-> EVAL
@@ -220,14 +245,14 @@ Policy MAY match on any of them.
 | Principal and its subtype | GLOSSARY, domain model I2 | Platform User, End User, Service Account, Platform Operator or Connector |
 | Tenant | GLOSSARY, ADR-0001, ADR-0011 | Mandatory on every evaluation and every record |
 | Workspace, where one applies | GLOSSARY, domain model section 3 | Administrative scope, never an isolation boundary |
-| The Agent or Workflow, and the version the Run pinned | Domain model I3 | The definition in force, not the current one |
+| The Agent or Workflow, and the version the Run pinned | Domain model I3; ADR-0041 | The definition in force, not the current one. Inside an `agent` or `subworkflow` Step, also each version on the path from the Run's version to the one executing, as pinned at publication |
 | The Policy versions the Run pinned at admission | ADR-0012, P6 | The versions in force at admission, never the current ones |
 | The Step and its type, at a Step boundary | GLOSSARY, ADR-0008 | Absent in an Agent Run — see E4 |
 | **Side-Effect Class** | GLOSSARY | A **primary** input; never a precondition for evaluation |
 | The Tool | GLOSSARY | Present at the Tool PEP |
-| The Tool schema major version, where the Run's definition pins one | VERSIONING W5 | W5 pins tool schema majors for Workflow versions; whether an Agent version does is unmade — see section 9 |
+| The Tool schema major version the Run's definition version pins | VERSIONING W5 | Agent and Workflow versions both pin one for each Tool they declare; an origin that no longer serves it fails a precondition — see A4 |
 | **Tool Catalog registration state** for that Tool | GLOSSARY, domain model I5 | Present at the Tool PEP. An input to the evaluation, never a gate in front of it — see A4 |
-| **The Agent version's capability grant set** | GLOSSARY, domain model I5 | Present at the Tool PEP, on the same terms. Its subject in a Workflow Run is unmade — see A2 |
+| **The Tools the pinned version declares, and the capability grants naming its definition** | GLOSSARY, domain model I5, ADR-0042 | Present at the Tool PEP, on the same terms. A grant counts only if it stood at admission and still stands — see A2 |
 | The proposed action, including its arguments | GLOSSARY, ADR-0003 | The object of judgement — see section 7 |
 | The enforcement point itself | E1 | Admission, Step boundary or Tool invocation |
 | The Run | GLOSSARY | Every Policy Decision references it |
@@ -267,15 +292,13 @@ deny-by-default authorization model before any Tool executes. Four rules follow.
 rule having objected.
 
 **A2 — Registration is not permission** (domain model I5). A Tool registered in the Tenant's Tool
-Catalog, the Agent version's capability grant to that Tool, and a PEP verdict permitting this
-invocation are three separate controls, and all MUST hold. A capability grant is not a verdict and
-MUST NOT be substituted for one; grants are specified in
-[`tool-authorization.md`](tool-authorization.md). The second control has a stated subject only for
-an Agent version — the grant edge the domain model draws
-([`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 5). What plays that part for
-a `tool` Step in a Workflow Run, where the Step names the Tool directly, is **unmade** and belongs
-to [`tool-authorization.md`](tool-authorization.md), which registers it. The first and third
-controls hold either way.
+Catalog, a capability grant to that Tool naming the Agent or Workflow the Run executes, and a PEP
+verdict permitting this invocation are three separate controls, and all MUST hold. A capability
+grant is not a verdict and MUST NOT be substituted for one; grants are specified in
+[`tool-authorization.md`](tool-authorization.md). The grant satisfies only for a Tool the Run's
+pinned version declares, and a Workflow holds grants on the same terms as an Agent: naming a Tool
+in a `tool` Step declares it and grants nothing
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)).
 
 **A3 — An evaluation that cannot complete MUST NOT return `allow`.** An unreachable policy store, a
 malformed Policy, an evaluation error: none is a permission, and under
@@ -286,10 +309,12 @@ as an error. The two differ in what the Run does next and in what the trail clai
 reliability model in [`../60-operations/`](../60-operations/) decides it with a later revision of
 this document.
 
-**A4 — A failed precondition is a `deny` that names no Policy.** Tool Catalog registration state and
-the grant set reach the enforcement point as evaluation inputs under N1, so an unregistered or
-ungranted Tool does not bypass the evaluation — it fails a precondition, and the evaluation yields
-`deny`. Because no Policy was reached, that Policy Decision names none, which is the case P4
+**A4 — A failed precondition is a `deny` that names no Policy.** Tool Catalog registration state,
+the pinned version's declaration, the capability grants and the schema major the version pins reach
+the enforcement point as evaluation inputs under N1, so a Tool that is unregistered, undeclared or
+ungranted, or whose origin no longer serves the pinned major, does not bypass the evaluation — it
+fails a precondition, and the evaluation yields `deny`. Because no Policy was reached, that Policy
+Decision names none, which is the case P4
 already admits and D2 already records as the explicit fact that none matched. A missing grant is
 therefore an audited refusal carrying the basis on which it was refused, never a silent gap. The
 alternative shape — short-circuiting to a refusal ahead of the enforcement point — produces the same
@@ -382,7 +407,9 @@ value the Expression Profile makes it so: an expression that raises an error doe
 a non-match, and the evaluation has not completed, so A3 forbids `allow`
 ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). Whether a value
 that is present and well formed but unverifiable is marked as such is the provenance question in
-section 9.
+section 9. A restriction on what a Tool call may do, such as *refunds below a value* or *orders in a
+region*, is written this way, as a rule on the arguments, and never as a condition on a capability
+grant ([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)).
 
 **S3 — The Agent's justification is an input to a human approver's decision, never to the verdict.**
 It reaches the approver in the Evidence Set attached to the Approval Request, so the human decides
@@ -445,16 +472,12 @@ normative document suffices.
 | Which aggregates the platform defines, and when a reservation is released other than on an unknown outcome — a refusal, a rejected gate, a compensated action | Document | The Expression Profile's specification, with [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) section 6 |
 | How a `require_approval` rule names its Approval Chain, and how one Approval Request records the chains of several matching rules, `approval-request.v1` carrying one chain with one mode | **ADR** | [`approval-workflows.md`](approval-workflows.md) section 5, with the decision on what satisfies a chain that its register marks **ADR** |
 | How the Expression Profile is versioned, and where VERSIONING records it | Document | [`../VERSIONING.md`](../VERSIONING.md), with the profile's specification; ADR-0035 fixes that a published version keeps its profile major |
-| Whether parameter-level or row-level restriction is a grant attribute or a Policy rule | **ADR** | Jointly with [`tool-authorization.md`](tool-authorization.md), which registers it on its side |
-| Whether an Agent version pins the Tool schema major version it may call | **ADR** | With the grant-subject question in [`tool-authorization.md`](tool-authorization.md); VERSIONING W5 covers Workflow versions only |
-| What a Run does after a `deny` outside admission — terminal refusal, declared branch, or failed Step Execution | **ADR** | The same shape as the rejected-gate question [`approval-workflows.md`](approval-workflows.md) section 11 marks **ADR**; spans the Run state machine, step types and a metered outcome |
 | Retention of Audit Records, Policy Decisions included | **ADR** | [`audit-model.md`](audit-model.md), adopting its classification. ADR-0012 makes this one question rather than two |
 | Whether untrusted content carries provenance inside the model context | **ADR** if it reaches a public contract, else Document | Jointly with [`../30-protocol/`](../30-protocol/); assigned here by [`threat-model.md`](threat-model.md) section 14 |
 | How a rule discriminating on a model-authored argument selects the restrictive branch on a value that is present and well formed but unverifiable — an absent or malformed value being settled by S2 under ADR-0035 | Document | With the provenance row above; assigned here by [`threat-model.md`](threat-model.md) section 14. See S2 |
 | Whether the Step-boundary and Tool PEPs collapse into one evaluation for a `tool` Step | Document | A later revision of this document, with [`../50-workflows/`](../50-workflows/) |
 | What a Policy Decision references for a Tool call inside an Agent Run | Document | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), or an ADR |
 | What an evaluation failure records — a `deny`, or a Step Execution error | Document | Reliability model in [`../60-operations/`](../60-operations/). ADR-0013 already settles that the action MUST NOT proceed; only the record and the Run outcome are open |
-| What satisfies an Approval Chain, and how it escalates and delegates | Document | [`approval-workflows.md`](approval-workflows.md) |
 | How a Policy Decision reaches a client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed** |
 | Whether Connector reachability is an evaluation input | Document | Rests on ADR-0007, **Proposed** |
 
@@ -466,11 +489,16 @@ constrained the others invisibly, so
 Where evaluation executes waited on them and left with them: in process at each enforcing service
 ([`../10-architecture/data-plane.md`](../10-architecture/data-plane.md) section 5).
 
-Two questions this document previously carried have been settled and are gone from the register.
+Three questions this document previously carried have been settled and are gone from the register.
+[ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md) fixes what a `deny` outside
+admission does to a Run, which V1 states.
 [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) fixes Policy versioning against
 snapshotting into the decision record, and fixes admission-time pinning for a Run in flight; P5 and
 P6 state both. [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) fixes what happens
-when the record cannot be written, which D3 states and A3 now defers to. Where a classification
+when the record cannot be written, which D3 states and A3 now defers to.
+[ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md) settles two more: a restriction
+on a call's arguments is a Policy rule (S2), and an Agent version pins the schema major of each
+Tool it declares (N1). Where a classification
 here differs from a sibling document's, the document that owns the subject is authoritative:
 retention and actorless attribution are [`audit-model.md`](audit-model.md)'s, and this register
 adopts its marking rather than restating a milder one.

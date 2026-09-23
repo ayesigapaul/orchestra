@@ -1,11 +1,11 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.12.0
+version: 0.13.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
-depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
+depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013, ADR-0042]
 ---
 
 # Domain Model
@@ -73,9 +73,10 @@ is request deduplication at the API boundary — a different mechanism with a di
 conflating the two is the error this invariant prevents. A failed model call is safe to retry; a
 partially executed Tool call is not, and the Step Execution is what distinguishes them.
 
-**I5 — Registration is not permission.** A Tool existing in a Tenant's Tool Catalog and an Agent being
-permitted to call it are two relationships, created by two administrative acts and audited
-separately. Authorization is deny-by-default: registration grants nothing.
+**I5 — Registration is not permission.** A Tool existing in a Tenant's Tool Catalog and an Agent or
+a Workflow being permitted to call it are two relationships, created by two administrative acts and
+audited separately. Authorization is deny-by-default: registration grants nothing, and neither does
+a version declaring the Tool.
 
 **I6 — Checkpoint is not a domain entity.** Durable Run state permitting suspension and resumption is
 supplied by the runtime ([ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md)). It is not
@@ -159,6 +160,13 @@ Policy is versioned on the same terms; section 6 covers it.
 never neither. A Workflow version declares one or more Steps; a Step Execution is one execution of
 one Step within one Run.
 
+**A Step may name a version, and that version executes inside the Run.** An `agent` Step names
+exactly one Agent version, and a `subworkflow` Step exactly one Workflow version, pinned when the
+Workflow version declaring the Step is published. The named version is not a second target: its
+execution creates no Run, its Step Executions belong to the Run that reached the Step, and it cannot
+be archived while a version naming it is unarchived
+([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)).
+
 **A Conversation spans Runs, and a Run belongs to at most one Conversation.** A Workflow Run started
 by a schedule or by a Service Account has no Conversation. Whether one Conversation may span Runs of
 *different* Agents is **not decided**; the glossary says a Conversation is between an End User and an
@@ -186,6 +194,8 @@ erDiagram
   AGENT ||--|{ AGENT_VERSION : "publishes"
   WORKFLOW ||--|{ WORKFLOW_VERSION : "publishes"
   WORKFLOW_VERSION ||--|{ STEP : "declares"
+  STEP }o--o| AGENT_VERSION : "names"
+  STEP }o--o| WORKFLOW_VERSION : "names"
   AGENT_VERSION |o--o{ RUN : "pinned by"
   WORKFLOW_VERSION |o--o{ RUN : "pinned by"
   RUN ||--o{ STEP_EXECUTION : "contains"
@@ -214,12 +224,15 @@ guarantees are exact for Workflow Runs and unnamed rather than undefined for Age
 
 A **Tool** is a single invocable business capability with a versioned typed schema, a Side-Effect
 Class and an authorization binding. It reaches Orchestra through an MCP Server or a native adapter —
-exactly one origin per Tool. The two relationships I5 separates are these:
+exactly one origin per Tool. The two relationships I5 separates are the first two rows. The third is
+authored rather than administered, and bounds the second
+([ADR-0042](../adr/adr-0042-declared-tools-and-capability-grants.md)):
 
 | Relationship | Meaning | Cardinality | Administrative act |
 | --- | --- | --- | --- |
 | Tool Catalog registers Tool | The Tool exists and is available for binding in this Tenant | Tenant 1 : 1 Catalog; Catalog 1 : 0..* Tool | Registration by a Platform User |
-| Agent version is permitted to call Tool | This Agent version may invoke it | Many to many, deny-by-default | A capability grant, separately audited |
+| Agent or Workflow is permitted to call Tool | Its Runs may invoke the Tool, where the pinned version declares it | Many to many, deny-by-default | A capability grant, separately audited and revocable at once |
+| Agent version or Workflow version declares Tool | The version may call the Tool, and pins its schema major; a ceiling no grant widens | Many to many | None: authored in a Draft and frozen by publication |
 
 A `tool` Step names exactly one Tool; every other Step type names none. Every Tool and every Step
 declares a **Side-Effect Class** — `read`, `write`, `destructive`, `financial` or
@@ -241,10 +254,11 @@ boundary. What persists is the **Policy Decision** — a reference to every Poli
 matched, the inputs, the verdict and the timestamp — recorded for allows as well as denials, as the
 glossary entry requires.
 
-**Registration and the grant are inputs to the evaluation, not gates in front of it.** By I5 they
-are two relationships rather than one, and both are available at the enforcement point: a Tool
-absent from the Tenant's Tool Catalog, or an Agent version holding no grant to it, produces a
-recorded refusal and not an unrecorded one.
+**Registration, the declaration and the grant are inputs to the evaluation, not gates in front of
+it.** By I5 registration and the grant are two relationships rather than one, and all three are
+available at the enforcement point: a Tool absent from the Tenant's Tool Catalog, a Tool the pinned
+version does not declare, or a definition holding no grant to it, produces a recorded refusal and
+not an unrecorded one.
 [`../40-governance/policy-model.md`](../40-governance/policy-model.md) owns the full input set and
 the shape of the record a failed precondition produces; this document fixes only that neither
 relationship bypasses the enforcement point.
@@ -267,11 +281,12 @@ precedence rule ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflo
   missing record, and so is a denial reached before any Policy was evaluated at all.
 - A `require_approval` verdict raises exactly one Approval Request; `allow` and `deny` raise none.
 - An Approval Request carries exactly one Evidence Set and is routed by exactly one Approval Chain.
-- An Approval Chain requires decisions from one or more Principals, ordered or parallel, derived
-  from policy rather than stored as a static list. The glossary calls an Approval Request a *human*
-  decision gate, so the deciding Principals are the human subtypes;
-  [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) states that
-  restriction normatively and the glossary entry does not yet carry it (section 11).
+- An Approval Chain requires decisions at one or more positions, ordered or parallel, derived from
+  policy rather than stored as a static list. Each position resolves at raise to the Platform Users
+  eligible to decide it. The glossary calls an Approval Request a *human* decision gate, and
+  [ADR-0043](../adr/adr-0043-approval-chains-and-separation-of-duties.md) narrows the deciding
+  Principals to Platform Users, never an End User, whose identity is the customer backend's
+  assertion.
 
 **The Evidence Set is what makes the approval meaningful.** It holds the exact inputs the Agent
 relied on — Tool results, retrieved context, prior messages — so a human approves on the same
@@ -306,7 +321,10 @@ erDiagram
   MCP_SERVER |o--o{ TOOL : "exposes"
   CONNECTOR |o--o{ MCP_SERVER : "makes reachable"
   TENANT ||--o{ CONNECTOR : "enrols"
-  AGENT_VERSION }o--o{ TOOL : "is permitted to call"
+  AGENT_VERSION }o--o{ TOOL : "declares"
+  WORKFLOW_VERSION }o--o{ TOOL : "declares"
+  AGENT }o--o{ TOOL : "is granted"
+  WORKFLOW }o--o{ TOOL : "is granted"
   STEP }o--o| TOOL : "invokes"
   TENANT ||--o{ POLICY : "authors"
   POLICY ||--|{ POLICY_VERSION : "publishes"
@@ -360,10 +378,11 @@ The table this document exists to make unambiguous.
 | Measured but explicitly not seat-billed | End User, and a Service Account on a dimension of its own | [ADR-0039](../adr/adr-0039-seats-count-platform-users.md) |
 | Execution, observability, billing and audit | Run | GLOSSARY |
 | Definition-version pinning | Run | ADR-0008, VERSIONING section 8 |
+| Pinning the version an `agent` or `subworkflow` Step names | The Workflow version declaring the Step, at publication | ADR-0041, VERSIONING section 8 |
 | Policy-version pinning at admission | Run | ADR-0012, invariant I3 |
 | Idempotency, retry and compensation | Step Execution | GLOSSARY, ADR-0008, invariant I4 |
 | Capability registration | Tool in the Tool Catalog | GLOSSARY, invariant I5 |
-| Capability authorization | The grant from an Agent version to a Tool | GLOSSARY, invariant I5 |
+| Capability authorization | A capability grant from an Agent or a Workflow to a Tool, within what the pinned version declares | GLOSSARY, invariant I5, ADR-0042 |
 | Declared consequence, and a primary policy input | Side-Effect Class | GLOSSARY |
 | Recorded governance outcome | Policy Decision, a class of Audit Record | GLOSSARY, ADR-0012, invariant I7 |
 | Human decision gate | Approval Request | GLOSSARY |
@@ -377,12 +396,15 @@ The table this document exists to make unambiguous.
 
 Every dimension [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) meters keys on an entity
 above, and three of the mappings are worth stating because they are not obvious. *Active Agents and
-Workflows* counts the definition, not the version, where at least one Run in the period pinned any of
-its versions. *Tool invocations* counts the Step Execution of a `tool` Step, by Tool and Side-Effect
-Class. *Model usage* is attributed to the Model Binding and is reported to the customer, never
-billed. Meter records are append-only, tenant-scoped, idempotent under retry and reconcilable against
-the audit log; the glossary does not define *meter record*, which section 11 registers with the
-other glossary gaps.
+Workflows* counts the definition, not the version, where any of its versions ran in the period: as
+the version a Run pinned, or nested inside a Run as the version an `agent` or `subworkflow` Step
+names ([ADR-0041](../adr/adr-0041-nested-versions-execute-inside-the-parent-run.md)). Restructuring
+cannot hide a definition from the count, and dividing a process into more definitions raises it
+while the *Runs* count stays one per Run. *Tool invocations* counts the Step Execution of a `tool`
+Step, by Tool and Side-Effect Class. *Model usage* is attributed to the Model Binding and is
+reported to the customer, never billed. Meter records are append-only, tenant-scoped, idempotent
+under retry and reconcilable against the audit log; the glossary does not define *meter record*,
+which section 11 registers with the other glossary gaps.
 
 Tool invocations inherit the gap in section 4: a Tool called inside an Agent Run has no Step
 Execution to key on under the current model. Metering cannot be applied retroactively, which is why
@@ -411,13 +433,13 @@ that question should be settled early rather than left to implementation.
 | Open question | What would decide it | ADR required? |
 | --- | --- | --- |
 | Attributes, keys, indexes, partitioning | The schema work that follows a datastore decision | No |
-| What a Tool invocation in an Agent Run is called, and what its Policy Decision, Audit Record and meter record key on | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) section 11, with `audit-model.md` | No — but neither compensation nor metering can be applied retroactively |
+| What a Tool invocation in an Agent Run is called, what its Policy Decision, Audit Record and meter record key on, and what an `unresolved` compensation outcome names for it ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)) | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) section 11, with `audit-model.md` | No — but neither compensation nor metering can be applied retroactively |
 | Which credential class a Service Account authenticates with | [`identity-and-access.md`](../10-architecture/identity-and-access.md) | No |
 | Whether a Conversation may span Agents | A product decision, not yet taken | No |
 | Whether Quota Envelopes are declared or discovered | The quota design ADR-0006 calls for | No |
 | The Policy version lifecycle and its states | `lifecycle-state-machines.md`, which ADR-0012 directs to follow the Workflow version lifecycle rather than invent a second shape | No |
 | Audit, evidence and Policy-version retention periods | Compliance work; a customer contract will force it first | **Yes** — it spans storage, erasure, the definition lifecycle and metering |
-| Glossary entries this document leans on — capability grant, Message, meter record, Agent version and Workflow version — and whether the Approval Chain entry carries the human-Principal restriction | [`../GLOSSARY.md`](../GLOSSARY.md) | No |
+| Glossary entries this document leans on — Message, meter record, Agent version and Workflow version | [`../GLOSSARY.md`](../GLOSSARY.md) | No |
 | Entity state machines | `lifecycle-state-machines.md`, planned in [`./README.md`](README.md) | No |
 
 The state machines are the natural next document. This one fixes what exists and how it connects, and

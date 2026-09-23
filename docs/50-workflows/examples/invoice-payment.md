@@ -1,7 +1,7 @@
 ---
 title: "Example: Invoice Payment"
 doc_id: DOC-065
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -99,7 +99,7 @@ flowchart TD
   P -->|"require_approval"| AR["Approval Request raised<br/>Evidence Set captured, Run suspends"]
   AR -->|"Approved"| T{"Before the invocation<br/>evaluated again"}
   T --> PAY["erp.payment.create executes"]
-  AR -->|"Rejected"| STOP["Payment never attempted<br/>Run outcome not decided"]
+  AR -->|"Rejected"| STOP["Payment never attempted<br/>the Run ends Denied"]
 ```
 
 | # | Boundary | What decides it | Verdicts | Records |
@@ -107,7 +107,7 @@ flowchart TD
 | 1 | Run admission | The Principal — the Service Account the payables inbox integration uses; the pinned `invoice-payment@1`; the pinned Policy versions | Any | Run admission with the pinned versions; Run enters `Running` |
 | 2 | `fetch-invoice` Step boundary, then before `documents.invoice.get` | Class `read`; the Tool and its Catalog registration; the arguments | Any; `allow` here | Step Execution start and outcome; Tool invocation |
 | 3 | `extract` Step boundary | The delegation to `invoice-reader@4` as the proposed action | Any; `allow` here | Step Execution |
-| 3a | Before each Tool the Agent chooses | That Tool, against the Agent version's capability grant set | Any, per call | Tool invocation, per call |
+| 3a | Before each Tool the Agent chooses | That Tool, against the Tools `invoice-reader@4` declares and the capability grants naming `invoice-reader` | Any, per call | Tool invocation, per call |
 | 4 | `match`, both evaluations | Class `read` | `allow` here | Step Execution; Tool invocation |
 | 5 | `pay` Step boundary | Class `financial`; the amount; the proposed action with its arguments, `pay_to_account` included, as they would execute | `require_approval` under the Policy above | The Approval Request raise, with the Evidence Set and the chain as resolved; Run enters `Suspended`, reason approval |
 | 6 | Not an evaluation — a human decision | The approver | `Approved` or `Rejected` | Each decision, with the deciding Principal and their authenticated identity; the resolution |
@@ -128,7 +128,7 @@ and is registered below.
 | Proposed action | `erp.payment.create`, class `financial`, with `supplier_id`, `amount` and `pay_to_account` exactly as they would execute — never re-derived at resume ([`approval-workflows.md`](../../40-governance/approval-workflows.md) R1, G2) |
 | Evidence Set | The invoice content the Agent read, the remittance field verbatim among it, with its provenance: a Tool result from `documents.invoice.get`, content the Agent read rather than text it wrote (E1, E6) |
 | The Agent's argument | Something like *invoice matches the purchase order; supplier has updated bank details; payment due today* — labelled model-generated and attributed to `invoice-reader@4`, never presented as an input (E2) |
-| Approval Chain | Resolved from the Policy at raise: the Platform Users holding the approver role (C1). A Service Account's decision would not count (C5) |
+| Approval Chain | Resolved from the Policy at raise: one position, at which every Platform User holding the approver role is eligible, so any one of them can satisfy it (C1, C7). No Service Account or End User is ever eligible (C5) |
 | Causing Policy Decision | The Policy version, the inputs and the verdict, so *why was I asked* is answerable from the request alone (R2) |
 
 This is the whole defence. The Agent's summary reproduces the attack faithfully and competently, and
@@ -156,18 +156,16 @@ criteria in [`mvp-definition.md`](../../70-delivery/mvp-definition.md) require.
 
 | What happens | What the specification says |
 | --- | --- |
-| The approver rejects | The payment is never attempted (G1). Whether the Run fails or takes a declared branch is not decided, but the outcome must be distinguishable from a fault (J1) |
+| The approver rejects | The payment is never attempted (G1). The gate is Policy's, raised at the `pay` Step, so the rejection goes where a `deny` there would: `pay` declares no refusal edge, so the Run ends `Denied`, a refusal and not a fault ([`approval-workflows.md`](../../40-governance/approval-workflows.md) J1 and J5) |
 | The payment is made and later found fraudulent | `erp.payment.recall` is a new business action, not a rollback. It crosses its own enforcement point and may itself need approval ([`execution-semantics.md`](../execution-semantics.md) X16). If its outcome is unknown it is not retried blindly (X17) |
 | The call to `erp.payment.create` drops mid-invocation | The payment's state is unknown, and unknown is not the same as not done. It is compensated, never retried blindly (X9) |
-| A Platform User started the Run and is also in the chain | Not decided — separation of duties has no rule yet |
+| A Platform User started the Run and also holds the approver role | They are never eligible at this gate's position, whatever the Policy says ([`approval-workflows.md`](../../40-governance/approval-workflows.md) C13), and nor is anyone else standing on the same verified Person (C15). If nobody else holds the role, the request waits until an administrator other than them reassigns it (C11), or until a deadline the Policy declares passes |
 
 ## Open questions — where this example stops
 
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
-| What a rejected gate does to the Run | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 8 | **Yes** — repeated |
 | How the threshold in the Policy above is written, as a CEL predicate over the payment's amount, once the Expression Profile names its inputs and how an amount is represented | [`policy-model.md`](../../40-governance/policy-model.md) section 9, under [ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) | No — the language is decided |
-| Whether the Platform User who started a Run may approve its gate | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 6 | **Yes** — repeated |
 | Whether the evaluation before `erp.payment.create` receives the approval resolution as an input, or collapses into the Step-boundary evaluation. Without one or the other an approved payment re-raises its own gate | [`policy-model.md`](../../40-governance/policy-model.md), which owns the collapse question [`../step-types.md`](../step-types.md) section 6 registers | As classified there — **new here** as a consequence |
 | Whether `pay_to_account`, taken from content the Agent read, is still marked untrusted when it reaches a Tool | [`../step-types.md`](../step-types.md) section 13, which registers provenance through the platform | As classified there |
 | Whether the approval surface shows the account on file beside the proposed one | [`../../30-protocol/ui-protocol.md`](../../30-protocol/ui-protocol.md), which owns the approval surface | No |

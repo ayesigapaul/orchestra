@@ -201,6 +201,10 @@
               "adr/adr-0037-per-tenant-keys-for-protected-content",
               "adr/adr-0038-egress-proxy-on-a-per-tenant-allow-list",
               "adr/adr-0039-seats-count-platform-users",
+              "adr/adr-0040-run-outcomes-for-refusal-and-compensation",
+              "adr/adr-0041-nested-versions-execute-inside-the-parent-run",
+              "adr/adr-0042-declared-tools-and-capability-grants",
+              "adr/adr-0043-approval-chains-and-separation-of-duties",
               "adr/adr-template"
             ]
           },
@@ -697,6 +701,22 @@
     {
       "source": "/adr/adr-0039-seats-count-platform-users.md",
       "destination": "/adr/adr-0039-seats-count-platform-users"
+    },
+    {
+      "source": "/adr/adr-0040-run-outcomes-for-refusal-and-compensation.md",
+      "destination": "/adr/adr-0040-run-outcomes-for-refusal-and-compensation"
+    },
+    {
+      "source": "/adr/adr-0041-nested-versions-execute-inside-the-parent-run.md",
+      "destination": "/adr/adr-0041-nested-versions-execute-inside-the-parent-run"
+    },
+    {
+      "source": "/adr/adr-0042-declared-tools-and-capability-grants.md",
+      "destination": "/adr/adr-0042-declared-tools-and-capability-grants"
+    },
+    {
+      "source": "/adr/adr-0043-approval-chains-and-separation-of-duties.md",
+      "destination": "/adr/adr-0043-approval-chains-and-separation-of-duties"
     },
     {
       "source": "/adr/adr-template.md",
