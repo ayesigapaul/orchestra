@@ -1,9 +1,9 @@
 ---
 title: "Example: Shipment Exception"
 doc_id: DOC-067
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -55,7 +55,7 @@ steps:
   settle:
     type: wait
     side_effect_class: read
-    until: "<time condition — syntax undecided, see workflow-dsl.md section 8>"
+    until: "<time condition — its form undecided, see workflow-dsl.md section 11>"
   update-order:
     type: tool
     side_effect_class: write
@@ -130,12 +130,13 @@ Execution that has not reached a terminal outcome.
 
 At row 5 the Run enters the same `Suspended` state an approval produces, with the reason recorded as
 a wait ([`lifecycle-state-machines.md`](../../20-domain/lifecycle-state-machines.md) section 2.2).
-Two things about it are uncomfortable, and neither is hidden.
+Two things about it are worth stating, and neither is hidden.
 
-**Its resumption has no acting Principal.** Nobody acts; time passes. Every audited action must
-resolve to exactly one Principal, and this transition resolves to none. That is the attribution gap
-[`audit-model.md`](../../40-governance/audit-model.md) section 9 owns and holds open, with a `wait`
-elapsing named among its cases.
+**Its resumption has no acting Principal.** Nobody acts; time passes. The transition is caused by an
+observed condition, so its record carries that cause and no Principal
+([`audit-model.md`](../../40-governance/audit-model.md) section 9,
+[ADR-0030](../../adr/adr-0030-platform-operator-and-observed-conditions.md)). Nothing is attributed
+to the Service Account that started the Run, which did not act.
 
 **It waits on time, not on the carrier.** What the process actually wants is to wait for the carrier
 to confirm the new booking. Whether a `wait` may be released by an external signal is unmade, and
@@ -150,6 +151,5 @@ condition that never becomes true.
 | --- | --- | --- |
 | What satisfies the join at `settle`, and what a failed `rebook` does to `notify-customer` | [`../execution-semantics.md`](../execution-semantics.md) section 6, assigned by [`../step-types.md`](../step-types.md) section 9 | As classified there |
 | Whether an `external-communication` Step must declare a compensating action, and what one would mean | [`../execution-semantics.md`](../execution-semantics.md) section 6 | As classified there |
-| How the resumption of `settle` is attributed, no Principal having acted | [`audit-model.md`](../../40-governance/audit-model.md) section 9 | As classified there |
 | Whether a `wait` may be released by an external signal, such as the carrier's confirmation | [`../step-types.md`](../step-types.md) section 10 | As classified there |
 | What bounds a wait whose condition never becomes true | [`lifecycle-state-machines.md`](../../20-domain/lifecycle-state-machines.md) section 2.4, which records that no maximum Run duration is decided | As classified there |

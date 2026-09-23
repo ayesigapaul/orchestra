@@ -1,9 +1,9 @@
 ---
 title: Testing Strategy
 doc_id: DOC-083
-version: 0.17.1
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0005, ADR-0006, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015, ADR-0020, ADR-0021]
 ---
@@ -31,6 +31,7 @@ silently**, because those are the ones where a test is the control rather than a
 | Tenant context cannot leak across a pooled connection | [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md) | It passes on a direct connection and fails under the pooler, which is where it runs |
 | The compiler emits an enforcement point at **every** Step boundary | [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md) | This is the differentiation ADR-0015 claims. A definition that dodges one is indistinguishable from one that does not |
 | A Policy Decision is durable **before** the gated action | [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) | Ordering is invisible in a passing test unless the store is made to fail deliberately |
+| Every enforcing service's CEL evaluator returns what the Expression Profile says — CEL's conformance tests and the profile's own cases, errors and the cost bound included | [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) | Two evaluators that disagree give one input set two verdicts, and nothing fails until an audit compares them |
 | Allows are audited, not only denials | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) | Nothing breaks when an allow goes unrecorded. It breaks much later, in an audit |
 | A Run pins its definition version for life | [`../VERSIONING.md`](../VERSIONING.md) W2, W3 | Only observable by editing a definition mid-Run, which no ordinary test does |
 | A partially executed tool call is never blindly retried | CLAUDE.md rule 6, [ADR-0006](../adr/adr-0006-model-layer-as-credential-broker.md) | The failure is a duplicated side effect in production, not a red test |
@@ -62,10 +63,13 @@ anyway.
 **Isolation tests**, run as two Tenants rather than one. Any single-Tenant test passes under broken
 isolation. These belong in CI and not in a periodic suite.
 
-**Failure-injection tests** for the ordering guarantees. Make the audit store unreachable and assert
-the gated action did not proceed. Kill a worker mid-Run and assert the lease is reclaimed and no
-side effect repeats. [`../60-operations/reliability.md`](../60-operations/reliability.md) owns the
-taxonomy these test against.
+**Failure-injection tests** for the ordering guarantees. Make the datastore an enforcing service
+commits to unreachable and assert the gated action did not proceed. Stop the capture of that
+service's outbox and assert that the action proceeds while the completeness horizon stops advancing
+([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)).
+Kill a worker mid-Run and assert the lease is reclaimed and no side effect repeats.
+[`../60-operations/reliability.md`](../60-operations/reliability.md) owns the taxonomy these test
+against.
 
 **Evaluation testing** for the agentic parts, which is the one kind this repository cannot yet
 specify. An `agent` Step's behaviour is not deterministic, so it is not testable in the sense the

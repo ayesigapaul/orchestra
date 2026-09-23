@@ -1,9 +1,9 @@
 ---
 title: Execution Semantics
 doc_id: DOC-063
-version: 0.10.1
+version: 0.11.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0012, ADR-0013]
 ---
@@ -378,7 +378,8 @@ exist: an event-protocol enumeration under C2 and a metered dimension under ADR-
 [`identity-and-access.md`](../10-architecture/identity-and-access.md) section 7 drew the table —
 Platform User and Service Account with an explicit administrative grant, End User only within a
 Conversation they are party to and only where the Session Token's scope permits, Connector never,
-platform operator not at all — and [`gateway-api.md`](../30-protocol/gateway-api.md) rule G15 has
+a Platform Operator only under an administrative grant with an end time for a recorded case — and
+[`gateway-api.md`](../30-protocol/gateway-api.md) rule G15 has
 since taken that assignment and reproduces the table as normative there. Cancellation is authorized
 as an administrative act, not by Policy. One term in it is still undefined, as G15 itself says:
 what a Session Token's scope may contain belongs to the delegation decision

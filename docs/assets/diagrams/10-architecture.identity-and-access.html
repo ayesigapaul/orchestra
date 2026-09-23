@@ -58,7 +58,8 @@ flowchart LR
   CN["Connector — ADR-0007, Proposed"] --&gt;|"enrolment identity"| GW
   CP --&gt; DS["Tenant-scoped datastore"]
   GW --&gt; DS
-  OP["Platform operator tooling"] -.-&gt;|"no Principal resolves"| DS
+  OP["Platform operator"] --&gt;|"as a Platform Operator Principal, in one Tenant"| CP
+  OP -.-&gt;|"maintenance that reads no tenant content"| DS
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">flowchart LR
   IDP["Tenant identity provider"] --&gt;|"federated sign-in"| CP["Control Plane"]
@@ -69,7 +70,8 @@ flowchart LR
   CN["Connector — ADR-0007, Proposed"] --&gt;|"enrolment identity"| GW
   CP --&gt; DS["Tenant-scoped datastore"]
   GW --&gt; DS
-  OP["Platform operator tooling"] -.-&gt;|"no Principal resolves"| DS</pre></details>
+  OP["Platform operator"] --&gt;|"as a Platform Operator Principal, in one Tenant"| CP
+  OP -.-&gt;|"maintenance that reads no tenant content"| DS</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

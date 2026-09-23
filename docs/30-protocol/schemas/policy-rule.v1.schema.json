@@ -3,7 +3,7 @@
   "$id": "https://raw.githubusercontent.com/ayesigapaul/orchestra/main/docs/30-protocol/schemas/policy-rule.v1.schema.json",
   "title": "Policy Rule",
   "description": "One tenant-authored rule within a Policy version: where it is evaluated, what it yields, and the conditions under which it matches.",
-  "$comment": "Normative prose: 40-governance/policy-model.md. THE MATCH LANGUAGE IS NOT DEFINED HERE AND CANNOT BE. policy-model.md section 8 requires the policy language to be an ADR rather than a later document, on the ground that it becomes a permanent public contract the moment a customer authors against it. The match member below is therefore deliberately unconstrained: this file fixes the envelope a rule lives in — scope, enforcement point, verdict, versioning — and the ADR fixes what may be written inside it. Rule precedence is likewise unmade, and D4 makes it a prerequisite rather than a later convenience: if two Policies match one action and precedence is undefined, the verdict is not a function of the inputs and determinism is unsatisfiable. No precedence member appears here for that reason.",
+  "$comment": "Normative prose: 40-governance/policy-model.md. The match member is one CEL expression under the Orchestra Expression Profile, yielding a boolean (ADR-0035); the profile, not this file, defines its inputs, functions and cost bound. It stays unconstrained here, because constraining a member this version left open would tighten an existing constraint, which VERSIONING section 6 forbids for a MINOR change, so publication refuses a rule that does not parse, type-check or stay within the cost bound. This file fixes the envelope a rule lives in — scope, enforcement point, verdict, versioning. Rule precedence is order-independent: any deny wins, otherwise any require_approval wins and every matching rule's chain is required, otherwise allow, and no matching rule is deny. The verdict is a function of which rules match and never of their order, so no member orders rules. Tenant-scoped and Workspace-scoped rules are evaluated together under that precedence.",
   "type": "object",
   "required": ["policy_id", "tenant_id", "enforcement_points", "verdict", "match"],
   "properties": {
@@ -27,7 +27,8 @@
     "workspace_id": {
       "type": "string",
       "minLength": 1,
-      "description": "Optional administrative scope. A Workspace scopes administration and visibility, never isolation."
+      "description": "Optional administrative scope. A Workspace scopes administration and visibility, never isolation.",
+      "$comment": "ADR-0035 — an evaluation in a Workspace considers the rules that name it together with the Tenant's rules that name no Workspace, under one precedence, so a rule naming a Workspace can add a deny or a gate and never remove a Tenant's."
     },
     "name": {
       "type": "string",
@@ -49,8 +50,8 @@
       "$comment": "P3 — the verdict set is closed. There is no warn, no allow-with-conditions, no silent pass-through. A fourth verdict is NOT the additive case VERSIONING R2 makes MINOR: the set is exhaustive and every consumer branches across all of it, so a new value repurposes the enum rather than adding one a consumer may ignore under R3. It is MAJOR and needs an ADR. One narrowing exists and is not expressible here: at the boundary of an approval Step the set narrows to require_approval and deny, and an implementation MUST NOT return allow there (V4) — a constraint on the evaluation, not on what a rule may be authored to yield."
     },
     "match": {
-      "description": "The conditions under which this rule applies. Unconstrained by design — see this file's top-level comment.",
-      "$comment": "policy-model.md N1 fixes what every evaluation receives and a rule MAY match on: the Principal and its subtype, the Tenant, the Workspace, the pinned definition version, the pinned Policy versions, the Step and its type at a Step boundary, the Side-Effect Class as a primary input, the Tool, its schema major, its Tool Catalog registration state, the Agent version's capability grant set, the proposed action including its arguments, the enforcement point, and the Run. N3 requires any input outside that table — wall-clock time, aggregate state, a value fetched during evaluation — to be captured in the Policy Decision, and whether a Policy may depend on aggregate state at all is unmade. D4 forbids a model in the evaluation path: a model call is neither deterministic nor attributable to a rule."
+      "description": "One CEL expression under the Expression Profile, yielding a boolean: true when this rule applies. Checked at publication rather than by this schema — see this file's top-level comment.",
+      "$comment": "policy-model.md N1 fixes what every evaluation receives and a rule MAY match on: the Principal and its subtype, the Tenant, the Workspace, the pinned definition version, the pinned Policy versions, the Step and its type at a Step boundary, the Side-Effect Class as a primary input, the Tool, its schema major, its Tool Catalog registration state, the Agent version's capability grant set, the proposed action including its arguments, the enforcement point, and the Run. N3 requires any input outside that table — the evaluation time, the value read from an aggregate — to be captured in the Policy Decision, and a rule reads aggregate state only through an aggregate the platform defines, reserved in the transaction that writes the decision (ADR-0035). An expression that raises an error does not make its rule a non-match: the evaluation has not completed, and A3 forbids allow. D4 forbids a model in the evaluation path: a model call is neither deterministic nor attributable to a rule."
     },
     "description": {
       "type": "string",

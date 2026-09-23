@@ -1,9 +1,9 @@
 ---
 title: System Context
 doc_id: DOC-021
-version: 0.8.1
+version: 0.9.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0011]
 ---
@@ -96,7 +96,7 @@ crosses it. Every other edge is ordinary SaaS integration.
 | R5 | Orchestra → model deployment surface | Prompts and assembled context out; completions and token counts back. The endpoint is tenant-configured and the credential is the tenant's, custodied under envelope encryption | ADR-0002, ADR-0006 |
 | R6 | Orchestra → publicly reachable tool origin | A Tool invocation whose arguments were composed by a model, and results returning into the model's context. The origin may be a third party's or the customer's own, publicly exposed. The fast path of ADR-0007, and the only path if ADR-0007 is rejected | ADR-0007 option 1, [`../40-governance/threat-model.md`](../40-governance/threat-model.md) B4 and B5 |
 | R7 | Connector → Orchestra | An outbound session raised from inside the customer network, multiplexing Tool traffic inward. **Planned, not settled** | ADR-0007, **Proposed** |
-| R8 | Orchestra platform operator → Orchestra | Support access, migration tooling and cross-tenant aggregation for metering. Legitimate and cross-tenant by design; how it is attributed is unmade | [`../40-governance/threat-model.md`](../40-governance/threat-model.md) B6 |
+| R8 | Orchestra platform operator → Orchestra | Support access, migration tooling and cross-tenant aggregation for metering. Support reaches a Tenant's records only as a Platform Operator Principal of that Tenant, recorded in its trail; migration and aggregation read no tenant content and appear in no Tenant's trail ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | [`../40-governance/threat-model.md`](../40-governance/threat-model.md) B6 |
 
 R1 and R4 are separate edges rather than one, and that separation is the product. R1 is a person
 holding an Orchestra account, authenticated through their employer's directory. R4 is an application
@@ -162,12 +162,9 @@ implementation could make without any diagram forbidding it.
 - **No tenant data crosses to another tenant.** Isolation is enforced by the datastore under
   [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md), not by anything drawn here; see
   [`multi-tenancy.md`](multi-tenancy.md). R8 is the one deliberately cross-tenant edge on the
-  diagram. Whether an operator path crosses a Policy Enforcement Point at all, or reaches only the
-  datastore, is not settled here or anywhere else;
-  [`../40-governance/audit-model.md`](../40-governance/audit-model.md) owns that question together
-  with the attribution one registered in section 7, and
-  [`../40-governance/policy-model.md`](../40-governance/policy-model.md) N2 blocks such a path
-  meanwhile.
+  diagram, and only for work that reads no tenant content. An operator reading a Tenant's records
+  does so as a Platform Operator Principal of that Tenant, crossing the Policy Enforcement Points on
+  its path ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 - **Model tokens are metered and reported, never billed.** Under BYOK the customer already pays the
   provider directly; Orchestra reports usage as a visibility feature (ADR-0009).
 - **Orchestra initiates no connection into the customer network for Tool traffic.** Under ADR-0007
@@ -203,9 +200,10 @@ diagram, because it is inside the Orchestra box. It is PostgreSQL, chosen by
 [`multi-tenancy.md`](multi-tenancy.md) sections 2 to 5 state.
 
 **Where policy evaluation executes**
-([`../40-governance/policy-model.md`](../40-governance/policy-model.md)). Also not Level 1 — a
-Policy Enforcement Point is a component of the Data Plane, so the question belongs to
-[`data-plane.md`](data-plane.md) and [`containers.md`](containers.md).
+([`../40-governance/policy-model.md`](../40-governance/policy-model.md)), now decided. Also not
+Level 1: evaluation runs in process in each enforcing service, inside the Orchestra box, as
+[`data-plane.md`](data-plane.md) and [`containers.md`](containers.md) record under
+[ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md).
 
 ## 7. Open questions
 
@@ -221,6 +219,4 @@ prose. Where another document owns a question, its classification is repeated ra
 | Whether model traffic may be proxied through the Connector so BYOK credentials never leave the customer perimeter, adding an edge this diagram does not carry | `connector.md`, planned in [`README.md`](README.md), with the Model Broker design; void if ADR-0007 is rejected | **ADR required** — it relocates credential custody, which ADR-0002 places with Orchestra |
 | How an approver is reached, which is an Orchestra-initiated outbound edge to a notification channel that this diagram cannot yet draw | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md); a product decision, per its register | Later document |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand; forwarding would add a standing outbound edge and an availability obligation | [`../40-governance/audit-model.md`](../40-governance/audit-model.md); a design-partner conversation, per its register | **ADR required** — that register's classification |
-| How platform-operator action on R8 is attributed, given that invariant I2 admits no unattributed action and no Principal subtype covers it | [`../40-governance/audit-model.md`](../40-governance/audit-model.md), with [`../40-governance/threat-model.md`](../40-governance/threat-model.md) | **ADR required** — that register's classification; it changes the identity model |
 | Whether the tenant identity provider on R2 also authenticates Service Accounts, or a separate credential type does | [`identity-and-access.md`](identity-and-access.md) | Later document |
-| Where policy evaluation executes — in process at each enforcement point, or as a separate component | [`data-plane.md`](data-plane.md) and [`containers.md`](containers.md) | Later document; an ADR if it constrains the datastore |

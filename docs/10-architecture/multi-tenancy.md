@@ -1,9 +1,9 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.14.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0007, ADR-0009, ADR-0011, ADR-0013]
 ---
@@ -110,7 +110,7 @@ Five role classes, separated because two of them can turn the mechanism off.
 | --- | --- | --- |
 | Application role | Gateway, Runtime, Policy Enforcement Points | Subject to it; sets context per transaction |
 | Migration/owner role | Schema migration only | Owns tables; forced policy still applies, but it can alter policy |
-| Operator role | Support, metering aggregation, incident response | Deliberately cross-tenant; boundary B6 of [`../40-governance/threat-model.md`](../40-governance/threat-model.md) |
+| Operator role | Metering aggregation, and other work that reads no tenant content. Support and incident response reach a Tenant's records as a Platform Operator Principal instead, never through this role ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | Deliberately cross-tenant; boundary B6 of [`../40-governance/threat-model.md`](../40-governance/threat-model.md) |
 | Linking role | The functions that create Persons and Memberships, and nothing else ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) | Bypasses it by design; cannot log in and owns only those functions, so each function is as security-critical as a policy |
 | Identity-sync role | Recording a Person's name and email from the identity provider | Subject to it, with no tenant context: its policies admit only Persons the identity provider verified, and its grants reach only their name and email |
 
@@ -119,15 +119,14 @@ right to change the policy. Ownership is therefore a privileged path in its own 
 problem: migration tooling holds it, runs on a schedule nobody watches, and is the realistic
 offender ADR-0011 names.
 
-Operator access is cross-tenant by construction — metering under
-[ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) and support both need it. It is unmade in
-both respects. Whether operator work reaches a Policy Enforcement Point at all or only the datastore
-is undecided, and so is how it is *attributed* under invariant I2 — one decision rather than two,
-because attribution is precisely what an enforcement point would need.
-[`../40-governance/audit-model.md`](../40-governance/audit-model.md) owns it and needs an ADR.
-Meanwhile [`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N2 blocks any
-such path through an enforcement point, because an unattributable permission has nothing to
-attribute to.
+Operator work is split by kind
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Metering aggregation
+under [ADR-0009](../adr/adr-0009-meter-first-defer-tiering.md) reads no tenant content, is
+cross-tenant by construction through the operator role, and appears in no Tenant's trail. Support
+reads a Tenant's content, so it is an act by a Platform Operator Principal of that Tenant, one
+Tenant at a time, under an administrative grant with an end time, on the paths every Principal
+travels, and recorded in that Tenant's trail
+([`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9).
 
 ## 5. The CI control, and what it must enumerate
 
@@ -286,12 +285,12 @@ What is implied today by decisions already taken, with what remains open:
 | Connector-side local state | [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed** | Single-tenant by deployment | Planned `connector.md`; not settled architecture |
 
 Caches and search indexes appear in the threat model's list and in no decision. Both rules govern
-them if they are introduced; neither is assumed here. The same conditional covers
-[ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md), which requires that a Policy
-Decision survive a crash ahead of the gated action and deliberately leaves the mechanism open:
-whether that introduces a store outside this datastore at all is a property of the mechanism rather
-than of the requirement, and the enforcement path owns the entry if it does
-([`data-plane.md`](data-plane.md) section 6).
+them if they are introduced; neither is assumed here.
+[ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)'s durable Policy Decision write
+adds no entry:
+[ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)
+writes a decision inside this datastore, under forced row-level security, and delivers it through
+the Kafka topics registered above ([`data-plane.md`](data-plane.md) section 6).
 
 ## 9. What this design does not protect against
 
@@ -313,7 +312,6 @@ than of the requirement, and the enforcement path owns the entry if it does
 | Per-tenant deletion for erasure requests under a shared schema, against audit-retention obligations | ADR-0011's follow-on, with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) and legal input | **Yes** — it spans retention, the definition lifecycle and metering |
 | Whether per-tenant encryption keys extend beyond credentials to data at rest | Left open by ADR-0011; ADR-0002 covers only credentials | **Yes** — a storage and key-management commitment |
 | The complete inventory of stores outside the datastore; section 8 fixes the scoping rule and the registry, not the list | [`containers.md`](containers.md) and [`data-plane.md`](data-plane.md) as each store is introduced; the planned `connector.md` for the connector's own | No — the rule holds on any inventory |
-| Whether platform-operator work reaches a Policy Enforcement Point at all or only the datastore, and how it is attributed under invariant I2 — one question, not two | [`../40-governance/audit-model.md`](../40-governance/audit-model.md), which owns the general case; boundary B6 of [`../40-governance/threat-model.md`](../40-governance/threat-model.md) records it unmade | **Yes** — it changes the identity model and the audit contract |
 | By what structure a cross-tenant grant is kept out of the datastore, given that row-level security filters rather than forbids — answered in section 6 by write policies that require the referent to exist in the same Tenant, with no foreign key constraint, recorded here so the choice is traceable rather than resident in prose | This document, which [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule TA2 assigns it to | Decided by [ADR-0023](../adr/adr-0023-no-foreign-key-constraints.md) |
 | Whether a surface identifier is globally unique as well as tenant-qualified, and the identifier shape | Schema work after the datastore decision; constrained by [`../VERSIONING.md`](../VERSIONING.md) once an identifier appears in a public contract | No |
 | The promotion procedure itself — sequencing, verification and cutover | The planned `deployment-topologies.md` listed in [`./README.md`](README.md) | No — section 7 fixes the constraints, not the runbook |

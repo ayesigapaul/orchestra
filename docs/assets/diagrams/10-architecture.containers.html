@@ -58,10 +58,12 @@ flowchart TB
     CPAPI --&gt; CRED["Credential Custody"]
     CPAPI --&gt; MET["Metering"]
     CPAPI --&gt; TUM["Tenant User Management"]
+    CPAPI --&gt; AUDIT["Audit"]
   end
   subgraph DP["Data Plane"]
-    GW["Gateway"] --&gt; RT["Runtime"]
-    GW --&gt; PEV["Policy evaluation — location undecided, section 5"]
+    GW["Gateway"] --&gt; RS["Run Supervisor"]
+    RS --&gt; RT["Runtime"]
+    RS --&gt; PEV["Policy evaluation — in process in each enforcing service, section 5"]
     RT --&gt; PEV
     RT --&gt; MB["Model Broker"]
     RT --&gt; TOOL["Tool Invocation"]
@@ -71,9 +73,11 @@ flowchart TB
   GW --&gt;|"resolves every credential; fails closed"| TUM
   CPAPI --&gt; DS[("Tenant-scoped datastore")]
   TUM --&gt; DS
-  PEV --&gt;|"Policy Decisions; durable-write mechanism open"| DS
+  PEV --&gt;|"Policy Decisions, committed with the gated change"| DS
   MET --&gt; DS
+  AUDIT --&gt; DS
   DP --&gt;|"metered occurrences"| MET
+  DP --&gt;|"Policy Decisions and other Audit Records, through each outbox and Kafka"| AUDIT
   CRED --&gt; KMS["Key management service"]
   MB --&gt; SURF["Model deployment surfaces"]
   TOOL --&gt; ORIGIN["MCP Servers and native adapters"]
@@ -88,10 +92,12 @@ flowchart TB
     CPAPI --&gt; CRED["Credential Custody"]
     CPAPI --&gt; MET["Metering"]
     CPAPI --&gt; TUM["Tenant User Management"]
+    CPAPI --&gt; AUDIT["Audit"]
   end
   subgraph DP["Data Plane"]
-    GW["Gateway"] --&gt; RT["Runtime"]
-    GW --&gt; PEV["Policy evaluation — location undecided, section 5"]
+    GW["Gateway"] --&gt; RS["Run Supervisor"]
+    RS --&gt; RT["Runtime"]
+    RS --&gt; PEV["Policy evaluation — in process in each enforcing service, section 5"]
     RT --&gt; PEV
     RT --&gt; MB["Model Broker"]
     RT --&gt; TOOL["Tool Invocation"]
@@ -101,9 +107,11 @@ flowchart TB
   GW --&gt;|"resolves every credential; fails closed"| TUM
   CPAPI --&gt; DS[("Tenant-scoped datastore")]
   TUM --&gt; DS
-  PEV --&gt;|"Policy Decisions; durable-write mechanism open"| DS
+  PEV --&gt;|"Policy Decisions, committed with the gated change"| DS
   MET --&gt; DS
+  AUDIT --&gt; DS
   DP --&gt;|"metered occurrences"| MET
+  DP --&gt;|"Policy Decisions and other Audit Records, through each outbox and Kafka"| AUDIT
   CRED --&gt; KMS["Key management service"]
   MB --&gt; SURF["Model deployment surfaces"]
   TOOL --&gt; ORIGIN["MCP Servers and native adapters"]

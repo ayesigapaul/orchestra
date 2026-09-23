@@ -66,7 +66,8 @@ flowchart TD
   COMP --&gt;|"compiled artifact, never returned"| ST
   DEF &amp; POL --&gt;|"publish freezes a version"| ST
   APR --&gt;|"one decision, evidence unchanged"| ST
-  AUD --&gt;|"read — itself audited"| ST
+  AUD --&gt;|"read — itself audited"| AUDIT["Audit&lt;br/&gt;owns the audit store"]
+  AUDIT --&gt; ST
   CAT --&gt; ST
   TEN --&gt; TUM["Tenant User Management"]
   TUM --&gt; ST
@@ -75,7 +76,7 @@ flowchart TD
   CRED --&gt;|"held by reference, never plaintext"| KMS["Envelope-encrypted custody&lt;br/&gt;per-tenant data keys"]
   CRED --&gt; ST
   ST["Tenant-scoped store&lt;br/&gt;row-level security forced — ADR-0011"] --&gt; DP["Data Plane&lt;br/&gt;Gateway · Runtime · PEPs · Model Broker"]
-  DP --&gt;|"Audit Records · Policy Decisions"| ST
+  DP --&gt;|"Audit Records · Policy Decisions, through each outbox and Kafka"| AUDIT
   DP --&gt;|"metered occurrences"| MET["Metering"]
   MET --&gt;|"meter records"| ST
 </pre></div>
@@ -96,7 +97,8 @@ flowchart TD
   COMP --&gt;|"compiled artifact, never returned"| ST
   DEF &amp; POL --&gt;|"publish freezes a version"| ST
   APR --&gt;|"one decision, evidence unchanged"| ST
-  AUD --&gt;|"read — itself audited"| ST
+  AUD --&gt;|"read — itself audited"| AUDIT["Audit&lt;br/&gt;owns the audit store"]
+  AUDIT --&gt; ST
   CAT --&gt; ST
   TEN --&gt; TUM["Tenant User Management"]
   TUM --&gt; ST
@@ -105,7 +107,7 @@ flowchart TD
   CRED --&gt;|"held by reference, never plaintext"| KMS["Envelope-encrypted custody&lt;br/&gt;per-tenant data keys"]
   CRED --&gt; ST
   ST["Tenant-scoped store&lt;br/&gt;row-level security forced — ADR-0011"] --&gt; DP["Data Plane&lt;br/&gt;Gateway · Runtime · PEPs · Model Broker"]
-  DP --&gt;|"Audit Records · Policy Decisions"| ST
+  DP --&gt;|"Audit Records · Policy Decisions, through each outbox and Kafka"| AUDIT
   DP --&gt;|"metered occurrences"| MET["Metering"]
   MET --&gt;|"meter records"| ST</pre></details>
 </section>

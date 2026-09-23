@@ -56,7 +56,7 @@ flowchart TD
     ADM["Administrative acts&lt;br/&gt;publish, retire, grant, revoke, enrol"]
     ACC["Credential and audit access; Platform User authentication"]
   end
-  SRC --&gt; AR["Audit Record&lt;br/&gt;append-only, immutable, tenant-scoped&lt;br/&gt;exactly one Principal"]
+  SRC --&gt; AR["Audit Record&lt;br/&gt;append-only, immutable, tenant-scoped&lt;br/&gt;exactly one Principal, or the cause of a transition nobody acted on"]
   PEP["Policy Decision at a PEP&lt;br/&gt;allow, deny, require_approval"]
   PEP -. "is a class of Audit Record — ADR-0012&lt;br/&gt;durable before the gated action — ADR-0013" .-&gt; AR
   PEP --&gt;|"references by version, never embeds the rule"| PV["Policy version&lt;br/&gt;immutable; retained while any record names it"]
@@ -74,7 +74,7 @@ flowchart TD
     ADM["Administrative acts&lt;br/&gt;publish, retire, grant, revoke, enrol"]
     ACC["Credential and audit access; Platform User authentication"]
   end
-  SRC --&gt; AR["Audit Record&lt;br/&gt;append-only, immutable, tenant-scoped&lt;br/&gt;exactly one Principal"]
+  SRC --&gt; AR["Audit Record&lt;br/&gt;append-only, immutable, tenant-scoped&lt;br/&gt;exactly one Principal, or the cause of a transition nobody acted on"]
   PEP["Policy Decision at a PEP&lt;br/&gt;allow, deny, require_approval"]
   PEP -. "is a class of Audit Record — ADR-0012&lt;br/&gt;durable before the gated action — ADR-0013" .-&gt; AR
   PEP --&gt;|"references by version, never embeds the rule"| PV["Policy version&lt;br/&gt;immutable; retained while any record names it"]

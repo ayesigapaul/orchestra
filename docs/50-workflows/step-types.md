@@ -1,9 +1,9 @@
 ---
 title: Step Types
 doc_id: DOC-062
-version: 0.10.0
+version: 0.11.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0012, ADR-0013]
 ---
@@ -242,7 +242,7 @@ effect leaving the platform.
 
 | Aspect | |
 | --- | --- |
-| Declares | The predicate, and the branch each outcome selects. The expression language is [`workflow-dsl.md`](workflow-dsl.md)'s to specify. |
+| Declares | The predicate, an Expression Profile expression ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)), and the branch each outcome selects. How a definition writes it is [`workflow-dsl.md`](workflow-dsl.md)'s to specify. |
 | Compiler validates | Every branch target resolves to a Step in the same definition; the predicate is well-formed and references only data the definition makes available at that point; the predicate invokes no Tool and no model — either is a different step type. A cyclic graph is rejected at compile time under [`workflow-dsl.md`](workflow-dsl.md)'s graph well-formedness check, so a branch may not target a Step already on the path to it and the language admits no iteration. Whether the language requires an exhaustive branch set remains a graph-shape question for that document. |
 | At its boundary | The Step, its class, and a proposed action that is a *selection* rather than an effect. The resulting Policy Decision is a class of Audit Record ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)), and so the durable record of why the process branched. It is evaluated like every other Step (S1). |
 | Failure modes | Predicate evaluation error, and a reference resolvable at compile time but absent at runtime because a model or a Tool did not produce it. Two failures are distinct here and only one of them is a policy failure. Where the boundary *Policy* evaluation cannot complete, rule A3 in [`../40-governance/policy-model.md`](../40-governance/policy-model.md) forbids `allow` and leaves the record — a `deny`, or a Step Execution error — **unmade**. Where the *predicate* cannot evaluate, no Policy was reached and nothing refused: it is a fault, which [`execution-semantics.md`](execution-semantics.md) section 10's taxonomy keeps distinct from a refusal in the audit trail, in the metered outcome and to the caller. What a predicate fault then does to the Step Execution and the Run is **unmade** — section 13. Having no side effect, a condition is the one case where re-evaluation cannot leave unknown state. |
@@ -258,32 +258,31 @@ Declares two or more branches that may execute concurrently, and rejoins them.
 | Failure modes | A branch failing after a side-effecting Step compensates at Step Execution grain (invariant I4). What that does to its siblings — cancellation, compensation, or letting them complete — is **unmade** and belongs to [`execution-semantics.md`](execution-semantics.md). No fan-out limit is decided. |
 
 The sharp edge is not concurrency but what it does to a Policy reading accumulated state: two
-branches evaluating a spend threshold at the same instant can each see a total excluding the other,
-and both be permitted. Whether a Policy may depend on aggregate state at all is **unmade** and most
-threatens the determinism requirement in rule D4;
-[`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N3 owns it, and must
-answer it against this type, where the race becomes reachable.
+branches evaluating a spend threshold at the same instant could each see a total excluding the
+other, and both be permitted.
+[`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N3 closes it. A Policy
+reads only a platform-defined aggregate, which the enforcing service reads and reserves in the
+transaction that writes the Policy Decision, so the two branches take turns and the second sees the
+first's contribution
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)).
 
-## 10. `wait` — time, and the attribution gap it opens
+## 10. `wait` — time, and a transition no Principal causes
 
 Suspends the Run until a declared time condition is met, entering the same `Suspended` state an
 approval gate produces with a recorded reason distinguishing the two
 ([`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section
 2.2). No duration, default or maximum appears here, because none is decided anywhere.
 
-**Resumption is a transition with no acting Principal.** Nobody acts; time passes. That is the
-attribution gap [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 owns
-and holds open, naming a `wait` Step elapsing among its cases. I2 admits no unattributed action, and
-[`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N2 fails an evaluation
-closed where no Principal resolves, leaving the resume side's attribution undefined until that
-settles. That document's third option — attributing a time-caused transition to the configuring
-act — covers this Step exactly, and carries that document's own costing of it: covering no
-platform-operator work at all, it is at best half an answer.
+**Resumption is a transition with no acting Principal.** Nobody acts; time passes. It is caused by
+an observed condition, so its record carries that cause and no Principal, as
+[`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 requires
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Nothing is attributed to
+the Principal who started the Run or to the author of the definition, since neither acted.
 
 | Aspect | |
 | --- | --- |
 | Compiler validates | The wait condition is expressible in the language without arbitrary evaluation, and the Step declares a class like any other. |
-| At its boundary | One evaluation at the Step boundary, with the inputs any Step boundary receives (rule N1) and on the same terms as every other type (S1). Rule E1 fixes a minimum of three enforcement points and resumption is not among them; it permits a later document to add one, and none does, so a `wait` carries one evaluation and not two. Were resumption made an enforcement point, rule N2 would fail it closed while the attribution gap above stands. |
+| At its boundary | One evaluation at the Step boundary, with the inputs any Step boundary receives (rule N1) and on the same terms as every other type (S1). Rule E1 fixes a minimum of three enforcement points and resumption is not among them; it permits a later document to add one, and none does, so a `wait` carries one evaluation and not two. Resumption is recorded with its cause rather than evaluated, because no Principal acts there. |
 | Failure modes | A condition that never becomes true: no maximum Run duration exists to bound it. Cancellation during a wait interrupts no invocation, so the wait itself leaves nothing in an unknown state — which says nothing about Step Executions that already ran, and cancellation is never proof that an earlier side effect did not occur. |
 
 Whether a `wait` may instead be released by an external signal is **unmade**, and larger than it
@@ -298,14 +297,16 @@ effect.
 
 | Aspect | |
 | --- | --- |
-| Compiler validates | References resolve; no Tool and no model is named; the expression requires no arbitrary evaluation. [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md) permits a reviewed custom step type as the escape hatch and **never raw customer code**, so a transform that needed to run authored code is a ninth-type proposal under section 3, not a transform. |
+| Compiler validates | References resolve; no Tool and no model is named; the body is an Expression Profile expression that type-checks within the profile's cost bound ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). [ADR-0005](../adr/adr-0005-langgraph-as-compilation-target.md) permits a reviewed custom step type as the escape hatch and **never raw customer code**, so a transform that needed to run authored code is a ninth-type proposal under section 3, not a transform. |
 | At its boundary | Evaluated like every other Step (S1). What it moves matters as much as what it computes: a transform can lift an untrusted string — a supplier's free-text field, an End User's message — into a field a later Step treats as trusted. Whether untrusted content carries provenance through the platform is **unmade** and owned jointly by [`../40-governance/policy-model.md`](../40-governance/policy-model.md), [`../40-governance/threat-model.md`](../40-governance/threat-model.md) and [`../30-protocol/`](../30-protocol/). |
 | Failure modes | An absent reference, or a type mismatch the compiler could not see because the value arrived from a model or a Tool at runtime. No side effect, so nothing to compensate. |
 
 ADR-0008's guard is on *step types*, and an expression language grows
 without anyone proposing a ninth type — one convenience at a time, until the definition is code
-written in YAML. The guard does not cover this axis. Section 13 registers where the ceiling is set,
-as an ADR: a published expression language is frozen by W1 into every definition using it.
+written in YAML. The guard does not cover this axis, so
+[ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) sets the ceiling:
+the Expression Profile admits no user-defined function, bounds evaluation cost, and grows only by a
+profile version, which W1 keeps from altering a definition already published.
 
 ## 12. `subworkflow` — nesting, and three questions nothing has decided
 
@@ -357,14 +358,11 @@ implementation. Rows marked *repeated* carry, unchanged, the owning document's c
 | Whether a Step may reference an Agent version at all, the domain model drawing no such edge and holding that a Run targets exactly one definition, and so whether a delegated execution crosses a Run admission enforcement point of its own | The same ADR as the `subworkflow` rows; it is the same missing edge in a different type | **Yes** |
 | Whether the compiler rejects a `tool` Step whose declared Side-Effect Class differs from the one the Tool Catalog records, or the language forbids restating the class at all | [`workflow-dsl.md`](workflow-dsl.md) section 5, which enumerates the compiler's checks and carries neither; [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) rule TA9 supplies the reason a restated class cannot be adopted | No |
 | What a Side-Effect Class means on the seven types that reach no Tool of their own, and whether the compiler constrains the declared value or accepts the author's assertion | [`../40-governance/policy-model.md`](../40-governance/policy-model.md), whose rule N1 makes the class a primary evaluation input, with [`workflow-dsl.md`](workflow-dsl.md) | **Yes** |
-| How far the expression language in `transform` and in `condition` predicates may go, given that the deny-by-default guard is on step types and an expression language grows without adding one | [`workflow-dsl.md`](workflow-dsl.md), as an ADR: rule W1 freezes it into every definition that uses it, and rule R3 makes it additive-only thereafter | **Yes** |
 | Whether untrusted content carries provenance through the platform, a `transform` being able to lift an untrusted string into a field a later Step treats as trusted | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9 carries it jointly with [`../30-protocol/`](../30-protocol/), assigned there by [`../40-governance/threat-model.md`](../40-governance/threat-model.md) | **ADR** if it reaches a public contract, else Document — *repeated* |
 | What a `condition` predicate that cannot evaluate does to the Step Execution and the Run, as distinct from a boundary Policy evaluation that cannot complete under A3 | The fault half of [`execution-semantics.md`](execution-semantics.md) section 10's taxonomy, which assigns it to `reliability.md` in [`../60-operations/`](../60-operations/); [`workflow-dsl.md`](workflow-dsl.md) owns the expression language it faults in | No |
 | Whether an `approval` Step is instead an author's hint that Policy may override, its boundary free to return `allow`, rather than a gate Policy routes but cannot remove | An ADR superseding the rule in section 7; [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) assigns the type here and its rule G1 fixes that only a `require_approval` verdict raises a request | **Yes** |
 | What a mid-Run `deny` does to a Run, which every Step boundary in every type can produce | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9 owns it, with [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | **Yes** — *repeated* |
 | Whether a `tool` Step naming a Tool is itself the permission, or Workflows need a grant subject of their own | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) with the definition language | **Yes** — *repeated* |
-| How the resumption of a `wait` is attributed, no Principal having acted | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 owns it and holds it open | **Yes** — *repeated* |
-| Whether a Policy may depend on aggregate state, which `parallel` makes reachable as a race from a definition | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule N3 | **Yes** — *repeated* |
 | What satisfies a `parallel` join, and what a branch failure does to its siblings — cancellation, compensation, or completion | [`execution-semantics.md`](execution-semantics.md) | No |
 | What a Tool call the model chooses keys on for idempotency, compensation and metering — in an Agent Run, which has no Steps, and inside an `agent` Step, whose delegation is the only Step there is | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 registers it and [`../40-governance/policy-model.md`](../40-governance/policy-model.md) rule E4 cites it, with the mechanics in [`execution-semantics.md`](execution-semantics.md) | No — *repeated* |
 | Where a compensating action is declared for a Tool call the model chooses, an `agent` Step's declaration covering the delegation rather than the calls | [`execution-semantics.md`](execution-semantics.md) section 11 registers it, with [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) and [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) | **Yes** — *repeated* |
@@ -374,6 +372,6 @@ implementation. Rows marked *repeated* carry, unchanged, the owning document's c
 | What admitting a cyclic graph would require — a step limit, an iteration bound and an answer on non-termination — a cyclic graph being rejected at compile time until an ADR admits one, and a `subworkflow` reference cycle turning additionally on the pinning row above | [`workflow-dsl.md`](workflow-dsl.md) section 11, which owns graph shape and registers it | **Yes** — *repeated* |
 | Graph shape otherwise — whether a `condition` branch set must be exhaustive, and data flow between Steps | [`workflow-dsl.md`](workflow-dsl.md), which owns schema and graph shape | No |
 
-Three of the twenty-two rows are one question in two guises: the domain model draws no edge from
+Three of the nineteen rows are one question in two guises: the domain model draws no edge from
 a Step to a definition, and both `agent` and `subworkflow` need one — the separate-Run row, the
 pinning row and the Agent-version row. Cheap now, expensive once Runs exist.

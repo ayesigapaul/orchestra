@@ -1,9 +1,9 @@
 ---
 title: Tool Authorization
 doc_id: DOC-053
-version: 0.8.0
+version: 0.9.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0003, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -221,10 +221,10 @@ resolves to a Service Account, and traffic arriving through the connector fabric
 Connector, a disjoint Principal subtype (domain model section 3). The deputy problem has the same
 shape for every subtype — a Platform User or Service Account with narrow rights invoking an Agent
 version that holds a broad grant is the same laundering — so the End User above is the
-illustration, not the boundary. The acknowledged hole is platform-operator action, which the domain
-model marks as having no Principal subtype; policy-model rule N2 fails such an evaluation closed,
-so no operator path may cross an enforcement point until attribution is decided. Section 10 carries
-it.
+illustration, not the boundary. Platform-operator action is no exception: it resolves to a Platform
+Operator Principal of the Tenant it acts in, a disjoint subtype like the others, and crosses the
+enforcement point as any other does
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 **How the two authorities combine is a design choice nobody has made, and this document does not
 make it.** Intersection is the intuitive answer and is not obviously right: an Agent whose purpose
@@ -330,7 +330,7 @@ rather than a neighbour of one
 [`audit-model.md`](audit-model.md) requires of an Audit Record therefore holds of it without
 restatement — append-only, immutable, tenant-scoped, one Principal, allows included — including
 that it stays readable after the Tool, Agent version or Principal it names is deleted, which is
-that document's rule A5. The Policy version evaluated is referenced, not embedded, and a Run pins
+that document's rule A5. The matching Policy versions are referenced, not embedded, and a Run pins
 the Policy versions in force at admission for its life, so editing a Policy never changes the
 verdict a Run already in flight receives.
 
@@ -367,4 +367,3 @@ ADR, because it is costly to reverse or spans components, or whether a later doc
 | What happens to grants and to Runs in flight when a Tool is de-registered | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) | Later document |
 | Divergence between the Connector's local allow-list and Orchestra's grants: detection, reporting, and whether Orchestra may read the list at all. Existence is settled by [`threat-model.md`](threat-model.md) T7 and precedence by TA17 | `connector.md` in [`../10-architecture/`](../10-architecture/), after ADR-0007 binds | Later document |
 | Whether a refused invocation is metered as a Tool invocation | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/) | Later document |
-| How platform-operator invocation of a Tool is attributed under invariant I2, given that [`policy-model.md`](policy-model.md) rule N2 blocks such a path until it is | [`audit-model.md`](audit-model.md), which already owns the general case | **ADR** |

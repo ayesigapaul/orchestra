@@ -1,9 +1,9 @@
 ---
 title: Control Plane
 doc_id: DOC-023
-version: 0.15.1
+version: 0.16.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -67,7 +67,8 @@ flowchart TD
   COMP -->|"compiled artifact, never returned"| ST
   DEF & POL -->|"publish freezes a version"| ST
   APR -->|"one decision, evidence unchanged"| ST
-  AUD -->|"read — itself audited"| ST
+  AUD -->|"read — itself audited"| AUDIT["Audit<br/>owns the audit store"]
+  AUDIT --> ST
   CAT --> ST
   TEN --> TUM["Tenant User Management"]
   TUM --> ST
@@ -76,23 +77,24 @@ flowchart TD
   CRED -->|"held by reference, never plaintext"| KMS["Envelope-encrypted custody<br/>per-tenant data keys"]
   CRED --> ST
   ST["Tenant-scoped store<br/>row-level security forced — ADR-0011"] --> DP["Data Plane<br/>Gateway · Runtime · PEPs · Model Broker"]
-  DP -->|"Audit Records · Policy Decisions"| ST
+  DP -->|"Audit Records · Policy Decisions, through each outbox and Kafka"| AUDIT
   DP -->|"metered occurrences"| MET["Metering"]
   MET -->|"meter records"| ST
 ```
 
 The dotted edge rests on **Proposed**
 [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) and is not binding.
-The Definition Compiler, Metering and Tenant User Management are Control Plane *containers* rather
-than surfaces; they are drawn because a surface's writes pass through them, and metered occurrences
-arise in the Data Plane but are recorded by a Control Plane container.
+The Definition Compiler, Metering, Tenant User Management and Audit are Control Plane *containers*
+rather than surfaces; they are drawn because a surface's writes or reads pass through them, and
+metered occurrences and Audit Records both arise in the Data Plane while a Control Plane container
+records them.
 
 | Surface | Served by, per [`containers.md`](containers.md) section 3 |
 | --- | --- |
 | Agents and Workflows | Admin Console → Control Plane API → Definition Compiler at publish |
 | Policies and Approvals | Admin Console → Control Plane API |
-| Tenant and access | Admin Console → Control Plane API → Tenant User Management, which owns Tenants, Workspaces, Persons and Principals ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) |
-| Audit | Admin Console → Control Plane API, reading the datastore |
+| Tenant and access | Admin Console → Control Plane API → Tenant User Management, which owns Tenants, Workspaces, Persons and Principals ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)) and holds administrative grants and group-to-role mappings ([ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)) |
+| Audit | Admin Console → Control Plane API → Audit, the container that owns the audit store ([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)) |
 | Usage | Admin Console → Control Plane API, reading what Metering wrote |
 | Tool Catalog and Connectors | Admin Console → Control Plane API; the Connector fabric it enrols is a **planned** Data Plane container |
 | Credentials and Model Bindings | Admin Console → Control Plane API → Credential Custody |
@@ -223,13 +225,16 @@ trail, and a Policy version outlives the records naming it.
 
 Three properties shape the surface rather than the store. **A read is itself an audited action**,
 and the recursion terminates — the record of a read is an ordinary record. **The compiled artifact
-is never returned**, per section 5. And **the surface may be behind the truth**:
+is never returned**, per section 5. And **the surface is behind the truth**:
 [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) fixes that a Policy Decision is
-durable before the gated action and deliberately leaves the mechanism open — a shared transaction
-with the datastore, a durable outbox, or a node-local append all satisfy it. Whether a decision can
-be durable yet not yet readable here therefore follows from the mechanism rather than from the ADR.
-Where one puts a lag between the two, *no record* cannot be read as *nothing happened* without
-knowing that lag, which `observability.md` in [`../60-operations/`](../60-operations/) owns.
+durable before the gated action, and
+[ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)
+makes it durable in the enforcing service's own transaction and readable here only once that
+service's outbox has delivered it to the **Audit** container, which owns the store this surface
+reads through ([`containers.md`](containers.md) section 3). *No record* cannot be read as *nothing
+happened* without knowing
+how far the trail is complete, which the completeness horizon of `observability.md` in
+[`../60-operations/`](../60-operations/) carries with every answer.
 
 **Export is a requirement with no design.** A Tenant must be able to obtain its own records; an
 audit surface without export reads as lock-in to a compliance reviewer (section 12 there). Format,
@@ -347,26 +352,35 @@ administration and visibility, never isolation
 and the promotion path to a dedicated database are [`multi-tenancy.md`](multi-tenancy.md)'s, and who
 may do what within a Tenant is [`identity-and-access.md`](identity-and-access.md)'s.
 
-The gap worth naming: **this document cannot yet say what an Orchestra operator sees of a Tenant
-here.** Whether operator work reaches a Policy Enforcement Point at all or reaches only the
-datastore, and how it is attributed under invariant I2, are one decision rather than two —
-attribution is precisely what an enforcement point would need — and
-[`audit-model.md`](../40-governance/audit-model.md) section 9 owns it and marks it ADR-required,
-with [`threat-model.md`](../40-governance/threat-model.md) boundary B6 recording it as unmade in
-both respects. Meanwhile [`policy-model.md`](../40-governance/policy-model.md) N2 blocks any such
-path through an enforcement point, because an unattributable permission has nothing to attribute to.
-It is among the first questions an enterprise security review asks of an administrative console.
+**What an Orchestra operator sees of a Tenant here is what its Platform Operator Principal may
+see.** [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) makes operator
+access to a Tenant's records an act by a Platform Operator Principal of that Tenant: it acts only
+under an administrative grant with an end time, issued on Orchestra's side for a recorded support
+case or incident, crosses the Policy Enforcement Points on its path, and is recorded in the Tenant's
+own audit trail. The Tenant's consent is not required, and the operator never appears among the
+Tenant's people. How Orchestra authorizes issuing the grant is registered in
+[`identity-and-access.md`](identity-and-access.md) section 12. It is among the first questions an
+enterprise security review asks of an administrative console.
+
+**A Tenant is not created on this surface.** Tenant User Management creates it, in an internal
+operation that only Orchestra's provisioning client may call, for a Platform Operator whose act is
+the first record in the new Tenant's trail
+([ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md)). No Tenant administers its
+own creation, and the Gateway contract has no route to it. The creation names the customer's first
+administrator by email address, and that person holds the Tenant's administrator role from their
+first sign-in through the Organization with that address verified, with no operator step.
 
 **The Tenant's identity provider is enrolled and configured here.** A Platform User authenticates
 through it ([`../GLOSSARY.md`](../GLOSSARY.md)), so the integration is administration of access and
 belongs to this surface rather than to the execution path.
-[`identity-and-access.md`](identity-and-access.md) assigns two questions about it to this document
-and neither is answerable pre-customer: which federation protocol the integration speaks, which no
-ADR names and which wants a design partner; and whether an identity-provider group may be the
-subject of an Orchestra grant, which is not a protocol question but part of the Control Plane
-authorization shape that document already marks ADR-required. Both are in section 13, along with a
-third assignment from the same register: how a Platform User is deprovisioned, and what becomes of
-grants held by a Principal who can no longer authenticate.
+[`identity-and-access.md`](identity-and-access.md) assigned two questions about it to this document.
+Whether an identity-provider group may hold an administrative grant is settled by
+[ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md): only through a
+group-to-role mapping the Tenant administers on this surface, each change to which is audited. The
+other is not answerable pre-customer: which federation protocol the integration speaks, and with it
+how group membership reaches Orchestra, which no ADR names and which wants a design partner. It is
+in section 13, along with a further assignment from the same register: how a Platform User is
+deprovisioned, and what becomes of grants held by a Principal who can no longer authenticate.
 
 The front end is built by duplicating `ui-template/control-plane` per surface, per
 [`../../ui-template/README.md`](../../ui-template/README.md): no dashboard from scratch, no code
@@ -399,13 +413,13 @@ unchanged.
 | How an approver is reached — notification and delivery channel | A product decision no ADR names; the queue in section 7 is the floor and out-of-band delivery is additive | No |
 | Where the approval surface schema is specified, and whether the term gains a glossary entry | `ui-protocol.md` in [`../30-protocol/`](../30-protocol/), once ADR-0010 validation step 2 is attempted | No |
 | Whether existing grants carry to a Tool re-registered with a different Side-Effect Class | The grant-subject decision registered in [`tool-authorization.md`](../40-governance/tool-authorization.md) | **ADR** |
-| What a platform operator sees of a Tenant here — whether such a path reaches a Policy Enforcement Point at all or only the datastore, and how it is attributed under I2 | [`audit-model.md`](../40-governance/audit-model.md) section 9, which owns both halves as one decision, with [`threat-model.md`](../40-governance/threat-model.md) B6; [`policy-model.md`](../40-governance/policy-model.md) N2 blocks such a path meanwhile | **ADR** — *repeated* |
+| The Tenant creation operation's specification — its path, members and codes, how the Platform Operator's credential and the first administrator's address travel, how the first sign-in is observed, the Organization's alias, name and domains, and whether an invitation expires and how a wrong one is replaced — and what Orchestra's provisioning client is | A document in [`../30-protocol/`](../30-protocol/) and Tenant User Management's OpenAPI document, before the operation ships; [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md) fixes who creates a Tenant, and for whom | No |
 | Which side of the implementation-language boundary the Definition Compiler sits on, and what artifact crosses into the Data Plane | ADR-0005 requires the boundary be a versioned internal contract and places neither side; [`containers.md`](containers.md) section 12 and [`data-plane.md`](data-plane.md) section 11 carry the same row | **ADR** — *repeated* |
 | Whether a Tool registration may itself be Workspace-scoped, given one Catalog per Tenant | Section 10 derives the shape from [`policy-model.md`](../40-governance/policy-model.md) P2 but not the choice; [`identity-and-access.md`](identity-and-access.md) offers to merge it with the grant-subject decision [`tool-authorization.md`](../40-governance/tool-authorization.md) marks ADR-required | No — unless it merges with that ADR, *repeated* |
 | Whether reconciliation against the audit log is a tenant-readable view here or an operator-assisted procedure, and what identifier the join uses | [`audit-model.md`](../40-governance/audit-model.md) section 7, which fixes what each side must carry and leaves the surface open, with the dispute runbook ADR-0009 calls for | No |
-| Which federation protocol the identity-provider integration speaks | A design partner; [`identity-and-access.md`](identity-and-access.md) assigns it here and no ADR names one, so no input exists pre-customer | No — *repeated* |
+| Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be when a check relies on it | A design partner; [`identity-and-access.md`](identity-and-access.md) assigns it here and no ADR names one, so no input exists pre-customer; [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) fixes that a group holds a role only through a mapping | No — *repeated* |
 | How a Platform User is deprovisioned, and what becomes of grants held by a Principal who can no longer authenticate | The same assignment from [`identity-and-access.md`](identity-and-access.md); the domain model fixes that a Principal outlives its credentials, not what removes its authority | No — *repeated* |
-| Whether an identity-provider group may be the subject of an Orchestra grant | The Control Plane authorization ADR [`identity-and-access.md`](identity-and-access.md) registers, which spans this surface, group mapping and audit | **ADR** — *repeated* |
+| How a new Tenant's first administrator receives an administrative grant — within the creation, or as a second act of the Platform Operator | This document with [`identity-and-access.md`](identity-and-access.md), once the role set of [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) exists; [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md) creates the Tenant, and either act is recorded in its trail | No |
 | Audit export: format, transport, completeness proof, and self-serve versus operator-assisted | [`audit-model.md`](../40-governance/audit-model.md) section 12, which separates on-demand export from continuous forwarding | No |
 | Whether the Control Plane ships as one duplicated front-end surface or several | Answered for the first slice only by [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) section 6 — one surface, because duplication pays before divergence exists. It reopens when a second audience does, such as an auditor who only reads | No |
 | Whether a Connector administration surface exists at all, and what separates `Degraded` from `Healthy` | ADR-0007 binding first, then `connector.md` in this section with `reliability.md` in [`../60-operations/`](../60-operations/) | No |

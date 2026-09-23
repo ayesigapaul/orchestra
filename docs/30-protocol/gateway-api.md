@@ -1,9 +1,9 @@
 ---
 title: Gateway API
 doc_id: DOC-043
-version: 0.11.0
+version: 0.12.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -19,7 +19,7 @@ implementation MUST keep distinguishable. It is not an endpoint catalogue.
 
 **Normative** ([`../README.md`](../README.md) section 3): implementations must conform. Keywords
 carry their [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) meanings, and rules are numbered
-`G1`–`G25` so other documents can cite them. **A citation MUST name this file** — `gateway-api.md`
+`G1`–`G30` so other documents can cite them. **A citation MUST name this file** — `gateway-api.md`
 G3 — because `G` is not unique across the normative set:
 [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) numbers its gate
 rules `G1`–`G3`, and [`event-protocol.md`](event-protocol.md) numbered its carriage guarantees the
@@ -85,7 +85,7 @@ degradation is *unknown*, never *benign*.
 ## 3. Authentication shapes
 
 [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) sections 2
-and 3 own the identity model, and enumerate one authentication shape per Principal subtype: four,
+and 3 own the identity model, and enumerate one authentication shape per Principal subtype: five,
 not two. Two *entry points* authenticate — the Control Plane's and the Gateway's, section 6 — and
 the two are not the same count. What binds on this contract is the following.
 
@@ -130,11 +130,10 @@ flowchart LR
   API --> PEP["Run admission enforcement point"]
 ```
 
-The mint, illustrative only. The path shown is an example and not a decision: JSON Schema fixes
-representations, not URLs, and [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes only the `/v1`
-prefix, so **the endpoint shape of this contract — path layout and resource addressing — is
-undecided**, though [`ui-protocol.md`](ui-protocol.md) section 1 assigns it here. Section 9 carries
-it.
+The mint is a command, and so a resource the caller creates (G28). Its path follows the layout
+section 5 fixes, which [`ui-protocol.md`](ui-protocol.md) section 1 assigns to this document,
+[`../VERSIONING.md`](../VERSIONING.md) section 4 fixes only as far as the `/v1` prefix, and
+[ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) decides.
 
 ```http
 POST /v1/session-tokens
@@ -143,9 +142,17 @@ Orchestra-Version: 2026-09-08
 Idempotency-Key: <client-generated-uuid>
 ```
 
-That last header is a collision worth naming: a replay MUST return the original response, so a
-replayed mint returns a bearer credential a second time, and satisfying the rule literally means
-holding a live credential wherever idempotent responses are kept (section 9).
+That last header is a collision worth naming, and the rule below resolves it.
+
+**G30 — A replayed mint returns the mint, never the token.** `Idempotency-Key` requires the
+original response on replay ([`../VERSIONING.md`](../VERSIONING.md) section 4) and a Session Token
+is a live bearer credential, so **the response stored against the key MUST carry the mint's
+identifier and its expiry, and MUST NOT carry the bearer value.** A replay returns that stored
+response — the mint without the token — and a caller that lost the first response cannot recover
+the token from it: it mints again, and the token it lost expires unused. **No live credential is
+stored for replay**, on this contract or behind it. The same holds of any other command whose first
+response carries a credential. G29 is unaffected: the replay names the same mint resource, so the
+act is recognisably the one that already happened rather than a second one.
 
 ## 4. Tenant scoping, and the two idempotency keys
 
@@ -162,11 +169,12 @@ to another Tenant's resource MUST NOT be answered differently from a reference t
 exist** — separating *forbidden* from *absent* across the boundary is an existence oracle, stated
 as observable behaviour because the status vocabulary is undecided.
 
-**G9 — A Workspace narrows visibility and administration and is not an isolation boundary**
-(domain model section 3, `tool-authorization.md` TA4); it is enforced in application code and can be
-nowhere else, since row-level security filters on the Tenant. No platform-operator route reaches
-this contract: an operator resolves to no Principal, so `policy-model.md` N2 fails such a path
-closed — the state of the world under N2, not a settled scope.
+**G9 — A Workspace narrows visibility and administration and is not an isolation boundary** (domain
+model section 3, `tool-authorization.md` TA4); it is enforced in application code and can be nowhere
+else, since row-level security filters on the Tenant. A platform operator reaches this contract only
+as a Platform Operator Principal of one Tenant
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)), and G7 applies to it
+unchanged: that Tenant is resolved from the credential, never set by the caller.
 
 Two different mechanisms are called an idempotency key, and this is the likeliest place for a
 serious bug.
@@ -182,8 +190,13 @@ key" unqualified.
 
 **G11 — A replayed submission MUST NOT create a second Run and MUST NOT re-run admission**, which
 writes a Policy Decision for every evaluation (`policy-model.md` D1); re-evaluating would record two
-admission decisions for one submission. **A replayed approval decision MUST NOT record a second
-decision**, since every Audit Record resolves to exactly one Principal (`audit-model.md` A3).
+admission decisions for one submission. The Gateway keeps no durable state, so it is not the
+Gateway that honours this from a stored response: the **Run Supervisor** admits Runs, and it holds
+the key with the Run in its own schema and returns what it stored
+([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md),
+[`../10-architecture/containers.md`](../10-architecture/containers.md) section 3). **A replayed
+approval decision MUST NOT record a second decision**, since every Audit Record resolves to exactly
+one Principal (`audit-model.md` A3).
 
 **G12 — An idempotent replay is not a retry of a side effect.** Returning a stored response is
 safe; re-attempting a partially executed Tool call is not (CLAUDE.md working rule 6,
@@ -194,24 +207,55 @@ reused with a different payload, are decided nowhere; section 9 registers both.
 ## 5. The resource model
 
 Derived from [`../20-domain/domain-model.md`](../20-domain/domain-model.md). Every resource is
-tenant-scoped by G7. *Operations* names what may be done, not endpoint syntax.
+tenant-scoped by G7. *Operations* names what may be done; G26 to G29, after the table, map it onto
+paths.
 
 | Resource | What it is | Operations | Governing rule | Schema |
 | --- | --- | --- | --- | --- |
-| Run | One execution of an Agent version or Workflow version | Submit, read, list, cancel; attach the event stream | `policy-model.md` E1, V1; lifecycle section 2 | `run.v1` |
+| Run | One execution of an Agent version or Workflow version | Submit, read, list; cancel, by a command (G28); attach the event stream | `policy-model.md` E1, V1; lifecycle section 2 | `run.v1` |
 | Agent, Workflow, and their versions | Stable named definitions; publishing freezes an immutable version | Author a draft, publish, set current; read and retire a version | ADR-0008; VERSIONING W1–W4 | `workflow-definition.v1`; none for Agent |
-| Approval Request | A gate raised by a `require_approval` verdict | Read, decide; never create | `policy-model.md` V2; `approval-workflows.md` | `approval-request.v1` |
+| Approval Request | A gate raised by a `require_approval` verdict | Read; decide, by a command created against it (G28); never create | `policy-model.md` V2; `approval-workflows.md` | `approval-request.v1` |
 | Evidence Set | The exact inputs the Agent relied on | Read, under a separate narrower authorization | `approval-workflows.md` E1–E6 | `approval-request.v1` |
 | Policy, Policy version | Tenant-authored rules, immutably versioned | Author a draft, publish; never edit a published version | ADR-0012; `policy-model.md` P5 | `policy-rule.v1` |
 | Tool | A capability registered in the Tenant's Tool Catalog | Register, re-register, read, list | Invariant I5; TA1–TA3, TA9 | None planned |
 | Capability grant | An Agent version's permission to call one Tool | Grant, revoke — audited separately from registration | Invariant I5; TA1–TA3, TA5 | None planned |
 | Connector | Customer-deployed software proxying Tool traffic inward | Enrol, read health, revoke | ADR-0007 — **Proposed** | `connector-envelope.v1` is the tunnel, not this |
 | Model Binding | Surface, endpoint, credential reference, declared limits | Create, update, register or rotate a credential by reference | ADR-0006, ADR-0002; `threat-model.md` T5 | None planned |
-| Session Token | A short-lived scoped client credential | Mint, revoke | GLOSSARY; section 3 | None planned |
+| Session Token | A short-lived scoped client credential | Mint and revoke, each a command (G28) | GLOSSARY; section 3 | None planned |
 | Audit Record | An append-only immutable fact | Read and query — and the read is itself audited | `audit-model.md` A1–A8 | `audit-record.v1` |
 | Usage | Metered dimensions for a period | Read | ADR-0009 | None planned |
 | Workspace, Principal | Administrative identity and scope inside a Tenant | Create, update, remove | ADR-0011; `identity-and-access.md` | None planned |
-| Tenant | The isolation boundary every other row sits inside | Read and update. **No create and no remove**: G7 resolves the Tenant from the credential, so no caller can create the Tenant its own credential presupposes, and G9 leaves no operator route that could. Onboarding a Tenant is an insert rather than an operation here ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)); which surface performs it is undecided, section 9 | ADR-0011; `identity-and-access.md` | None planned |
+| Tenant | The isolation boundary every other row sits inside | Read and update. **No create and no remove on this contract**: G7 resolves the Tenant from the credential, so no caller can create the Tenant its own credential presupposes. A Tenant is created by an internal Tenant User Management operation that only Orchestra's provisioning client may call, for a Platform Operator, and the act is the first record in the new Tenant's trail ([ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md)). Onboarding stays an insert rather than an infrastructure step ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)) | ADR-0011; `identity-and-access.md` | None planned |
+
+**Addressing.** The paths follow JSON:API's recommended layout under `/v1`, as
+[ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) decides, and
+four rules map the operations above onto them.
+
+**G26 — One collection per resource type.** Every resource type has one collection at
+`/v1/{type}`, named by its `type` ([`http-conventions.md`](http-conventions.md) HC3), and each
+resource is at `/v1/{type}/{id}`, resolved within the Tenant the credential established (G7). A
+resource is created by `POST` to its collection and read at its own path, whatever relates to it.
+
+**G27 — Relationships are links, never nesting.** A resource names what it relates to in
+`relationships`, with `self` and `related` links of the forms
+`/v1/{type}/{id}/relationships/{relationship}` and `/v1/{type}/{id}/{relationship}`, and no path is
+nested deeper. No path segment names a Tenant (G7) or a Workspace (G9). A Workspace is a
+relationship of the resources it scopes, and a collection narrowed by it takes a `filter[...]`
+parameter ([`http-conventions.md`](http-conventions.md) HC5).
+
+**G28 — A command is a resource that is created.** An operation that asks the platform to act,
+rather than to store a representation the caller supplies, is created by `POST` in a collection of
+its own, names what it acts on in `relationships`, and is answered as HC4 answers any creation. A
+lifecycle transition a caller asks for is a command — deciding an Approval Request, cancelling a
+Run, minting or revoking a Session Token. No operation writes a resource's lifecycle state
+directly, and no path carries a verb.
+
+**G29 — Every command has its own identifier.** A command stays readable at its own path, the Audit
+Record of the act names it ([`../40-governance/audit-model.md`](../40-governance/audit-model.md)
+A4), and a replay under the same `Idempotency-Key` returns the stored response naming the same
+resource (G10, G11). Each command's type name, path and relationships are fixed when its operation
+is specified, here and in the Gateway's OpenAPI document ([`http-conventions.md`](http-conventions.md)
+HC14).
 
 ### 5.1 Runs
 
@@ -225,7 +269,11 @@ error destroys the dimension a review cares about most. **Execution MUST NOT beg
 admission Policy Decision is durable**
 ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md); `policy-model.md` E5 and D3,
 whose labels `approval-workflows.md` also uses for different rules): submission MAY return with the
-Run in `Pending`, and MUST NOT return one in `Running` whose decision is not yet durable.
+Run in `Pending`, and MUST NOT return one in `Running` whose decision is not yet durable. The
+Gateway authenticates the caller and forwards the submission; the Run Supervisor evaluates
+admission and commits the Run, or its refusal, with the admission Policy Decision in one
+transaction, so the durability this rule requires is that commit
+([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)).
 
 **G14 — Resumption, migration and reopening are not operations on a Run.** A Run suspends at an
 Approval Request or at a `wait` step, one state with a recorded reason (lifecycle 2.2), and resumes
@@ -237,19 +285,20 @@ Run referencing the old, and W3 forbids an in-flight migration ever being added.
 **G15 — Cancellation stops orchestration, not side effects**: a Run cancelled mid-invocation
 leaves that invocation in an unknown state, and unknown is not the same as not done (lifecycle 2.4).
 It is authorized as an administrative act rather than by Policy — it is not one of the three
-enforcement points, and `policy-model.md` E1's *minimum, not a maximum* leaves adding one
-available. **This document takes the assignment
+enforcement points, and
+[ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) adds none to the
+administrative path. **This document takes the assignment
 [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 7
 makes; the table below is normative here.** The transition is audited with the cancelling Principal
 and any Step Execution in flight.
 
 | Principal | May cancel | Basis |
 | --- | --- | --- |
-| Platform User | With an explicit administrative grant, tenant-scoped, optionally Workspace-narrowed | The stop ADR-0003 implies must be reachable from the Control Plane |
+| Platform User | Holding a role that permits cancellation, as an administrative grant — tenant-scoped, optionally Workspace-narrowed ([ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)) | The stop ADR-0003 implies must be reachable from the Control Plane |
 | Service Account | With the same administrative grant | A backend that can start a Run must be able to stop one |
 | End User | Only in a Conversation they are party to, and only where the Session Token's scope says so | Deny-by-default: absent an explicit scope, no |
 | Connector | Never | Reachability is not authority (TA8) |
-| Platform operator | Not reachable on this contract | No Principal resolves; `policy-model.md` N2 |
+| Platform Operator | Under an administrative grant with an end time, issued on Orchestra's side for a recorded support case or incident | Operator access is an act by a Platform Operator Principal and needs no consent from the Tenant ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)); how issuing the grant is authorized is registered in `identity-and-access.md` section 12 |
 
 The End User row contains an undefined term: **what a Session Token's scope may contain is not
 decided**, and it belongs to the delegation decision `tool-authorization.md` section 6 marks
@@ -261,15 +310,10 @@ ADR-required. Section 9 repeats that classification unchanged.
 contract.** Publishing freezes an immutable version (W1); an operation that edited one would make
 every Run's pin a lie. Retirement drains rather than kills (W4). **Archival is not an operation at
 all**: it is caused by the last pinned Run reaching a terminal state, so no Principal acts and there
-is nothing for a caller to invoke — which is the whole of what this contract decides about it. How
-the resulting Audit Record is attributed is not this document's, and is not settled anywhere:
-`audit-model.md` section 9 owns `Retired → Archived` as one of the transitions caused by an observed
-condition rather than an act, marks the class **ADR**-required and does not close it, while
-[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 4.1
-requires archival to record an acting Principal. Two normative statements, one of which has to give,
-with G11's *exactly one Principal* (`audit-model.md` A3) as the constraint they sit against. Section
-9 repeats that row's classification. The compiled artifact is retained and never returned (ADR-0005,
-`audit-model.md` section 3).
+is nothing for a caller to invoke — which is the whole of what this contract decides about it. Its
+Audit Record carries that cause and no Principal
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md), `audit-model.md` section
+9). The compiled artifact is retained and never returned (ADR-0005, `audit-model.md` section 3).
 
 **G17 — No rail vocabulary appears in any representation.** The orchestration runtime's, a model
 provider's and the tool protocol's vocabularies MUST NOT appear in a field name, enum value,
@@ -288,7 +332,8 @@ is ADR-required in
 
 An Approval Request exists only as the consequence of a `require_approval` verdict
 (`policy-model.md` V2), so **no create operation exists** and every request has a causing Policy
-Decision. The representation MUST carry the proposed action as it would execute
+Decision. A decision on a request is a command, created against it (G28). The representation MUST
+carry the proposed action as it would execute
 (`approval-workflows.md` R1) and each evidence item's provenance (its E6), and MUST label a
 model-generated justification as the Agent's argument rather than evidence (its E2). The Evidence
 Set is immutable from raise time (its E4) and **MUST be read under a separate, narrower
@@ -451,8 +496,9 @@ definition, a Tool registration, a capability grant, a Model Binding, a Session 
 report, and the Workspace, Principal and Tenant administrative contracts. Section 7's error
 envelope, once an eighth, is specified by [`http-conventions.md`](http-conventions.md). So the prose
 above describes contracts nothing is scheduled to define. The mint is the one to name twice:
-section 3 records that a replayed mint returns a live bearer credential, which is a standing
-security question against a contract nothing is scheduled to write. Every wire-facing object leaves
+section 3's G30 fixes what a replay returns — the mint's identifier and its expiry, never the
+bearer value — so the schema nothing is scheduled to write already has one member it may not carry
+into a stored response. Every wire-facing object leaves
 `additionalProperties` unset or `true`
 ([`../VERSIONING.md`](../VERSIONING.md) section 6), since `false` breaks R3; the `$id` embeds the
 major version, on a base URI provisional pending domain registration.
@@ -465,12 +511,15 @@ document's classification unchanged. Two assignments are absent because this doc
 **which normative document carries the cancellation authorization rule** — this one, section 5.1
 — and **whether the administrative API is the resource-oriented Gateway API** — it is, section
 6. A third question is answered rather than registered: **which credentials may establish a Run
-event stream** — any this contract accepts, G25.
+event stream** — any this contract accepts, G25. Two more have left the register: **the endpoint
+shape of this contract**, which
+[ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) decides and
+G26 to G29 state, and **whether a Session Token mint response may be stored under an
+`Idempotency-Key`** — it may, carrying the mint's identifier and expiry and never the token, G30.
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
 | The `Idempotency-Key` retention window, and the outcome of a key reused with a different payload | A later revision of this document; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes the obligation and names no window | No |
-| Whether a Session Token mint response may be stored under an `Idempotency-Key` at all, given a replay returns a live bearer credential | This document with a security review | No — but it must be settled before the first security review |
 | What a Session Token's scope may contain, which leaves the End User cancellation row with an undefined term | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — *repeated* |
 | Session Token, Service Account and enrolment credential lifetimes, and what credential class a Service Account holds | A customer contract or design partner; [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) sections 3 and 9 fix only what they are not | No — *repeated*, condition included: that document's section 12 classifies it *No, unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies* — and this is that contract, so a lifetime landing here lands as a versioned obligation |
 | What a `deny` outside admission does to a Run in flight, which this contract must represent | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9, with the Run state machine | **ADR** — *repeated* |
@@ -481,10 +530,7 @@ event stream** — any this contract accepts, G25.
 | Whether an out-of-band replay endpoint exists alongside in-stream resumption — resumption itself is fixed by [`../VERSIONING.md`](../VERSIONING.md) section 5 and is not open, section 2 | [`event-protocol.md`](event-protocol.md) section 11 assigns it here, with its section 5; [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) leaves it open and is **Proposed** | No — *repeated* |
 | What a Quota Envelope delay carries, and whether an envelope is declared, discovered or both — the carrier is settled, [`event-protocol.md`](event-protocol.md) section 10 putting the delay in the reserved `orchestra.quota.*` family rather than in the Run state machine, on [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md), **Proposed** | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), on the quota design ADR-0006 calls for | No — *repeated* |
 | Schemas for an Agent definition, a Tool registration, a capability grant, a Model Binding, a Session Token mint, a usage report and the administrative contracts — the seven of section 8, none of which is planned | [`schemas/README.md`](schemas/README.md), in the schema batch | No |
-| Which transport bindings this contract serves for the Run event stream, given that only the binary one drops top-level extras silently and only the server-sent-events one carries a cursor | This document; [`event-protocol.md`](event-protocol.md) section 11 assigns it here, and its carriage guarantees hold on any answer | No — *repeated* |
+| Which transport bindings this contract serves for the Run event stream, and the path under the Run that attaches it — the stream being an operation on the Run (G25) and not a JSON:API document — given that only the binary binding drops top-level extras silently and only the server-sent-events one carries a cursor | This document; [`event-protocol.md`](event-protocol.md) section 11 assigns it here, and its carriage guarantees hold on any answer | No — *repeated* |
 | By which path a Platform User's client reaches a Run event stream, G25 admitting any credential this contract accepts while no edge to a stream is drawn for the Admin Console | [`../10-architecture/containers.md`](../10-architecture/containers.md) section 3, with [`ui-protocol.md`](ui-protocol.md) | No |
-| The endpoint shape of this contract — path layout and resource addressing — assigned here by [`ui-protocol.md`](ui-protocol.md) section 1, and not something JSON Schema can carry | A later revision of this document, with the schema batch; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes only the `/v1` prefix | **ADR** — permanent for the life of `/v1` and reproduced in every SDK, on the same test ADR-0025 applied to the error envelope |
-| Which surface provisions a Tenant, given G7 resolves the Tenant from the credential and G9 admits no operator route, so no caller of this contract can create one | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md), constrained by [ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md), under which onboarding a Tenant is an insert rather than an infrastructure step | **ADR** — a pre-tenant path is the one route the isolation argument excludes, and admitting one moves the boundary ADR-0011 draws |
-| How a transition caused by an observed condition rather than an act is attributed, `Retired → Archived` included — G16 leaves it open here, and [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 4.1 answers it the other way | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 | **ADR** — *repeated* |
 | Who within a Tenant may read the audit surface, and who may read an Evidence Set, which sections 5.3 and 5.6 depend on | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 13, which owns the binding form of the derivation [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 6 routes to it | No — *repeated* |
 | Whether declarative UI representations reach this contract at all, or only [`ui-protocol.md`](ui-protocol.md)'s | ADR-0010 validation step 2, **Proposed** and outstanding | No — *repeated* |

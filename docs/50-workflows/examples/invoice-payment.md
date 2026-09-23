@@ -1,9 +1,9 @@
 ---
 title: "Example: Invoice Payment"
 doc_id: DOC-065
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -79,7 +79,9 @@ grounds for ranking the two ([`threat-model.md`](../../40-governance/threat-mode
 
 ## The Policy
 
-Written in prose, because the policy language is unmade:
+Written in prose, because the Expression Profile that Policies are written in
+([ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)) does not yet
+name its inputs:
 
 > A `financial` action above the Tenant's threshold requires approval, by a Platform User holding
 > the accounts-payable approver role.
@@ -164,7 +166,7 @@ criteria in [`mvp-definition.md`](../../70-delivery/mvp-definition.md) require.
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | What a rejected gate does to the Run | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 8 | **Yes** — repeated |
-| How the threshold in the Policy above is expressed | [`policy-model.md`](../../40-governance/policy-model.md) section 8 | **Yes** — repeated |
+| How the threshold in the Policy above is written, as a CEL predicate over the payment's amount, once the Expression Profile names its inputs and how an amount is represented | [`policy-model.md`](../../40-governance/policy-model.md) section 9, under [ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) | No — the language is decided |
 | Whether the Platform User who started a Run may approve its gate | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 6 | **Yes** — repeated |
 | Whether the evaluation before `erp.payment.create` receives the approval resolution as an input, or collapses into the Step-boundary evaluation. Without one or the other an approved payment re-raises its own gate | [`policy-model.md`](../../40-governance/policy-model.md), which owns the collapse question [`../step-types.md`](../step-types.md) section 6 registers | As classified there — **new here** as a consequence |
 | Whether `pay_to_account`, taken from content the Agent read, is still marked untrusted when it reaches a Tool | [`../step-types.md`](../step-types.md) section 13, which registers provenance through the platform | As classified there |

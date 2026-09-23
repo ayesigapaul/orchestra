@@ -1,9 +1,9 @@
 ---
 title: Personas
 doc_id: DOC-013
-version: 0.13.0
+version: 0.14.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0009, ADR-0014, ADR-0015]
 ---
@@ -226,10 +226,13 @@ each were an administrator.
 
 ## 5. What this document does not decide
 
-- **These are not RBAC roles.** ADR-0001 requires a tenant-scoped, deny-by-default authorization
-  model but names no roles. Whether "approver" and "auditor" are grantable roles, attributes on a
-  Platform User, or purely policy-derived belongs to the planned identity-and-access document in
-  [`10-architecture/`](../10-architecture/).
+- **These are not roles.** ADR-0001 requires a tenant-scoped, deny-by-default authorization model
+  but names no roles, and
+  [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) makes an
+  administrative grant one role from a closed set Orchestra defines. Whether "approver" and
+  "auditor" correspond to roles in that set is settled when
+  [`identity-and-access.md`](../10-architecture/identity-and-access.md) lists it; an approver's
+  place in an Approval Chain is derived from Policy either way.
 - **Whether an End User can resolve an Approval Request.** The glossary defines an Approval Chain as
   a set of **Principals**, which does not exclude an End User. Approving from inside the customer's
   application rather than the Control Plane is unspecified, and it touches the seat definition, so

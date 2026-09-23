@@ -1,9 +1,9 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.30.0
+version: 0.31.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -56,6 +56,12 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0027](adr-0027-tenant-user-management-signs-principal-tokens.md) | Tenant User Management signs the Principal Token that carries a Principal and Tenant between services | Accepted | 2026-09-13 |
 | [0028](adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) | Telemetry goes to a self-hosted Grafana stack, keeps every trace until volume demands sampling, and gives work with no Tenant the Nil UUID | Accepted | 2026-09-13 |
 | [0029](adr-0029-kafka-carries-facts-captured-by-debezium.md) | Kafka carries facts between services, captured from each outbox by Debezium | Accepted | 2026-09-13 |
+| [0030](adr-0030-platform-operator-and-observed-conditions.md) | Operator access to a Tenant's records is a time-boxed act by a Platform Operator, and a transition caused by an observed condition records its cause and no Principal | Accepted | 2026-09-13 |
+| [0031](adr-0031-tenant-user-management-creates-tenants.md) | A Tenant is created by an internal Tenant User Management operation that only Orchestra's provisioning client may call, for a Platform Operator | Accepted | 2026-09-13 |
+| [0032](adr-0032-administrative-grants-are-orchestra-defined-roles.md) | An administrative grant is a role from a closed set Orchestra defines, and an identity-provider group holds one only through a mapping the Tenant administers | Accepted | 2026-09-13 |
+| [0033](adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) | The Gateway contract follows JSON:API's recommended URL layout, and a command is a resource that is created | Accepted | 2026-09-13 |
+| [0034](adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md) | A Policy Decision is written in the enforcing service's own transaction, and reaches the audit store through that service's outbox | Accepted | 2026-09-13 |
+| [0035](adr-0035-cel-profile-for-policies-and-workflow-expressions.md) | Policies and Workflow expressions are written in CEL behind an Orchestra profile, and matching Policies combine by verdict, never by order | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -106,10 +112,22 @@ flowchart TD
   A26 --> A29["ADR-0029<br/>Kafka and Debezium carry facts"]
   A21 --> A29
 
+  A24 --> A30["ADR-0030<br/>Platform Operator, observed conditions"]
+  A27 --> A30
+  A30 --> A31["ADR-0031<br/>Tenant User Management creates Tenants"]
+  A24 --> A31
+  A30 --> A32["ADR-0032<br/>Administrative grants are roles"]
+  A17 --> A32
+  A25 --> A33["ADR-0033<br/>JSON:API URLs, commands created"]
+  A13 --> A34["ADR-0034<br/>Decisions commit with what they gate"]
+  A29 --> A34
+  A12 --> A35["ADR-0035<br/>CEL profile, verdicts combine"]
+  A34 --> A35
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;
 ```

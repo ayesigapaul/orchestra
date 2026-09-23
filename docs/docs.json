@@ -191,6 +191,12 @@
               "adr/adr-0027-tenant-user-management-signs-principal-tokens",
               "adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack",
               "adr/adr-0029-kafka-carries-facts-captured-by-debezium",
+              "adr/adr-0030-platform-operator-and-observed-conditions",
+              "adr/adr-0031-tenant-user-management-creates-tenants",
+              "adr/adr-0032-administrative-grants-are-orchestra-defined-roles",
+              "adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created",
+              "adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox",
+              "adr/adr-0035-cel-profile-for-policies-and-workflow-expressions",
               "adr/adr-template"
             ]
           },
@@ -647,6 +653,30 @@
     {
       "source": "/adr/adr-0029-kafka-carries-facts-captured-by-debezium.md",
       "destination": "/adr/adr-0029-kafka-carries-facts-captured-by-debezium"
+    },
+    {
+      "source": "/adr/adr-0030-platform-operator-and-observed-conditions.md",
+      "destination": "/adr/adr-0030-platform-operator-and-observed-conditions"
+    },
+    {
+      "source": "/adr/adr-0031-tenant-user-management-creates-tenants.md",
+      "destination": "/adr/adr-0031-tenant-user-management-creates-tenants"
+    },
+    {
+      "source": "/adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md",
+      "destination": "/adr/adr-0032-administrative-grants-are-orchestra-defined-roles"
+    },
+    {
+      "source": "/adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md",
+      "destination": "/adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created"
+    },
+    {
+      "source": "/adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md",
+      "destination": "/adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox"
+    },
+    {
+      "source": "/adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md",
+      "destination": "/adr/adr-0035-cel-profile-for-policies-and-workflow-expressions"
     },
     {
       "source": "/adr/adr-template.md",

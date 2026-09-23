@@ -1,9 +1,9 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.10.0
+version: 0.11.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -23,8 +23,11 @@ and audit. Every persisted record and every emitted event carries a `tenant_id`.
 **Workspace** — an optional subdivision of a Tenant (e.g. *Finance*, *Logistics*), scoping agents,
 workflows, connectors and policies. Enables delegated administration without cross-tenant risk.
 
-**Principal** — any authenticated actor: a Platform User, an End User, a Service Account, or the
-Connector itself. Every action in the audit log resolves to exactly one Principal.
+**Principal** — any authenticated actor: a Platform User, an End User, a Service Account, a Platform
+Operator, or the Connector itself. Every action in the audit log resolves to exactly one Principal.
+A transition caused by an observed condition, such as an Approval Request expiring, is not an
+action: its record carries the cause and no Principal
+([ADR-0030](adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 **Platform User** — a person who administers Orchestra: defines agents, workflows, policies; approves
 requests; reads audit logs. Authenticates via the tenant's IdP. **This is the seat-billable
@@ -35,6 +38,14 @@ to Orchestra by the customer's backend via a scoped session token. **Not seat-bi
 [ADR-0009](adr/adr-0009-meter-first-defer-tiering.md).
 
 **Service Account** — a non-human Principal used for machine-to-machine calls into the Gateway.
+
+**Platform Operator** — a person acting for Orchestra on one Tenant's records, such as support
+reading a Run or incident response cancelling one. A tenant-scoped Principal, one in each Tenant the
+person acts in, acting only under an administrative grant with an end time that Orchestra issues for
+a recorded support case or incident. It stands on no Membership, and every act appears in that
+Tenant's audit trail. Not a Platform User. Work that reads no tenant content, such as a schema
+migration, is no Platform Operator's act and appears in no Tenant's trail
+([ADR-0030](adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 **Person** — a human, recorded once across every Tenant they belong to. A Person's name and email
 come only from the identity provider, and a Tenant sees a Person only through its own Membership.
@@ -53,6 +64,16 @@ a browser or mobile bundle.
 carrying one Principal and its Tenant on a call between services. The callee verifies it rather than
 trusting its caller, and no client ever holds one
 ([ADR-0027](adr/adr-0027-tenant-user-management-signs-principal-tokens.md)).
+
+**Administrative grant** — a Principal's permission to administer something through the Control
+Plane: one role, from a closed set Orchestra defines, held by Tenant User Management in one Tenant
+and optionally narrowed to one Workspace. It can carry an end time, and a Platform Operator's always
+does. An identity-provider group holds one only through a group-to-role mapping the Tenant
+administers in Orchestra. Distinct from a capability grant, which lets an Agent version call a Tool
+([ADR-0032](adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)).
+
+> **Collision note.** A role here is never a Keycloak role or a database role, and a *group
+> membership* is a person's place in an identity-provider group, never a Membership.
 
 ---
 
@@ -113,13 +134,21 @@ a Connector.
 **Policy** — a tenant-authored rule evaluated at a Policy Enforcement Point, yielding
 `allow` · `deny` · `require_approval`.
 
+**Expression Profile** — the Orchestra-versioned profile of the Common Expression Language (CEL) in
+which a Policy's conditions and a Workflow's predicates, data references and `transform` bodies are
+written: the inputs an expression may read, the functions it may call, and the bound on its cost. It
+admits no user-defined function, and a published version is evaluated under the profile major it was
+published against. See
+[ADR-0035](adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md).
+
 **Policy Enforcement Point (PEP)** — a place in the execution path where policy is evaluated and
 enforced. Minimally: before any Tool invocation, at every Workflow Step boundary, and at Run
 admission.
 
 **Policy Decision** — a class of Audit Record: the recorded outcome of a PEP evaluation, holding a
-reference to the Policy version that matched, the inputs, the verdict and the timestamp. Always
-audited, including allows. See [ADR-0012](adr/adr-0012-policy-decisions-are-audit-records.md).
+reference to every Policy version that matched, the inputs, the verdict and the timestamp. Always
+audited, including allows. See [ADR-0012](adr/adr-0012-policy-decisions-are-audit-records.md) and
+[ADR-0035](adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md).
 
 **Approval Request** — a human decision gate raised by a `require_approval` verdict. Carries the
 proposed action, the evidence the agent relied on, the routing chain, and its resolution.

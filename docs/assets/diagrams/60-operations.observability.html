@@ -73,14 +73,14 @@ flowchart LR
 sequenceDiagram
   autonumber
   participant P as Policy Enforcement Point
-  participant L as Durable local append
-  participant S as Audit store
+  participant L as The enforcing service's transaction and outbox
+  participant S as Audit — the container that owns the audit store
   participant R as Reader — approver, auditor, support
-  Note over P,S: the lagging branch — a shared transaction has neither participant L nor the gap
-  P-&gt;&gt;L: write the Policy Decision, fsync
+  Note over P,S: the decision commits with the change it gates, then leaves through the outbox
+  P-&gt;&gt;L: commit the Policy Decision with the gated change
   L--&gt;&gt;P: durable, the action may proceed
   P-&gt;&gt;P: gated action
-  L-&gt;&gt;S: replicate, asynchronously
+  L-&gt;&gt;S: captured and carried to the audit store, asynchronously
   R-&gt;&gt;S: query the Run in flight
   S--&gt;&gt;R: records replicated so far, plus the horizon they are complete to
   Note over R,S: between durable and readable the trail is behind reality
@@ -88,14 +88,14 @@ sequenceDiagram
   <details><summary>Mermaid source</summary><pre class="src">sequenceDiagram
   autonumber
   participant P as Policy Enforcement Point
-  participant L as Durable local append
-  participant S as Audit store
+  participant L as The enforcing service's transaction and outbox
+  participant S as Audit — the container that owns the audit store
   participant R as Reader — approver, auditor, support
-  Note over P,S: the lagging branch — a shared transaction has neither participant L nor the gap
-  P-&gt;&gt;L: write the Policy Decision, fsync
+  Note over P,S: the decision commits with the change it gates, then leaves through the outbox
+  P-&gt;&gt;L: commit the Policy Decision with the gated change
   L--&gt;&gt;P: durable, the action may proceed
   P-&gt;&gt;P: gated action
-  L-&gt;&gt;S: replicate, asynchronously
+  L-&gt;&gt;S: captured and carried to the audit store, asynchronously
   R-&gt;&gt;S: query the Run in flight
   S--&gt;&gt;R: records replicated so far, plus the horizon they are complete to
   Note over R,S: between durable and readable the trail is behind reality</pre></details>

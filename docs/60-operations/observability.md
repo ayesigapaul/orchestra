@@ -1,9 +1,9 @@
 ---
 title: Observability
 doc_id: DOC-071
-version: 0.14.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012, ADR-0013, ADR-0028]
 ---
@@ -45,12 +45,14 @@ everything resting on them is provisional and marked at each use.
 [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 10 owns the test and
 this document does not re-derive it: a fact is an Audit Record if it answers *who did what, when, on
 what basis, and under which Policy*, which requires a Principal and, where one applies, a Policy
-basis. A fact with neither is telemetry, and telemetry is this document's.
+basis — or if that document's section 3 enumerates it as a transition caused by an observed
+condition, recorded with its cause and no Principal. A fact that is neither is telemetry, and
+telemetry is this document's.
 
 | Property | Audit Record | Telemetry signal |
 | --- | --- | --- |
 | Answers | Who acted, on what basis, under which Policy | What the system did, how long it took, how loaded it was |
-| Principal | Exactly one, always — invariant I2 | None. That is the definition, not an omission |
+| Principal | Exactly one for an act — invariant I2; none for a transition caused by an observed condition, which records its cause ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | None. That is the definition, not an omission |
 | Policy basis | Present, or explicitly stated as absent — never left out | Not applicable |
 | Sampling | Forbidden for every audited act — audit-model section 3 | Expected, and what makes it affordable |
 | Lifetime | Append-only and immutable; a correction appends. Retention driven by regulation, dispute window and investigation reach, and undecided | Aggregated, downsampled and expired on an operational schedule, driven by usefulness against cost |
@@ -133,10 +135,10 @@ section specifies only how it is surfaced and read, and does not restate it.
 proceed. Degradation is only ever about the second class, and conflating the two would let an
 availability argument reach the strict path, which ADR-0013 forecloses by making the class a
 property of the record rather than a runtime choice. The two are not alternatives, though.
-[`reliability.md`](reliability.md) F11 notes that an audit-store outage will usually open a degraded
-period *concurrently*, for the second class buffering behind the same failure — so a reader may well
-meet a bracket over the interval in which a gated action halted, and the bracket does not describe
-the halt.
+[`reliability.md`](reliability.md) F11 notes that an outage of the datastore an enforcing service
+commits to will usually open a degraded period *concurrently*, for the second class buffering behind
+the same failure — so a reader may well meet a bracket over the interval in which a gated action
+halted, and the bracket does not describe the halt.
 
 A **degraded period** is an interval during which writes in the degradable class were buffered,
 retried or written behind the acts they describe. [`reliability.md`](reliability.md) rules F13 and
@@ -145,8 +147,9 @@ and is used here rather than a second one. What this section owns is what the br
 the read path, which is four things.
 
 - **It rides a path the failure cannot swallow.** A bracket recorded only into the store that is
-  failing is not a signal — F13 puts it on the durable local append ADR-0013 already places on the
-  enforcement path.
+  failing is not a signal — F13 puts it on the path a Policy Decision takes, the enforcing service's
+  own transaction and outbox
+  ([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)).
 - **It attaches to the range, not to a console.** A query whose range overlaps a degraded period
   returns the bracket alongside the records. The reader who most needs the caveat is an auditor
   reading a trail months later, not an operator watching a dashboard on the day.
@@ -173,9 +176,10 @@ sees, and nothing else.
 
 **What is not decided.** Whether the bracket is itself an Audit Record class — audit-model section 3
 is the enumeration of audited events and decides it, and reliability.md registers it as needing a
-document rather than an ADR. Note the friction either way: a bracket has no acting Principal, since
-degradation is an observed condition rather than an act, which is the attribution class audit-model
-section 9 holds open. Nor is there any bound on how long a degraded period may run before execution
+document rather than an ADR. A bracket has no acting Principal either way, since degradation is an
+observed condition rather than an act, so if it is an Audit Record it carries its cause and no
+Principal ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Nor is there
+any bound on how long a degraded period may run before execution
 stops, and such a bound would reintroduce the coupling ADR-0013's split exists to remove:
 operational audit volume able to halt a Run after all.
 
@@ -186,27 +190,26 @@ action, not that it has reached the audit store. A local append replicated after
 rule. That produces three states where a reader intuits two — **durable**, **replicated**,
 **readable** — and the gap between the first and the last is where a Run in flight is read.
 
-Whether the gap exists at all is a property of the mechanism, not of the requirement.
-[`../10-architecture/data-plane.md`](../10-architecture/data-plane.md) section 6 lays it out: a
-shared transaction with the datastore has no lag and puts a network round-trip on the enforcement
-path instead; a durable outbox or a node-local append has lag and keeps the round-trip off it. The
-mechanism is undecided and registered **ADR** in that document's section 11, repeated in section 9.
-The diagram below draws the lagging branch only, because it is the branch that creates a read-path
-problem at all: on the shared-transaction branch there is no separate append, no replication step
-and no gap, and nothing else in this section applies.
+The gap exists.
+[ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)
+makes a Policy Decision durable when the enforcing service's own transaction commits it, and
+readable only once its outbox has carried it to the audit store, through Debezium and Kafka
+([ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md)).
+[`../10-architecture/data-plane.md`](../10-architecture/data-plane.md) section 6 sets out what that
+costs the enforcement path and what it spares it. The diagram below draws the path.
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant P as Policy Enforcement Point
-  participant L as Durable local append
-  participant S as Audit store
+  participant L as The enforcing service's transaction and outbox
+  participant S as Audit — the container that owns the audit store
   participant R as Reader — approver, auditor, support
-  Note over P,S: the lagging branch — a shared transaction has neither participant L nor the gap
-  P->>L: write the Policy Decision, fsync
+  Note over P,S: the decision commits with the change it gates, then leaves through the outbox
+  P->>L: commit the Policy Decision with the gated change
   L-->>P: durable, the action may proceed
   P->>P: gated action
-  L->>S: replicate, asynchronously
+  L->>S: captured and carried to the audit store, asynchronously
   R->>S: query the Run in flight
   S-->>R: records replicated so far, plus the horizon they are complete to
   Note over R,S: between durable and readable the trail is behind reality
@@ -218,15 +221,15 @@ sequenceDiagram
   carried with the result. [`reliability.md`](reliability.md) F15 is the rule it satisfies —
   absence MUST be readable as *not yet seen* rather than *did not happen* — and the horizon is how
   a reader tells *no record exists* from *no record yet visible*. The negative reading is the one an
-  auditor asks for. Where the mechanism has no lag the horizon is the present moment rather than
-  absent, so one contract holds either way.
+  auditor asks for.
 - **The lag itself, watched.** Not a value stamped on a response and read by nobody: it bounds how
   current every Control Plane read of a Run in flight can be, which gives it a consumer.
-- **A distinction the horizon cannot make alone.** A node lost holding unreplicated appends is
-  *lost* audit, not stale audit (data-plane section 6), and a Policy Decision cannot be
-  regenerated — [`../40-governance/policy-model.md`](../40-governance/policy-model.md) D5. The
-  horizon reports how far the trail is known good; whether the missing tail is arriving or gone is
-  recovery, and [`reliability.md`](reliability.md) owns it.
+- **A distinction the horizon cannot make alone.** A Policy Decision cannot be regenerated
+  ([`../40-governance/policy-model.md`](../40-governance/policy-model.md) D5), so ADR-0034 keeps
+  each one in the enforcing service's schema until the audit store has recorded it, and a capture
+  gap is delivered again rather than lost. The horizon reports how far the trail is known good;
+  whether the missing tail is arriving or stuck is recovery, and [`reliability.md`](reliability.md)
+  owns it.
 
 **A registered question, answered.**
 [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 8 and
@@ -300,10 +303,10 @@ identifiers. The explorer resolves through that link to the definition version t
 retained for audit and never returned to a customer** — audit-model section 3 keeps it in the
 publication record, section 8 and A8 keep it out of the tenant-readable surface, ADR-0005 is why
 both. So there are two views over one Run: an Orchestra operator diagnosing a compilation defect
-needs the artifact and the customer-facing explorer cannot show it. What an operator may see of a
-Tenant's Run, and how that read is attributed given invariant I2 admits no unattributed action, is
-the operator-boundary question audit-model section 9 holds open and classifies **ADR** — repeated in
-section 9, not decided here.
+needs the artifact and the customer-facing explorer cannot show it. That read is an act by a
+Platform Operator Principal of the Tenant whose Run it is, recorded in that Tenant's trail
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)); whether an operator's
+view may return the compiled artifact is registered in section 9.
 
 **What it reconstructs** is audit-model section 8's list, not restated. Three things are this
 document's, and each is a way a view can destroy information the records preserve.
@@ -398,8 +401,8 @@ settles who may read one **by derivation** — a second, narrower administrative
 surface, or a request-scoped read by a member of the Approval Chain, and never an End User or a
 Connector — and says the resulting rule belongs in
 [`../40-governance/audit-model.md`](../40-governance/audit-model.md), which is where it will bind.
-That same section undercuts the control in exactly this place: *an operator reading the store is not
-reading the surface, so the control does not reach them*. A telemetry pipeline is a store. Until the
+That control reaches only the governed path, and a telemetry pipeline is a store beside it: an
+operator reading payloads there reads no surface, and the read produces no record. Until the
 rule lands, capturing model payloads into telemetry is a security decision rather than an
 instrumentation default.
 
@@ -434,13 +437,12 @@ question, its classification is repeated rather than revised.
 | Whether Connector health transitions are Audit Records or telemetry | Document — but it must be settled before the metered dimension ships | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 10 owns the tension between the actor test and ADR-0009's reconciliation requirement; `connector.md` in [`../10-architecture/`](../10-architecture/) with this document, and [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 5.2 defers to the same pair. Classification repeated. Section 2 supplies the half available without the decision — what a telemetry answer would have to carry for the metered dimension to reconcile. ADR-0007 is **Proposed**, so the lifecycle underneath it is provisional |
 | Whether the bracket marking a degraded audit period is itself an Audit Record class | Document | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3, which is the enumeration of audited events; [`reliability.md`](reliability.md) F13 and F14 fix what it must survive and carry. Classification repeated. Section 3 here specifies what it must make visible on either answer, and notes that a bracket has no acting Principal |
 | How a degraded period is detected and ended, and whether any duration bound halts execution | Document | [`reliability.md`](reliability.md), which ADR-0013 gives the failure taxonomy and the signals; audit-model section 13 classifies it, repeated. A halting bound would reintroduce the coupling ADR-0013's split removes |
-| Which mechanism satisfies the durable Policy Decision write, which decides whether replication lag exists at all | **ADR** | Registered in [`../10-architecture/data-plane.md`](../10-architecture/data-plane.md) section 11; ADR-0013 leaves it open and ADR-0011 constrains it. Classification repeated; section 4's horizon is defined to hold on either answer |
-| The replication lag budget, where lag exists | Document | ADR-0013 places it with the datastore work it constrains and decides none; the engine choice itself is registered **ADR** in [`../10-architecture/multi-tenancy.md`](../10-architecture/multi-tenancy.md) section 10. The bound is the staleness a Run-in-flight read may carry, not a storage target |
-| Whether the completeness horizon appears in the public Gateway contract or only in the Control Plane, and whether *completeness horizon* enters the glossary | Document | [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md), whose endpoint shape is itself open; adding a horizon to an answer is additive under [`../VERSIONING.md`](../VERSIONING.md) R2. The term is coined in section 4 and carries that section's whole answer, so it wants a [`../GLOSSARY.md`](../GLOSSARY.md) row before it reaches a contract |
+| The lag budget from a Policy Decision's commit to the audit store | Document | ADR-0013 places it with the datastore work it constrains and decides none, and [ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md) makes the lag real, on the capture path of [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md). The bound is the staleness a Run-in-flight read may carry, not a storage target |
+| Whether the completeness horizon appears in the public Gateway contract or only in the Control Plane, and whether *completeness horizon* enters the glossary | Document | [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md), whose endpoint shape [ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) fixes; adding a horizon to an answer is additive under [`../VERSIONING.md`](../VERSIONING.md) R2. The term is coined in section 4 and carries that section's whole answer, so it wants a [`../GLOSSARY.md`](../GLOSSARY.md) row before it reaches a contract |
 | Queue-depth, wait-time and admission figures, and whether any of them ever becomes a commitment | Document | The quota design ADR-0006 calls for and which does not exist, with [`quotas-and-metering.md`](quotas-and-metering.md) sections 3 and 4. Quota Envelope values are the customer's own, so an admission figure is bounded by them rather than chosen; section 1 states what else is undecided |
 | Whether a Quota Envelope is declared, discovered from the Deployment Surface, or both | Document | The quota design ADR-0006 calls for; [`quotas-and-metering.md`](quotas-and-metering.md) section 5 bounds it and closes nothing. Classification repeated from [`../10-architecture/containers.md`](../10-architecture/containers.md) section 12 |
 | Whether the Run explorer is a Control Plane surface of its own or a view over the Audit surface, whether *Run explorer* enters the glossary, and whether a Run's model token usage appears in it | Document | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 4, which enumerates ten surfaces and names no explorer; its section 11 holds token usage on the Usage surface, reported and never billed under ADR-0009 |
-| What an Orchestra operator sees of a Tenant's Run, the compiled artifact included, and how that read is attributed | **ADR** | audit-model section 9, which owns operator attribution and the enforcement-point question as one decision; classification repeated |
+| Whether an Orchestra operator's view of a Tenant's Run may return the compiled artifact, which the customer-facing explorer never does | Document | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 11, which owns what an operator reaches; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) makes the read a Platform Operator's act in the Tenant's trail, and audit-model section 8 and A8 keep the artifact off the tenant-readable surface |
 | The trace and audit grain of a Tool call inside an Agent Run | Document | [`../20-domain/domain-model.md`](../20-domain/domain-model.md) section 11 with [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) section 5; classification repeated, and neither audit nor metering can be applied retroactively |
 | When volume makes keeping every trace too costly, what share of other traces tail sampling keeps and what counts as a slow trace; and whether an Agent Run's trace may be sampled at all | Document | An operations design with [`reliability.md`](reliability.md), from observed volume. [ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) keeps every trace until then, keeps every trace with an error and every slow trace after, and has the edge decide. Bounded above by audit-model section 3, which forbids sampling any audited act, and below by section 7: what a model chose survives in the trail, so what a sampled-away trace destroys is the ungoverned material — the timing, and the calls considered and not made |
 | Telemetry retention, which is not the audit-retention question | Document | Operational cost once volume is observable. audit-model section 11 classifies audit retention **ADR**; that classification is not inherited here, and putting telemetry in the audit store is exactly what would inherit it |

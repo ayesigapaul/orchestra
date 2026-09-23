@@ -51,7 +51,7 @@
     "step": {
       "type": "object",
       "description": "One declared Step. Every Step declares a type and a Side-Effect Class whatever else it carries.",
-      "$comment": "What each type declares beyond these two is deliberately unconstrained here. The tool object shape, the expression and reference syntax, the predicate on a condition Step and the branch labels leaving it are all notation in workflow-dsl.md's worked example and are explicitly NOT decided — sections 3, 8 and 11 register them, and section 8 is the point at which a definition language would become a programming language. A compiler pass, not this schema, checks a Step body against the allow-list for its type.",
+      "$comment": "What each type declares beyond these two is deliberately unconstrained here. The tool object shape, how a document writes an expression, and the branch labels leaving a condition Step are notation in workflow-dsl.md's worked example and are NOT decided — sections 3 and 11 register them. The expressions themselves — a condition predicate, a data reference, a transform body — are Expression Profile expressions under ADR-0035, which workflow-dsl.md section 8 records; the compiler checks them at publication, and this schema does not. A compiler pass, not this schema, checks a Step body against the allow-list for its type.",
       "required": ["type", "side_effect_class"],
       "properties": {
         "type": {
@@ -76,7 +76,7 @@
           "type": "string",
           "minLength": 1,
           "description": "The outcome label this edge leaves by, on an edge out of a condition or parallel Step.",
-          "$comment": "The label vocabulary is NOT decided — workflow-dsl.md section 8 registers it with the expression syntax, and the labels in the worked example are notation. Typed as a free string rather than an enum for that reason."
+          "$comment": "The label vocabulary is NOT decided — workflow-dsl.md section 11 registers it with the concrete syntax, and the labels in the worked example are notation. Typed as a free string rather than an enum for that reason."
         }
       }
     },

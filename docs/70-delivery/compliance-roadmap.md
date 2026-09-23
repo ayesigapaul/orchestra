@@ -1,9 +1,9 @@
 ---
 title: Compliance Roadmap
 doc_id: DOC-084
-version: 0.14.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0011, ADR-0012, ADR-0013, ADR-0015]
 ---
@@ -49,7 +49,7 @@ compliance work.
 | What a review asks | What is already decided |
 | --- | --- |
 | How is tenant data isolated, and what stops a bug crossing it? | Row-level security enabled and forced in the datastore, with CI failing on a tenant-scoped table that lacks a policy ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)) |
-| Who did what, and under what authority? | Every action resolves to exactly one Principal; every Policy Decision is an Audit Record naming the Policy version that governed it ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)) |
+| Who did what, and under what authority? | Every action resolves to exactly one Principal; every Policy Decision is an Audit Record naming every Policy version that matched ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md), [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)) |
 | Can the trail be incomplete without anyone noticing? | No. A Policy Decision is durable before the gated action, and a degraded period for other records is bracketed and recoverable rather than silent ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)) |
 | Are approvals real controls or advisory? | An `approval` Step's boundary cannot return `allow` ([`../40-governance/policy-model.md`](../40-governance/policy-model.md) V4) |
 | What stops an agent being talked into an action? | Policy the model cannot argue past, at an enforcement point the definition author cannot write around ([ADR-0015](../adr/adr-0015-governed-action-positioning.md)) |

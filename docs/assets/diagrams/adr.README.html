@@ -95,10 +95,22 @@ flowchart TD
   A26 --&gt; A29["ADR-0029&lt;br/&gt;Kafka and Debezium carry facts"]
   A21 --&gt; A29
 
+  A24 --&gt; A30["ADR-0030&lt;br/&gt;Platform Operator, observed conditions"]
+  A27 --&gt; A30
+  A30 --&gt; A31["ADR-0031&lt;br/&gt;Tenant User Management creates Tenants"]
+  A24 --&gt; A31
+  A30 --&gt; A32["ADR-0032&lt;br/&gt;Administrative grants are roles"]
+  A17 --&gt; A32
+  A25 --&gt; A33["ADR-0033&lt;br/&gt;JSON:API URLs, commands created"]
+  A13 --&gt; A34["ADR-0034&lt;br/&gt;Decisions commit with what they gate"]
+  A29 --&gt; A34
+  A12 --&gt; A35["ADR-0035&lt;br/&gt;CEL profile, verdicts combine"]
+  A34 --&gt; A35
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;
 </pre></div>
@@ -148,10 +160,22 @@ flowchart TD
   A26 --&gt; A29["ADR-0029&lt;br/&gt;Kafka and Debezium carry facts"]
   A21 --&gt; A29
 
+  A24 --&gt; A30["ADR-0030&lt;br/&gt;Platform Operator, observed conditions"]
+  A27 --&gt; A30
+  A30 --&gt; A31["ADR-0031&lt;br/&gt;Tenant User Management creates Tenants"]
+  A24 --&gt; A31
+  A30 --&gt; A32["ADR-0032&lt;br/&gt;Administrative grants are roles"]
+  A17 --&gt; A32
+  A25 --&gt; A33["ADR-0033&lt;br/&gt;JSON:API URLs, commands created"]
+  A13 --&gt; A34["ADR-0034&lt;br/&gt;Decisions commit with what they gate"]
+  A29 --&gt; A34
+  A12 --&gt; A35["ADR-0035&lt;br/&gt;CEL profile, verdicts combine"]
+  A34 --&gt; A35
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29 accepted;
+  class A1,A2,A6,A9,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A22 superseded;</pre></details>
 </section>
