@@ -1,9 +1,9 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.15.0
+version: 0.16.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0006, ADR-0007, ADR-0009, ADR-0011, ADR-0012]
 ---
@@ -44,16 +44,20 @@ holding a capability grant on a `financial` Tool is not thereby permitted to inv
 
 **Two mechanisms, two words, always qualified.** *Capability grant* is the second row's
 Agent-to-Tool edge, as `tool-authorization.md` uses it. *Administrative grant* is the first row's
-permission to author something through the Control Plane, and is this document's provisional word
-for a thing whose shape section 5 sends to an ADR. An unqualified "grant" would collapse exactly the
-distinction this section exists to keep, so none appears below. Neither term has a
-[`../GLOSSARY.md`](../GLOSSARY.md) entry and both need one (section 12).
+permission to author something through the Control Plane: one role, from a closed set Orchestra
+defines, held in one Tenant and optionally narrowed to a Workspace
+([ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)). An unqualified
+"grant" would collapse exactly the distinction this section exists to keep, so none appears below.
+[`../GLOSSARY.md`](../GLOSSARY.md) defines *administrative grant*, and *capability grant* still
+needs an entry (section 12).
 
 ## 2. The Principal model
 
-Four disjoint and exhaustive subtypes; every action resolves to exactly one Principal (invariant I2,
-domain model section 3). Personas are jobs, not identity types: administrator, developer, approver
-and auditor are one subtype ([`../00-overview/personas.md`](../00-overview/personas.md) section 1).
+Five disjoint and exhaustive subtypes; every action resolves to exactly one Principal (invariant I2,
+domain model section 3), and a transition caused by an observed condition records its cause instead
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Personas are jobs, not
+identity types: administrator, developer, approver and auditor are one subtype
+([`../00-overview/personas.md`](../00-overview/personas.md) section 1).
 
 | Subtype | Who it is | Authenticates by | Seat-billable |
 | --- | --- | --- | --- |
@@ -61,6 +65,7 @@ and auditor are one subtype ([`../00-overview/personas.md`](../00-overview/perso
 | End User | A person using the customer's own application | A scoped Session Token minted by Orchestra | No — measured only |
 | Service Account | A machine caller into the Gateway, typically the customer's backend | Undecided; see section 3 | Not counted under ADR-0009 as written, which counts Principals authenticating to the Control Plane; whether that omission was intended is registered in `personas.md` section 5 |
 | Connector | Customer-deployed software proxying Tool traffic inward | Enrolment identity, provisional under **Proposed** [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) | No |
+| Platform Operator | A person acting for Orchestra on one Tenant's records — support, incident response ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | Undecided; see section 3 | Not a Platform User; how ADR-0009's wording, which counts Principals authenticating to the Control Plane, treats one is registered in `quotas-and-metering.md` section 14 |
 
 **A person administering two Tenants is two Principals, and one Person.**
 [ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md) reverses this document's
@@ -76,9 +81,12 @@ provider. An End User a customer's backend vouches for is a Person known to that
 Service Account and a Connector have no Person, and no Principal and no other service keeps a copy
 of a person's attributes.
 
-**How the identity provider's attributes reach a Person.** Tenant User Management pulls them.
-Its own client reads each user from the identity provider's admin API, holding one role that can
-read users and nothing else, and the identity-sync role records what it read. Names follow
+**How the identity provider's attributes reach a Person.** Tenant User Management pulls them. Its
+own client reads each user from the identity provider's admin API, holding a role that can read
+users, and the identity-sync role records what it read. When the operation that creates a Tenant is
+built, the same client also holds the narrowest role that creates the Tenant's Organization,
+`manage-organizations` in Keycloak 26.7
+([ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md)). Names follow
 international standards. The name is the display name the identity provider holds, the
 `displayName` of RFC 2798 and SCIM (RFC 7643), kept in its own order and script and stored in
 Unicode NFC. When there is none it is the username, as SCIM allows. Orchestra never composes a name
@@ -101,7 +109,8 @@ flowchart LR
   CN["Connector — ADR-0007, Proposed"] -->|"enrolment identity"| GW
   CP --> DS["Tenant-scoped datastore"]
   GW --> DS
-  OP["Platform operator tooling"] -.->|"no Principal resolves"| DS
+  OP["Platform operator"] -->|"as a Platform Operator Principal, in one Tenant"| CP
+  OP -.->|"maintenance that reads no tenant content"| DS
 ```
 
 **Platform User — the tenant's identity provider.** Orchestra holds no password and runs no sign-in
@@ -132,6 +141,14 @@ decision, and the one Orchestra-side credential whose rotation is Orchestra's ow
 **Connector — provisional.** Enrolment identity, mutual authentication and revocation rest entirely
 on **Proposed** ADR-0007; the planned `connector.md` in [`./README.md`](README.md) owns the
 mechanism. If that ADR is rejected the subtype leaves the model and nothing else here changes.
+
+**Platform Operator — undecided, and bounded.** A person acting for Orchestra on one Tenant's
+records is a Platform Operator Principal of that Tenant
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). How that person
+authenticates, which verified subjects Tenant User Management may resolve to one, and whether the
+Principal stands on a Membership as a Platform User does, are unmade. The list of operators is an
+Orchestra record, never a Keycloak role ([ADR-0017](../adr/adr-0017-keycloak-for-identity.md)), and
+section 12 registers the rest.
 
 **Which component authenticates, and which mints.** [`containers.md`](containers.md) registers both
 here. Its section 3 gives the Gateway as the public HTTP and event-stream boundary that
@@ -207,18 +224,21 @@ Policy Decision — coherent only because
 [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) makes a Policy Decision a class of
 Audit Record, so an administrative act is fully audited without producing one. Two authorization
 mechanisms therefore exist in the platform, and an audit surface presenting them as one would
-misstate which control acted. Adding an enforcement point to the administrative path later remains
-available and would be an ADR — registered in section 12 with the shape question below, because the
-same language decision settles both.
+misstate which control acted.
+[ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) keeps it so: an
+enforcement point on the administrative path would need an ADR superseding that one.
 
-**The shape needs an ADR.** Whether an administrative grant is a named role, an attribute on a
-Principal, or an expression in the same language `policy-model.md` section 8 already reserves for an
-ADR is unmade. It is a permanent authoring surface spanning the Control Plane, identity-provider
-group mapping and audit, and once a Tenant has authored administrative grants against one reading,
-moving to another is expensive — the test in [`../adr/README.md`](../adr/README.md) met twice over.
-This also answers personas section 5, which asks whether *approver* and *auditor* are grantable
-roles: that they are not identity types is settled there; whether they are roles at all waits on
-this ADR.
+**The shape is a role.** An administrative grant is one role, from a closed set Orchestra defines,
+given to one Principal in one Tenant and optionally narrowed to one Workspace
+([ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)). Roles and
+administrative grants are Orchestra records, never Keycloak roles, and Tenant-defined roles can be
+added later without changing a grant. An identity-provider group holds a role only through a
+group-to-role mapping the Tenant administers in the Control Plane: every change to a mapping is
+audited, and every authorization check records the group membership it relied on. Which roles the
+set holds, and which operations each permits, is this document's to specify before the first
+operation that checks an administrative grant (section 12). Whether *approver* and *auditor*, which
+personas section 5 asks about, correspond to roles is settled with that list, and deciding an
+Approval Request stays with the Approval Chain that Policy derives.
 
 ## 6. Who may read audit, and who may read an Evidence Set
 
@@ -250,8 +270,8 @@ lands there.**
 Principal resolved into an Approval Chain must be able to read the Evidence Set of the request they
 decide, or rules E1 and E5 of `approval-workflows.md` are unsatisfiable; that read is bounded to
 that request and audited like any other. Both administrative grants may be Workspace-narrowed, with
-section 4's caveat — and both are undercut in one place: an operator reading the store is not
-reading the surface, so the control does not reach them (section 11).
+section 4's caveat, and both reach an operator, who reads a Tenant's content only through the
+surface, as a Platform Operator Principal (section 11).
 
 ## 7. Who may cancel a Run
 
@@ -260,12 +280,10 @@ holds this open and names this document. [ADR-0003](../adr/adr-0003-governance-l
 lists *how it is stopped* among the questions an enterprise buyer arrives with, so cancellation is a
 control surface, not a convenience. It is not one of the three enforcement points, so it is
 authorized as an administrative act rather than by Policy, and the transition is audited with the
-cancelling Principal and any Step Execution in flight. **No normative document owns the rule
-below.** `gateway-api.md` in [`../30-protocol/`](../30-protocol/) is the natural home while
-cancellation stays an ordinary operation on a public contract; `policy-model.md` is the alternative
-if a later document admits cancellation as a further enforcement point, which rule E1's *minimum,
-not a maximum* leaves available. Until one of them takes it, this table binds nobody — registered in
-section 12.
+cancelling Principal and any Step Execution in flight. `gateway-api.md` G15 now owns the rule below
+and reproduces the table normatively, and
+[ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) adds no enforcement
+point to the administrative path, so cancellation stays authorized by an administrative grant.
 
 | Subtype | May cancel | Derivation |
 | --- | --- | --- |
@@ -273,17 +291,16 @@ section 12.
 | Service Account | With the same administrative grant | A backend that can start a Run must be able to stop one, or there is no programmatic stop |
 | End User | Only in a Conversation they are party to, and only where the Session Token's scope says so | Deny-by-default: absent an explicit scope, no |
 | Connector | Never | Reachability is not authority (TA8); transport does not decide execution |
-| Platform operator | Cannot, today | No Principal resolves, so no administrative grant can be held and the deny-by-default posture of section 5 supplies the refusal; section 11 for what an operator does reach |
+| Platform Operator | With the same administrative grant, held in the Tenant it acts in | Operator access is an act by a Platform Operator Principal ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)); who may give one that grant, and whether the Tenant consents, is registered in section 12 |
 
-Three weaknesses, named rather than smoothed. **What a Session Token's scope may contain is
+Two weaknesses, named rather than smoothed. **What a Session Token's scope may contain is
 undecided**, so the End User row is a rule with an undefined term in it; that vocabulary belongs to
-the delegation decision `tool-authorization.md` section 6 owns and marks ADR-required. **An incident
-response cannot stop a Run**: the operator has no Principal, and acting as a tenant Principal would
-be the false attribution `audit-model.md` section 9 calls worse than an acknowledged gap. And
+the delegation decision `tool-authorization.md` section 6 owns and marks ADR-required. And
 cancellation stops orchestration, not side effects, which
 [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 2.4
 already fixes normatively — cited here rather than restated, because a second copy would drift from
-the MUST NOT that carries it.
+the MUST NOT that carries it. An incident response can now stop a Run, as a Platform Operator
+Principal of that Tenant holding the grant, recorded in the Tenant's trail.
 
 ## 8. Whether a Workspace constrains which Tools a capability grant may name
 
@@ -376,39 +393,34 @@ would actually be tested.
 
 ## 11. Platform-operator access
 
-`audit-model.md` section 9 calls platform-operator attribution the largest hole in the identity
-model and marks it ADR-required. **This document owns only what an operator may reach on the
-datastore path, and under what control.** It closes neither attribution nor scoping.
+[ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles what
+`audit-model.md` section 9 held open: how platform-operator work is attributed, and whether it
+crosses a Policy Enforcement Point. **This document owns what an operator may reach, and under what
+control.**
 
-- **Scoping is unmade, and is the same decision as attribution rather than a second one.** Whether
-  operator work reaches a Policy Enforcement Point at all, or reaches only the datastore under
-  ADR-0011, is undecided — attribution is precisely what an enforcement point would need, so
-  answering either answers the other.
-  [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 owns both and needs
-  an ADR; `threat-model.md` boundary B6 records the same. Meanwhile `policy-model.md` rule N2 fails
-  any such path closed at an enforcement point, because an unattributable permission has nothing to
-  attribute to — so no operator route today reaches invoking a Tool, admitting a Run or resolving an
-  Approval Request, and what an operator can actually reach is a datastore read or write. That is
-  the state of the world under N2, not a settled scope.
+- **Support and incident response act as a Platform Operator.** Reading a Tenant's content, or
+  changing it, is an act by a Platform Operator Principal of that Tenant. It travels the paths every
+  Principal travels, crosses the enforcement points on them, needs an administrative grant for an
+  administrative act, and is recorded in that Tenant's trail. `policy-model.md` rule N2 no longer
+  blocks it, because a Principal resolves.
+- **Aggregation and migration reach the datastore, and read no content.** They appear in no Tenant's
+  trail. The operator role now serves aggregation alone, and migration keeps the migration and owner
+  role.
 - **Separate roles.** The operator role is distinct from the application role and from the migration
-  and owner role — [`multi-tenancy.md`](multi-tenancy.md) section 4 enumerates the three, and
-  ADR-0011 requires the separation because ownership remains a bypass of the policy definition.
-- **Cross-tenant by construction.** Metering aggregation under ADR-0009 and support both need it,
-  and no per-tenant control constrains it.
+  and owner role — [`multi-tenancy.md`](multi-tenancy.md) section 4 enumerates them, and ADR-0011
+  requires the separation because ownership remains a bypass of the policy definition.
 
-Derivable and worth applying: **the three operator needs are not one privilege.** Aggregation for
+Derivable, and now applied: **the three operator needs are not one privilege.** Aggregation for
 metering needs aggregates, not rows; maintenance and migration need schema, not content; support
 needs one Tenant's rows, and is the only one of the three that reads customer content — so it is the
-only one a customer will ask about, and collapsing all three into one role forfeits the answer. That
-is ADR-0011's "separate roles" applied, not a new decision.
+only one a customer will ask about, and the only one ADR-0030 records in the customer's trail.
 
-**Section 6's audit-read control does not reach the operator, and this is the sharpest form of the
-gap.** That control sits on the audit surface; the operator's datastore path is not the surface, so
-an operator read of a Tenant's records produces no record at all — not a mis-attributed one, none.
-The reader a customer most wants logged is the one this design cannot log. Nor is the deliberate
-insider modelled: `threat-model.md` section 13 excludes an Orchestra employee acting with intent and
-calls the exclusion uncomfortable. Everything here is written against accident, and against an
-outsider who has obtained operator-level read access.
+**Section 6's audit-read control now reaches the operator**, because support reads through the
+surface as a Platform Operator Principal and the read is recorded like any other. What no control
+here reaches is an operator who goes around that path with datastore privilege. Nor is the
+deliberate insider modelled: `threat-model.md` section 13 excludes an Orchestra employee acting with
+intent and calls the exclusion uncomfortable. Everything here is written against accident, and
+against an outsider who has obtained operator-level read access.
 
 ## 12. Open questions
 
@@ -424,22 +436,26 @@ naming this document in full. The other four are discharged in part: the Service
 and `threat-model.md`'s lifetimes row is below unchanged. Which signed token carries a Principal
 and Tenant between services is settled by
 [ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) (section 3), so its
-row is gone too.
+row is gone too. Three more rows are gone for the same reason:
+[ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles platform-operator
+attribution (section 11),
+[ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) settles the shape
+of an administrative grant (section 5), and `gateway-api.md` G15 carries the cancellation rule
+(section 7).
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
-| The shape of an administrative grant — named roles, attributes on a Principal, or the language `policy-model.md` section 8 already reserves for an ADR — and whether an enforcement point is ever added to the administrative path, which E1's *minimum, not a maximum* leaves available | This document, with or after that language decision; it spans the Control Plane, identity-provider group mapping and audit | **ADR** — a permanent authoring surface, expensive to move once administrative grants exist |
-| How platform-operator action is attributed under invariant I2, and — the same decision, not a second — whether operator work reaches a Policy Enforcement Point at all or only the datastore | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9, which owns both | **ADR** — its classification, repeated; section 7 shows the cost of leaving it |
+| Which roles the closed set of administrative grants holds, which administrative operations each permits, and how a role comes to permit an operation added later | This document, before the first operation that checks an administrative grant; [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) fixes the shape | No |
+| How a Platform Operator authenticates, which verified subjects Tenant User Management may resolve to one, and whether a Platform Operator Principal stands on a Membership | This document, before the first operation a Platform Operator performs; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) fixes the Principal, and ADR-0017 keeps the list of operators out of Keycloak roles | No — but before the first operator operation |
 | Whether an operator break-glass decrypt of a custodied credential exists | A security review, on the same test `approval-workflows.md` applies to break-glass | **ADR** — a deliberate hole in the control section 10 settles closed |
 | What a Session Token's scope may contain, which bounds the End User row in section 7 | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — its classification, repeated |
 | Whether an End User may sit in an Approval Chain, which would give a Session Token an approval authority | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md), and the seat definition under ADR-0009 | **ADR** — its classification, repeated |
-| Which federation protocol the identity-provider integration speaks, and whether group membership maps to an administrative grant | [`control-plane.md`](control-plane.md) with a design partner; that document accepts the assignment in its section 12 and carries the row in section 13 | No |
+| Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be | [`control-plane.md`](control-plane.md) with a design partner; that document accepts the assignment in its section 12 and carries the row in section 13. [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) decides that a group holds a role only through a mapping | No |
 | How a Platform User is deprovisioned, and what becomes of administrative grants held by a Principal who can no longer authenticate | [`control-plane.md`](control-plane.md), which accepts it in section 12 and carries the row in section 13; the domain model fixes that a Principal outlives its credentials, not what removes its authority | No |
 | What credential class a Service Account authenticates with, and whether the tenant identity provider authenticates it or a separate credential type does | A product decision with a design partner; section 3 fixes only what it is not, and which component receives it | No |
 | Session Token, Service Account and enrolment credential lifetimes and rotation intervals | A customer contract or design partner; no input exists pre-customer, and section 9 gives the forces | No — unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies |
-| Whether operator support access to a Tenant's rows requires consent, is time-bounded, or is announced to the Tenant | A design-partner conversation and the contract; no ADR names one | No — but it must exist before the first security review |
+| Whether a Platform Operator's access to a Tenant requires the Tenant's consent, is time-bounded, or is announced to the Tenant, and who gives a Platform Operator an administrative grant there | A design-partner conversation and the contract; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) decides the attribution, not the consent | No — but it must exist before the first security review |
 | Whether a Tool registration may itself be Workspace-scoped, given one Catalog per Tenant | [`control-plane.md`](control-plane.md) section 10, which specifies registration no further today, with the capability grant's subject, which `tool-authorization.md` marks ADR-required | No — unless it merges with that ADR |
-| Which normative document carries the cancellation authorization rule of section 7 | `gateway-api.md` in [`../30-protocol/`](../30-protocol/) while cancellation is an ordinary operation on a public contract, or [`../40-governance/policy-model.md`](../40-governance/policy-model.md) if a later document adds an enforcement point there | No — unless it becomes an enforcement point, which changes E1's minimum |
 | Whether a Service Account consumes a seat, given ADR-0009 counts Principals authenticating to the Control Plane and carries no Service Account dimension | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), where [`../00-overview/personas.md`](../00-overview/personas.md) section 5 registers it | No — its classification, repeated |
-| GLOSSARY entries for *capability grant* and *administrative grant*, neither of which has one | [`../GLOSSARY.md`](../GLOSSARY.md), joining the entry [`../20-domain/domain-model.md`](../20-domain/domain-model.md) already registers for the first | No |
+| A GLOSSARY entry for *capability grant*, which has none | [`../GLOSSARY.md`](../GLOSSARY.md), joining the entry [`../20-domain/domain-model.md`](../20-domain/domain-model.md) already registers | No |
 | When identity sync runs — on a schedule, on the identity provider's events, or at sign-in — and so how long a Person's name and email may lag behind the identity provider | [`control-plane.md`](control-plane.md), which owns deprovisioning, with a design partner's expectations of how soon a change must show | No |

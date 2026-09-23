@@ -1,9 +1,9 @@
 ---
 title: Vision
 doc_id: DOC-011
-version: 0.16.1
+version: 0.17.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0004, ADR-0005, ADR-0006, ADR-0007, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
 ---
@@ -109,7 +109,7 @@ that specific enough to be attacked, and they are the substance of the claim.
 | Commitment | What it rules out | Where it is fixed |
 | --- | --- | --- |
 | Exactly one accountable Principal per governed action, with no unattributed path | An action attributable to "the agent", to a shared service identity, or to nothing | [`GLOSSARY.md`](../GLOSSARY.md); [`audit-model.md`](../40-governance/audit-model.md) |
-| The Policy version that matched is pinned for the life of a Run and referenced by version | Reconstructing after the fact what the rule *probably* said when the action was taken | [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md); [VERSIONING.md](../VERSIONING.md) section 8 |
+| Every Policy version that matched is pinned for the life of a Run and referenced by version | Reconstructing after the fact what the rule *probably* said when the action was taken | [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md); [VERSIONING.md](../VERSIONING.md) section 8 |
 | An Approval Request carries the Evidence Set the model relied on | A human approving a summary the model wrote about its own reasoning | [`approval-workflows.md`](../40-governance/approval-workflows.md) |
 | The Policy Decision is durable before the action it gates is attempted | An action taken while the record of why it was permitted could not be written | [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md) |
 
@@ -328,7 +328,7 @@ author, is the third durable row of section 2.1. Either way it is load-bearing, 
 in section 2 is only as good as the point that produces it.
 
 **Audit is a product surface, not a log level.** Every Policy Decision is recorded, including the
-allows, with the Policy version that matched and the inputs it matched on
+allows, with every Policy version that matched and the inputs they matched on
 ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)), and a Policy Decision must be
 durable before the gated action is attempted
 ([ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md)). Audit is never reconstructed

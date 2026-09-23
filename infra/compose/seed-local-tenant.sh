@@ -19,6 +19,7 @@ LOCAL_TENANT=00000000-0000-4000-8000-000000000100
 SCHEMA=tenant_user_management
 
 # No operation provisions Tenants yet, so the schema's owner writes the directory row itself.
+# ADR-0031 decides that operation; when it is built, this write becomes a call to it.
 docker compose exec -T postgres psql -X -q -v ON_ERROR_STOP=1 \
   "postgresql://tenant_user_management_owner:tenant-user-management-owner-local-dev@postgres:5432/orchestra" -c "
   INSERT INTO $SCHEMA.tenant_directory (tenant_id, status, identity_provider_organization)

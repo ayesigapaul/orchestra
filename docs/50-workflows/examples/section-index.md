@@ -1,9 +1,9 @@
 ---
 title: "Worked Examples"
 doc_id: DOC-064
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -76,8 +76,9 @@ answer the example quietly chose. Four recur in all three:
 
 - What a rejected or expired gate does to the Run —
   [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 8, ADR required.
-- The policy language. Every Policy below is written in prose because no syntax exists —
-  [`policy-model.md`](../../40-governance/policy-model.md) section 8, ADR required.
+- How a Policy is written. The language is decided — CEL under the Expression Profile
+  ([ADR-0035](../../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)) — but the
+  profile's inputs are not yet specified, so every Policy below is still written in prose.
 - Whether the Principal who started a Run may approve its gate —
   [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 6, ADR required.
 - What satisfies an Approval Chain —

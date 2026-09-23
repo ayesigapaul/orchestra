@@ -1,9 +1,9 @@
 ---
 title: UI Protocol
 doc_id: DOC-044
-version: 0.14.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -92,10 +92,12 @@ applies in full. The record is then fail-closed under
 [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md): it MUST be durable before the
 surface is emitted. If the check is not an enforcement point, the write MAY degrade under that same
 ADR — and US4's tenant visibility is then only as strong as the classification, because a degraded
-write loses the injection signal as silently as the drop US4 forbids. Two smaller gaps ride along
-and section 10 registers both: audit-model section 3 declares itself the enumeration of audited acts
-and has no row for a refused surface or for UA4's refused UI Action, and audit-model A3 requires
-exactly one Principal per record where an Agent is not one (audit-model section 9).
+write loses the injection signal as silently as the drop US4 forbids. Two smaller gaps rode along.
+Section 10 registers the one that remains: audit-model section 3 declares itself the enumeration of
+audited acts and has no row for a refused surface or for UA4's refused UI Action. The other is
+closed: a refusal no Principal caused, as a surface refused outside an enforcement point would be,
+records its cause and no Principal
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 ## 3. What ships, and what is deferred
 
@@ -257,10 +259,11 @@ Surface. It travels from the customer application to Orchestra — outbound on r
 [`../10-architecture/system-context.md`](../10-architecture/system-context.md) — and is therefore an
 ordinary state-changing Gateway request, not an event on the stream.
 
-**Which Gateway operation carries one.** An approval decision raised from the approval surface is
-the *decide* operation on the Approval Request resource, which [`gateway-api.md`](gateway-api.md)
-section 5 already admits as read and decide and never create. What this document adds to it is the
-surface-instance reference UC4 requires, an obligation that resource's rules do not yet carry.
+**Which Gateway operation carries one.** An approval decision raised from the approval surface is a
+command: a decision created against the Approval Request it decides ([`gateway-api.md`](gateway-api.md)
+G28), the request itself being read and decided and never created. What this document adds to it
+is the surface-instance reference UC4 requires, which the decision carries, an obligation the
+Gateway's rules do not yet carry.
 Whether any other UI Action reaches that contract, as its own resource or not at all, is that
 document's open row, turning on ADR-0010 validation step 2 and therefore **Proposed**. Section 10
 repeats it with gateway-api's classification rather than closing another document's question here.
@@ -368,7 +371,7 @@ carry the owning document's classification unchanged and are not revised here.
 | Where the UI profile, a component catalog and a surface definition enter the artefacts that carry versions, and whether a Run pins its catalog version as invariant I3 pins the definition version it started with | [`../VERSIONING.md`](../VERSIONING.md), which enumerates those artefacts and carries none of the three; section 4 asserts the profile's version, CC6 records the catalog's and AS6 the surface definition's, and no enumeration admits them | No |
 | Whether declarative UI representations reach the Gateway contract at all, or only this document's | [`gateway-api.md`](gateway-api.md), on ADR-0010 validation step 2, **Proposed** and outstanding | No — *repeated* |
 | Whether a component catalog registration may itself be Workspace-scoped, given one catalog per Tenant under CC1 | [`../10-architecture/control-plane.md`](../10-architecture/control-plane.md) section 10, which holds the same question open for a Tool registration and derives the shape but not the choice | No — unless it merges with that ADR, *repeated* |
-| Which rows the audit enumeration needs for a refused UI Surface and a refused UI Action, and how a refusal with no acting Principal is attributed | [`../40-governance/audit-model.md`](../40-governance/audit-model.md): section 3 is the enumeration by its own rule, section 9 holds attribution open, and section 13 classifies it | **Yes** for the attribution half — *repeated*; the enumeration rows are No |
+| Which rows the audit enumeration needs for a refused UI Surface and a refused UI Action | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 3, the enumeration by its own rule; a refusal no Principal caused records its cause and no Principal ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | No |
 | Whether an approval surface may ever be presented through a renderer Orchestra does not ship, and what conformance MUST be demonstrated first | The renderer-path decision above, with the front-end platform; AS4 binds where Orchestra ships the renderer, and section 3 defers every other case out of the first slice | No |
 
 Two questions assigned here are **answered rather than deferred**, and are absent above for that

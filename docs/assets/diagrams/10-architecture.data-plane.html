@@ -53,17 +53,20 @@ sequenceDiagram
   autonumber
   participant C as Customer backend and client
   participant G as Gateway
+  participant S as Run Supervisor
   participant P as Policy evaluation at each PEP
   participant D as Durable decision write
   participant R as Runtime
   participant M as Model Broker
   participant T as Tool Invocation
   C-&gt;&gt;G: Submit a Run, bearing a Session Token
-  G-&gt;&gt;P: Admission enforcement point
+  G-&gt;&gt;S: Forward the submission, Principal and Tenant already resolved
+  S-&gt;&gt;P: Admission enforcement point, evaluated in process
   P-&gt;&gt;D: Write the Policy Decision, durably. It must survive a crash
-  P--&gt;&gt;G: allow, deny or require_approval
+  P--&gt;&gt;S: allow, deny or require_approval
+  S--&gt;&gt;G: The Run as created or refused, with its identifier
   G--&gt;&gt;C: A deny ends it here. The Run is Denied and no Step ever runs
-  G-&gt;&gt;R: Admitted. Definition and Policy versions pinned for life
+  S-&gt;&gt;R: Admitted. Definition and Policy versions pinned for life
   R-&gt;&gt;P: Step boundary, emitted by the compiler
   P-&gt;&gt;D: Write the Policy Decision, durably
   R-&gt;&gt;M: Model call for an agent Step
@@ -76,23 +79,26 @@ sequenceDiagram
   T--&gt;&gt;R: A result, or an unknown state that is never blindly retried
   R--&gt;&gt;G: Agent Events
   G--&gt;&gt;C: Ordered, replayable stream
-  D--&gt;&gt;D: Where the mechanism replicates, replication to the audit store is asynchronous
+  D--&gt;&gt;D: Delivered to the audit store afterwards, through the enforcing service's outbox
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">sequenceDiagram
   autonumber
   participant C as Customer backend and client
   participant G as Gateway
+  participant S as Run Supervisor
   participant P as Policy evaluation at each PEP
   participant D as Durable decision write
   participant R as Runtime
   participant M as Model Broker
   participant T as Tool Invocation
   C-&gt;&gt;G: Submit a Run, bearing a Session Token
-  G-&gt;&gt;P: Admission enforcement point
+  G-&gt;&gt;S: Forward the submission, Principal and Tenant already resolved
+  S-&gt;&gt;P: Admission enforcement point, evaluated in process
   P-&gt;&gt;D: Write the Policy Decision, durably. It must survive a crash
-  P--&gt;&gt;G: allow, deny or require_approval
+  P--&gt;&gt;S: allow, deny or require_approval
+  S--&gt;&gt;G: The Run as created or refused, with its identifier
   G--&gt;&gt;C: A deny ends it here. The Run is Denied and no Step ever runs
-  G-&gt;&gt;R: Admitted. Definition and Policy versions pinned for life
+  S-&gt;&gt;R: Admitted. Definition and Policy versions pinned for life
   R-&gt;&gt;P: Step boundary, emitted by the compiler
   P-&gt;&gt;D: Write the Policy Decision, durably
   R-&gt;&gt;M: Model call for an agent Step
@@ -105,7 +111,7 @@ sequenceDiagram
   T--&gt;&gt;R: A result, or an unknown state that is never blindly retried
   R--&gt;&gt;G: Agent Events
   G--&gt;&gt;C: Ordered, replayable stream
-  D--&gt;&gt;D: Where the mechanism replicates, replication to the audit store is asynchronous</pre></details>
+  D--&gt;&gt;D: Delivered to the audit store afterwards, through the enforcing service's outbox</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

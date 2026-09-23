@@ -1,9 +1,9 @@
 ---
 title: Deployment Topologies
 doc_id: DOC-028
-version: 0.12.0
+version: 0.13.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0013]
 ---
@@ -164,16 +164,18 @@ because a topology discussion is where someone proposes relaxing one.
 
 [`containers.md`](containers.md) section 12 assigns this here with a warning worth keeping: *nothing
 there is a service count*. This document produces none either — pre-implementation that is
-invention, and three decisions land first: the datastore engine and the Definition Compiler's side
-of the language boundary, both registered **ADR** elsewhere, and where policy evaluation executes,
-which [`containers.md`](containers.md) section 12 registers **ADR** only if evaluation needs its own
-datastore access and Document otherwise. Each classification is repeated, not revised. What can be
-fixed now are the constraints on any packaging.
+invention. Of the decisions that land first, two are taken: the datastore engine is PostgreSQL
+([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)), and policy evaluation runs in process
+in each enforcing service
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)), so it adds no
+deployable unit. The Definition Compiler's side of the language boundary is still registered
+**ADR** elsewhere, and that classification is repeated, not revised. What can be fixed now are the
+constraints on any packaging.
 
 | Constraint | Why it holds |
 | --- | --- |
 | The plane boundary must be a **release** boundary, whatever the service count | An artifact already crosses it — compiled definitions down, facts up ([`containers.md`](containers.md) section 1) — and that is the whole of why it holds today, independent of any assumption. Separately, **under A1 and A2**, it is cheap insurance: the hybrid variant, if it ever exists, splits along exactly this line, so keeping the planes separately releasable is what would keep section 7 from being a rewrite |
-| Policy evaluation may not become a network hop that can fail open | Enforcement is in-process by construction ([`data-plane.md`](data-plane.md) section 5). Where the *evaluator* runs is undecided; that failing to reach it is **fail-closed** is not — the gated action does not proceed, and the condition is a contained fault under [`../60-operations/reliability.md`](../60-operations/reliability.md) F10 and F11, never an `allow` and never recorded as a `deny`, which would inflate the governance-refusal count with outages. This is not |
+| Policy evaluation is not a network hop | Enforcement is in-process by construction, and evaluation is too: each enforcing service evaluates in process over the Policy versions the Run pinned ([`data-plane.md`](data-plane.md) section 5). What stays fail-closed is the decision's commit — a decision that cannot be made durable stops the gated action, a contained fault under [`../60-operations/reliability.md`](../60-operations/reliability.md) F10 and F11, never an `allow` and never recorded as a `deny`, which would inflate the governance-refusal count with outages |
 | Every process that can gate an action carries the drain obligation | [`../60-operations/reliability.md`](../60-operations/reliability.md) F23 makes drain a property of that whole set, not of one service with a lifecycle hook, so packaging that multiplies such processes multiplies drain surfaces |
 
 ## 7. Hybrid — contingent, and not the architecture
@@ -195,12 +197,12 @@ on a shape nobody has chosen.
 | Gateway | Moves | It is the plane's only ingress, and ingress is where the customer's data first arrives |
 | Runtime | Moves | The execution path is what a non-egress requirement is about, under A2 |
 | Policy Enforcement Points | Move, necessarily | They are places in the path, not a service — they go where the Step goes |
-| Policy evaluation | **Undecided, and the sharpest of these** | Its location is undecided today ([`containers.md`](containers.md) section 3) and its classification is repeated in section 6, not revised. Left hosted, it puts a wide-area call on every gating path, which section 6's second constraint permits only fail-closed — so a link failure stops governed work rather than passing it. Moved into the estate, Policy version propagation becomes a distributed-consistency problem instead |
+| Policy evaluation | Moves, necessarily | It runs in process in each enforcing service ([`containers.md`](containers.md) section 3), so it goes where those services go. What becomes hard is propagating Policy versions into the estate, a distributed-consistency problem, together with the aggregates each service keeps in its own transactions |
 | Model Broker | Moves | Which raises separately whether credential custody moves with it |
 | Tool Invocation | Moves | And with it most of the Connector's reason to exist — 7.2 |
 | Connector fabric | **Undecided, and split by the boundary** | It terminates the Connector's outbound session and holds enrolment and health state, while the enrolment *act* sits on the Control Plane API, which stays hosted ([`containers.md`](containers.md) section 3). Under hybrid it could move with Tool Invocation, stay hosted with enrolment, or lose most of its purpose where the deployed plane reaches in-network Tools directly. Whether it is a container at all is classified **ADR** in [`containers.md`](containers.md); this row is registered in section 12 |
-| Whatever satisfies ADR-0013's durable decision write | Moves, or the enforcement path crosses a wide-area link | 7.3 |
-| Control Plane API, Admin Console, Definition Compiler, Metering | Stay hosted | This is what makes it hybrid rather than self-hosted, per assumption A3 |
+| The enforcing services' transactions and outboxes, which make a Policy Decision durable under ADR-0034 | Move with the services that commit them, leaving only delivery to the hosted audit store on the link | 7.3 |
+| Control Plane API, Admin Console, Definition Compiler, Metering, Audit | Stay hosted | This is what makes it hybrid rather than self-hosted, per assumption A3. Audit staying hosted is what puts the trail's delivery on the link, 7.3 |
 | Credential Custody | **Undecided** | ADR-0002 places custody with Orchestra. [`system-context.md`](system-context.md) section 7 registers the *connector-proxy* form of the question — whether model traffic may be proxied so credentials never leave the perimeter — and classifies it **ADR required**; that classification is repeated. The hybrid form is registered here for the first time and inherits it, because it relocates the same custody. Hybrid does not answer it |
 
 ### 7.2 Hybrid relocates the outbound-session problem; it does not remove it
@@ -233,10 +235,10 @@ estate. Four consequences follow.
   [`../60-operations/observability.md`](../60-operations/observability.md) section 4 makes absence
   readable as *not yet seen* rather than *did not happen*; under hybrid that horizon lags a customer
   network's availability, and a reconciliation run behind it asserts less than it does today.
-- **ADR-0013's durable write must be satisfiable inside the estate**, or every enforcement point
-  takes a wide-area round trip on the gating path. Hosted, the mechanism choice is a latency and
-  audit-volume trade-off; hybrid removes the option that keeps it simple. The same arithmetic
-  applies to the evaluation call itself wherever the evaluator stays hosted — 7.1.
+- **ADR-0013's durable write happens inside the estate.** ADR-0034 writes a decision in the
+  enforcing service's own transaction, so a customer-deployed service commits it there, and only
+  delivery to the hosted audit store crosses the link. The trail then lags by that link as well as
+  by capture, and evaluation, which runs in process, takes no wide-area round trip — 7.1.
 - **Degraded periods are bracketed by an operator who is not Orchestra.** `reliability.md` F16 makes
   the bracket a metering input as well as an operational signal, so the customer's own operations
   become an input to their own invoice.
@@ -334,10 +336,10 @@ classifies it **Document**. That classification is repeated, not revised; `relia
 10 answers the operational half in F22, which orders the drain, and F23, which places the obligation
 on every process that can gate an action. This document's share is a topology sentence: under hosted
 the procedure is Orchestra's to perform and be paged for; under hybrid it is the customer's, on a
-schedule Orchestra does not set, for a failure mode whose consequence — where the durable write is a
-node-local append or an outbox rather than a shared transaction — is **lost audit rather than stale
-audit** (`reliability.md` section 10; the mechanism itself is undecided,
-[`data-plane.md`](data-plane.md) section 11). Assumption A4 does the work in that second clause.
+schedule Orchestra does not set. Under ADR-0034 a drained process holds no decision of its own, so
+what is at stake is the datastore and capture path the customer would operate: a decision kept in
+its service's schema until the audit store records it is delayed rather than lost only while that
+datastore survives (`reliability.md` section 10). Assumption A4 does the work in that second clause.
 
 ## 11. Questions assigned to this document, and their disposition
 
@@ -345,7 +347,7 @@ audit** (`reliability.md` section 10; the mechanism itself is undecided,
 | --- | --- | --- |
 | [`system-context.md`](system-context.md) section 7 | Whether a hybrid topology exists | **Escalated, not answered.** It rests on a design-partner conversation, and an assumed partner is not one. Section 7 states what it would cost so the decision is informed; its classification, **ADR required**, is repeated |
 | [`data-plane.md`](data-plane.md) section 11 | Whether a customer-hosted execution topology exists, and what of this plane would move into it | **Split, and both halves keep their classifications.** Whether it exists is system-context's **ADR required** row above; what would move is the **Document** half, answered conditionally in 7.1 |
-| [`containers.md`](containers.md) section 12 | Which containers are separately deployable, and which share a process or a release | **Answered as constraints, not as a count** — section 6. The count waits on three decisions registered **ADR** elsewhere |
+| [`containers.md`](containers.md) section 12 | Which containers are separately deployable, and which share a process or a release | **Answered as constraints, not as a count** — section 6. The count waits on the Definition Compiler's side of the language boundary, registered **ADR** elsewhere |
 | [`multi-tenancy.md`](multi-tenancy.md) section 10 | The promotion procedure — sequencing, verification and cutover | **Partly answered** — section 8 gives the ordered shape and what verification must assert. Sequencing under concurrent writes, cutover atomicity and rollback wait on the datastore engine and are registered below |
 | [`data-plane.md`](data-plane.md) section 11 | How a node is drained without losing unreplicated decision writes | **Answered elsewhere and repeated** — `reliability.md` F22 and F23. Section 10 adds only whose operator performs it |
 | [`connector.md`](connector.md) section 11 | The topology half of whether credential custody relocates when BYOK is read as non-egress | **Registered, not answered.** 7.1 marks Credential Custody **Undecided**; section 12 repeats [`system-context.md`](system-context.md)'s **ADR required** classification for the connector-proxy form and registers the hybrid form beside it |
@@ -368,4 +370,4 @@ in prose. Where another document owns a question, its classification is repeated
 | Whether credential custody moves under hybrid, given ADR-0002 places it with Orchestra | [`system-context.md`](system-context.md) section 7 registers the connector-proxy form of this question | **ADR required** — that register's classification; it relocates custody |
 | How a customer-deployed execution plane would be versioned and its skew supported, given [`../VERSIONING.md`](../VERSIONING.md) enumerates nine artifacts and does not include one | [`../VERSIONING.md`](../VERSIONING.md), void unless hybrid binds | **ADR required** if it binds — it is a support commitment, not a document convention |
 | Whether an Evidence Set is materialised by value or by reference, which decides how much egress hybrid actually prevents | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) | No — that register's classification; recorded here because section 7.4 turns on it |
-| Which containers are separately deployable, as a count rather than as constraints | The datastore engine, the Definition Compiler's side of the language boundary, and where policy evaluation executes — all registered **ADR** in [`containers.md`](containers.md) and [`data-plane.md`](data-plane.md) | No — the constraints in section 6 hold on any count |
+| Which containers are separately deployable, as a count rather than as constraints | The Definition Compiler's side of the language boundary, registered **ADR** in [`containers.md`](containers.md) and [`data-plane.md`](data-plane.md); the datastore engine and where policy evaluation executes are decided | No — the constraints in section 6 hold on any count |

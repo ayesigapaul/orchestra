@@ -1,9 +1,9 @@
 ---
 title: Workflows
 doc_id: DOC-060
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -55,5 +55,7 @@ Admitting cycles later is MINOR; withdrawing them is MAJOR.
 > now fixes the document shape `workflow-dsl.md` section 2 specifies — and fixes only that. It
 > deliberately does not make the language checkable: L9 puts that authority in the compiler rather
 > than the schema, because ignoring an unknown construct would drop an author's intent, and where
-> that intent was a governance one the loss is invisible. The expression syntax, the input type
-> notation and the branch labels stay unconstrained there because they are undecided here.
+> that intent was a governance one the loss is invisible. Expressions are written in the Expression
+> Profile ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)),
+> but how a document marks one, the input type notation and the branch labels stay unconstrained
+> there because they are undecided here.

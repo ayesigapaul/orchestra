@@ -1,9 +1,9 @@
 ---
 title: Workflow Definition Language
 doc_id: DOC-061
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0005, ADR-0008, ADR-0011]
 ---
@@ -163,7 +163,7 @@ steps:
   route:
     type: condition
     side_effect_class: read
-    when: "<predicate — syntax undecided, see section 8>"
+    when: "<predicate — an Expression Profile expression, its form here undecided, section 11>"
   approve:
     type: approval
     side_effect_class: read
@@ -192,8 +192,9 @@ edges:
 
 **Illustrative, and bounded by section 2.** What the example specifies is the shape section 2's
 table gives, and nothing past the keys in that table. Everything else is notation chosen to make the
-shape readable, and MUST NOT be read as decided: the predicate in `route`, the `${…}` references and
-the branch labels leaving `route`, which are one question registered in section 8; the `inputs` type
+shape readable, and MUST NOT be read as decided: the form of the predicate in `route` and of the
+`${…}` references, which are Expression Profile expressions (section 8) written in a notation
+section 11 registers, and the branch labels leaving `route`; the `inputs` type
 notation and the choice of YAML as the concrete syntax, registered with the type system in section
 11; the `tool: { name, schema_major }` object shape; the version pin on `assess`; and the class
 declared on the `agent`, `condition` and `approval` Steps, whose meaning on a type that reaches no
@@ -264,6 +265,7 @@ adds indirection when debugging. C5 and C6 pay that down.
 | Tool reference | Every Tool named — the Step's own and the one in its compensating action — is registered in this Tenant's Tool Catalog, pins its schema MAJOR, and passes arguments conforming to that major | Rejected — L7, W5, `execution-semantics.md` X21 |
 | Agent and Workflow reference | An `agent` or `subworkflow` Step names something that resolves within the Tenant and is published rather than draft. Whether the reference pins that version is unmade, so no pinning check is specified either way | Rejected — `step-types.md` section 5; section 11 |
 | Graph well-formedness | Step identifiers unique, `entry` names a declared Step, every edge names declared Steps, every Step reachable from `entry`, and the graph acyclic | Rejected — L8, L11 |
+| Expressions | Every predicate, data reference and `transform` body parses and type-checks under the Expression Profile version in force at publication, within the profile's cost bound | Rejected — section 8, [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) |
 | Rail vocabulary | No runtime, provider or tool-protocol vocabulary in any name or value | Rejected — L4 |
 
 One absence is deliberate: **nothing is warned and published**, a compile-time warning on a
@@ -326,18 +328,23 @@ The options are different products, not points on a scale:
 | An existing expression language | Adopt a third-party specification and its evaluator | Inherits someone else's versioning and someone else's escape hatches, and puts a third-party evaluator on the path of every Step |
 | A general-purpose evaluator | Embed a scripting engine | Reverses L1 — the definition would contain code — and places arbitrary evaluation inside the very Step boundary the enforcement point exists to govern |
 
-**This is not decided, and this document MUST NOT decide it.** It is ADR-shaped on exactly the
-grounds `policy-model.md` section 8 gives for the policy language — the same question at a different
-enforcement point. It becomes a permanent public contract the moment a customer authors against it,
-it constrains the compiler, the authoring surface, the audit representation and the
-`workflow-definition` schema slot reserved in VERSIONING section 6, and the four options fail in
-different ways rather than at different prices. Whether it and the policy language are one language
-is part of that decision, not a detail of it: one language is one surface to defend and one
-evaluator to secure, two are two.
+**It is decided, and not here.**
+[ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) takes the third
+option and makes it the policy language as well: predicates, data references and `transform` bodies
+are expressions in the Expression Profile, the Orchestra-versioned profile of CEL that Policies are
+written in. A reference is field selection, and a transform is map and list construction. The
+profile admits no user-defined function and bounds evaluation cost, which keeps the language on the
+right side of L1, and the compiler checks every expression at publication (section 5). It needed an
+ADR on exactly the grounds `policy-model.md` section 8 gives for the policy language: it became a
+permanent public contract the moment a customer could author against it, and it constrains the
+compiler, the authoring surface, the audit representation and the `workflow-definition` schema slot
+reserved in VERSIONING section 6. One language is one surface to defend and one evaluator to secure.
 
 **Expressions are one pressure on the closed set; iteration is the other.** It is the same risk in
 other clothes: a cycle plus a predicate is a loop, and a loop is where step limits, iteration bounds
-and non-termination arrive — none decided, and none this document may invent.
+and non-termination arrive — none decided, and none this document may invent. The Expression
+Profile's macros over finite lists, such as `map` and `all`, are not that loop: they terminate
+within the cost bound and repeat no Step (ADR-0035).
 
 **L11 — A cyclic graph is rejected at compile time, and the language admits no iteration until an
 ADR admits one.** Declining to check would not have been neutral. It would have decided the question
@@ -383,15 +390,15 @@ components. Rows marked *repeated* carry another document's classification uncha
 
 | Question | ADR required? | Decided by |
 | --- | --- | --- |
-| The expression language — predicates, data references and `transform` bodies, which are one question and not three | **ADR** | An ADR of its own, on the grounds `policy-model.md` section 8 gives for the policy language. Whether the two are one language is part of the decision. Section 8 sets out the four options and why they differ in kind |
-| What admitting a cycle would require — a step limit, an iteration bound and an answer for non-termination — and so whether the language ever admits iteration | **ADR** | The same ADR, or one beside it. L11 rejects a cyclic graph in the interim, so nothing frozen under W1 depends on an answer nobody has given; admitting cycles later is MINOR under R2, withdrawing them would be MAJOR. The ADR has to supply the bounds, not only the permission |
+| What admitting a cycle would require — a step limit, an iteration bound and an answer for non-termination — and so whether the language ever admits iteration | **ADR** | An ADR beside ADR-0035, which admits no iteration. L11 rejects a cyclic graph in the interim, so nothing frozen under W1 depends on an answer nobody has given; admitting cycles later is MINOR under R2, withdrawing them would be MAJOR. The ADR has to supply the bounds, not only the permission |
 | Whether a `tool` Step naming a Tool is itself the permission, or Workflows need a grant subject of their own | **ADR** — *repeated* | [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 10, which assigns it jointly here. Disposition below |
 | Whether the Step-boundary and Tool enforcement points collapse into one evaluation for a `tool` Step | Document — *repeated* | [`../40-governance/policy-model.md`](../40-governance/policy-model.md) section 9, with a later revision of that document. Disposition below |
 | Whether an `agent` or `subworkflow` Step pins the version of the definition it names, or resolves the Active one at run time | **ADR** | This document with `step-types.md`, read against W1 to W3 and invariant I3. Resolving Active at run time lets a published version's behaviour change without republishing it, which W1 exists to prevent, and lets a Run reach logic published after its own admission, which I3 and W2 exist to prevent; pinning makes a nested definition undrainable while any caller is published. Neither cost has been accepted, and the `subworkflow` half is only answerable once `step-types.md` section 13 settles whether a sub-execution is a separate Run. The worked example shows a pin and says it is undecided |
 | What a Side-Effect Class means on the seven types that reach no Tool of their own, and whether the compiler constrains the declared value or accepts the author's assertion | **ADR** — *repeated* | [`../40-governance/policy-model.md`](../40-governance/policy-model.md), whose rule N1 makes the class a primary evaluation input, with this document; registered by `step-types.md` section 13. Disposition below |
 | Graph shape past well-formedness — whether a `condition` branch set must be exhaustive, and whether a `subworkflow` reference cycle is reachable across definitions, which is where recursion and nesting depth live | Document | This document, which owns schema and graph shape; assigned here by `step-types.md` section 13. L11 rejects a cycle inside one definition and says nothing about one spanning several |
 | Whether concurrent branches of a `parallel` Step may write the same data, and what wins if they do | Document | This document with the type-system row below, data flow being a schema question; assigned here by `step-types.md` section 9 |
-| The type system for `inputs` and Step outputs, whether the schema borrows an existing schema language, and which concrete syntax is canonical | Document | This document with the `workflow-definition` schema slot reserved in [`../VERSIONING.md`](../VERSIONING.md) section 6. W1 needs one canonical form to freeze and to diff. Cheaper to take after the expression-language ADR |
+| The type system for `inputs` and Step outputs, whether the schema borrows an existing schema language, and which concrete syntax is canonical | Document | This document with the `workflow-definition` schema slot reserved in [`../VERSIONING.md`](../VERSIONING.md) section 6. W1 needs one canonical form to freeze and to diff. Now that [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) has fixed the expression language, this row includes how a document marks a value as an expression rather than a literal, and the branch labels leaving a `condition` or `parallel` Step |
+| Whether a `wait` condition is an Expression Profile expression or a structured time value, such as an ISO 8601 duration or an RFC 3339 time | Document | This document with [`step-types.md`](step-types.md) section 10. [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) covers predicates, data references and `transform` bodies, not the `wait` condition |
 | Whether compiler diagnostics are a versioned contract with stable codes a customer's build can assert against | Document | This document with the error-envelope decision registered in [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md). C5 fixes a diagnostic's content, not its stability |
 | What a reviewed custom step type is, and what review admits one | **ADR** | ADR-0005 names it as the escape hatch and ADR-0008 requires an ADR per step type, so each instance is gated. The general shape of the hatch is unmade |
 | Whether a rejected or expired approval gate fails the Run or takes a declared rejection branch, and so whether the language admits a rejection edge | **ADR** — *repeated* | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md) section 8, shared with `step-types.md` |

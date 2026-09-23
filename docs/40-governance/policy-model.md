@@ -1,9 +1,9 @@
 ---
 title: Policy Model
 doc_id: DOC-051
-version: 0.7.0
+version: 0.8.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -51,7 +51,11 @@ Workspace reference, and is subject to invariant I1: isolation is enforced by ro
 the datastore, not by application code
 ([ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md)). A Workspace scopes
 administration and visibility, never isolation. A Policy MUST NOT be evaluated against another
-Tenant's inputs, and every Policy Decision MUST carry `tenant_id`.
+Tenant's inputs, and every Policy Decision MUST carry `tenant_id`. An evaluation considers the
+Tenant's Policies that name no Workspace together with those that name the evaluation's Workspace,
+under the one precedence rule of D4, so a Workspace Policy can add a `deny` or a gate and MUST NOT
+remove a Tenant's
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)).
 
 **P3 — The verdict set is closed.** Exactly three verdicts exist and an evaluation MUST yield
 exactly one: never two, never none. There is no "warn", no "allow with conditions", no silent
@@ -61,18 +65,22 @@ repurposes the enum rather than adding a value rule R3 lets a consumer ignore. I
 contract change, and it needs an ADR because it reaches every enforcement point, every consumer of a
 Policy Decision and every audit report at once.
 
-**P4 — A Policy Decision names at most one Policy version.** Deny-by-default means *no Policy
-matched* is itself a decision with a record, not a missing record — see section 5.
+**P4 — A Policy Decision names every Policy version whose rules matched, with the verdict each
+contributed.** The verdict comes from all of them and never from one chosen among them (D4), and
+deny-by-default means *no Policy matched* is itself a decision with a record, not a missing record
+— see section 5
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)).
 
 **P5 — A Policy is immutably versioned, and a Policy Decision references the version it
 evaluated.** Policies are versioned on the same terms as Agent and Workflow definitions —
 [`../VERSIONING.md`](../VERSIONING.md) sections 2 and 8, rules W1 to W4 — so a published version is
 frozen and editing a Policy means publishing a new one
 ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)). A Policy Decision MUST
-reference the Policy version it evaluated and MUST NOT embed the rule text. An audit that resolves a
+reference the matching Policy versions and MUST NOT embed the rule text. An audit that resolves a
 decision against today's text reports a rule that may never have run; embedding the text instead
 would carry rule content in every record at PEP volume. The cost ADR-0012 accepts is the resulting
-join: a Policy version MUST be retained at least as long as any record referencing it.
+join: a Policy version MUST be retained at least as long as any record referencing it. For its whole
+life it is evaluated under the Expression Profile major it was published against (ADR-0035).
 
 **P6 — A Run pins the Policy versions in force at admission, for its whole life.** Exactly as it
 pins its definition version (domain model I3, [`../VERSIONING.md`](../VERSIONING.md) rules W2 and
@@ -105,10 +113,11 @@ Run state machine has no transition for it either
 section 2.4); it is registered in section 9.
 
 **V2 — `require_approval` raises exactly one Approval Request**, carrying the proposed action, the
-Evidence Set the Agent relied on, and an Approval Chain derived from Policy. The Run suspends, and
-may stay suspended for days. What satisfies a chain, whether a deadline exists, and how escalation
-and delegation work are **not decided here**; they belong to
-[`approval-workflows.md`](approval-workflows.md).
+Evidence Set the Agent relied on, and an Approval Chain derived from Policy. Where several matching
+rules return `require_approval`, that request's chain requires the chain of every one of them, and
+none stands in for another (D4). The Run suspends, and may stay suspended for days. What satisfies a
+chain, whether a deadline exists, and how escalation and delegation work are **not decided here**;
+they belong to [`approval-workflows.md`](approval-workflows.md).
 
 **V3 — An approval resolution does not retroactively change the verdict.** The verdict was
 `require_approval` and the resolution is a separate governance fact with its own record and its own
@@ -208,7 +217,7 @@ Policy MAY match on any of them.
 
 | Input | Grounding | Note |
 | --- | --- | --- |
-| Principal and its subtype | GLOSSARY, domain model I2 | Platform User, End User, Service Account or Connector |
+| Principal and its subtype | GLOSSARY, domain model I2 | Platform User, End User, Service Account, Platform Operator or Connector |
 | Tenant | GLOSSARY, ADR-0001, ADR-0011 | Mandatory on every evaluation and every record |
 | Workspace, where one applies | GLOSSARY, domain model section 3 | Administrative scope, never an isolation boundary |
 | The Agent or Workflow, and the version the Run pinned | Domain model I3 | The definition in force, not the current one |
@@ -224,24 +233,25 @@ Policy MAY match on any of them.
 | The Run | GLOSSARY | Every Policy Decision references it |
 
 **N2 — An evaluation with no resolvable Principal MUST fail closed.** Domain model invariant I2
-admits no unattributed action, and deny-by-default supplies the verdict. Two execution paths have no
-acting Principal today: platform-operator work, and Approval Request expiry if a deadline mechanism
-is adopted. Both are registered unmade in
-[`../20-domain/domain-model.md`](../20-domain/domain-model.md) and
-[`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md), and are
-decided by [`audit-model.md`](audit-model.md). Until they are, no such path may be permitted through
-a PEP, because there is nothing to attribute the permission to. How much this blocks depends on whether
-platform-operator work reaches a PEP at all, or reaches only the datastore under
-[ADR-0011](../adr/adr-0011-tenant-isolation-shared-schema-rls.md). That is the same decision as
-attribution rather than a second one — attribution is precisely what an enforcement point would
-need — so [`audit-model.md`](audit-model.md) owns both, and neither is answered here.
+admits no unattributed action, and deny-by-default supplies the verdict: no path on which no
+Principal resolves may be permitted through a PEP, because there is nothing to attribute the
+permission to. Platform-operator work is not such a path. It resolves to a Platform Operator
+Principal of the Tenant it acts in, and is evaluated as any other Principal's work is
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Approval Request expiry
+is not one either: it is a transition caused by an observed condition, not an act, and its record
+carries its cause and no Principal ([`audit-model.md`](audit-model.md) section 9).
 
 **N3 — Any input outside the table MUST be captured in the Policy Decision.** Wall-clock time,
 aggregate state such as a running total within a Run or a period, and any value fetched during
 evaluation are inputs like any other. If a Policy may depend on them, the values used MUST be
-recorded, or the decision is not reconstructible and section 6 is violated. Whether a Policy may
-depend on aggregate state at all is **unmade** — it is the input class that most threatens
-determinism, and precisely the class a spend threshold needs.
+recorded, or the decision is not reconstructible and section 6 is violated. A Policy MAY depend on
+aggregate state only through an aggregate the platform defines. The enforcing service reads it, and
+reserves the proposed action's contribution, in the transaction that writes the Policy Decision, and
+records the value it read as an input
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md),
+[ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)).
+Two concurrent evaluations of one aggregate therefore take turns, and neither decides on a total
+that leaves out the other.
 
 Whether Connector health or reachability is an input is **unmade** and rests on
 [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md), **Proposed**. If it
@@ -289,8 +299,8 @@ shape on its own account.
 
 ## 6. The Policy Decision
 
-A **Policy Decision** is the recorded outcome of a PEP evaluation: the Policy version that matched,
-the inputs, the verdict and the timestamp. **Always audited, including allows**
+A **Policy Decision** is the recorded outcome of a PEP evaluation: every Policy version that
+matched, the inputs, the verdict and the timestamp. **Always audited, including allows**
 ([`../GLOSSARY.md`](../GLOSSARY.md)). It **is a class of Audit Record**, not a separate record that
 an Audit Record references
 ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md)), so everything true of an Audit
@@ -306,12 +316,13 @@ ADR-0009 meters Runs by outcome, and
 requires the admission decision to be audited whichever way it goes.
 
 **D2 — A Policy Decision MUST carry** `tenant_id`, the Run, the enforcement point, the Principal,
-the verdict, the timestamp, the inputs evaluated, the Policy version that matched or the explicit
-fact that none did, and — at a Step boundary — the Step Execution it gates. Append-onliness,
+the verdict, the timestamp, the inputs evaluated, every Policy version that matched with the verdict
+each contributed, or the explicit fact that none did, and — at a Step boundary — the Step Execution
+it gates. Append-onliness,
 immutability and attribution to exactly one Principal are not requirements this rule adds; they hold
 because it is an Audit Record (ADR-0012, domain model I2). Like every Audit Record it holds
 identifiers and the values recorded at the time, not foreign keys a later deletion could null
-(domain model section 6) — and, by P5, the Policy version it names MUST outlive it.
+(domain model section 6) — and, by P5, every Policy version it names MUST outlive it.
 
 **D3 — The Policy Decision MUST be durable before the gated action is attempted**, and if it cannot
 be written the action MUST NOT proceed
@@ -335,8 +346,11 @@ follow, each a MUST:
 2. **Every input must be recorded** — N3, restated from the other direction.
 3. **Rule precedence must be specified before any Policy set may contain overlapping rules.** If two
    Policies match one action and precedence is undefined, the verdict is not a function of the
-   inputs and D4 is unsatisfiable. Precedence is a prerequisite, not a later convenience. It is
-   **unmade** — see section 9.
+   inputs and D4 is unsatisfiable. Precedence is a prerequisite, not a later convenience, and it is
+   order-independent: any `deny` wins; otherwise any `require_approval` wins, and every matching
+   `require_approval` rule's chain is required (V2); otherwise the verdict is `allow`; and no
+   matching rule is `deny` (A1). No authoring order affects it
+   ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)).
 
 **D5 — Reconstruction MUST NOT require re-evaluation.** The record stands alone. Replaying an old
 action against today's Policies may produce a different verdict; that is expected and is not a
@@ -363,8 +377,12 @@ A Policy MUST NOT treat model-produced content as an assertion about whether the
 permitted. Arguments are evidence about *what is being attempted*, never testimony about *whether it
 is allowed*. Where a rule discriminates on such an argument, an absent, malformed or unverifiable
 value MUST NOT select the more permissive branch
-([`threat-model.md`](threat-model.md) T1, which defers the wording here). How a rule expresses that
-is inseparable from the policy language and is **unmade**; see section 9.
+([`threat-model.md`](threat-model.md) T1, which defers the wording here). For an absent or malformed
+value the Expression Profile makes it so: an expression that raises an error does not make its rule
+a non-match, and the evaluation has not completed, so A3 forbids `allow`
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). Whether a value
+that is present and well formed but unverifiable is marked as such is the provenance question in
+section 9.
 
 **S3 — The Agent's justification is an input to a human approver's decision, never to the verdict.**
 It reaches the approver in the Evidence Set attached to the Approval Request, so the human decides
@@ -382,13 +400,17 @@ grounds for ranking that text below its own instructions: the attacker writes in
 channel. The defence is that the decision is not the model's to make: the Step's Side-Effect Class
 is `financial`, the PEP evaluates before execution, and if the Tenant's Policy requires a human
 above a threshold the verdict is `require_approval` however persuasive the argument. No threshold
-value appears here or anywhere in this repository, and how a threshold is expressed is unmade.
+value appears here or anywhere in this repository. A threshold is a CEL predicate under the
+Expression Profile, over the proposed action's arguments, or over a platform-defined aggregate for a
+rate or a window (ADR-0035).
 
 ## 8. Why the language is an ADR, not a later document
 
-Section 9 lists everything open. Two entries deserve their reason stated, because the temptation is
-to fill them in — a policy model with no policy language reads as incomplete, and an invention here
-would be cited as a decision by every document that follows.
+Two entries stood in section 9 with their reason stated here, because the temptation was to fill
+them in — a policy model with no policy language reads as incomplete, and an invention here would
+have been cited as a decision by every document that followed.
+[ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) has taken both, and
+the reasons stay because they are why it is an ADR.
 
 **The policy language becomes a permanent public contract** the moment a customer authors against
 it, carrying the versioning obligations
@@ -398,12 +420,14 @@ representation, and the `policy-rule` schema slot reserved in
 [`../VERSIONING.md`](../VERSIONING.md) section 6. Adopting an existing language, defining a
 restricted declarative schema, and embedding a general-purpose expression evaluator are different
 products with different failure modes, and the last puts arbitrary evaluation on the path of every
-Step.
+Step. ADR-0035 adopts the first: CEL, behind an Orchestra-versioned profile that bounds evaluation
+cost and admits no user-defined function, so that it cannot become the last.
 
 **Scope composition is a security property.** Whether a Workspace-scoped Policy may narrow a
 Tenant-scoped one, whether it may widen one, and what happens when both match together decide
 whether delegated administration can weaken a control the Tenant set. Workspace is explicitly not an
-isolation boundary.
+isolation boundary. ADR-0035 evaluates both scopes together under one precedence rule, so a
+Workspace Policy can add a `deny` or a gate and never remove a Tenant's (P2).
 
 A third entry stood here — Policy currency across a suspension — until
 [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) settled it for admission-time
@@ -417,29 +441,30 @@ normative document suffices.
 
 | Question | Needs | Decided by |
 | --- | --- | --- |
-| The policy language and its syntax | **ADR** | A permanent public contract under VERSIONING; see section 8 |
-| How thresholds are expressed, and over what — amount, count, rate, window | **ADR** | Inseparable from the language decision |
-| Rule precedence and conflict resolution when more than one Policy matches | **ADR** | Prerequisite for D4; spans PEP, authoring surface and audit |
-| Whether Policies compose across Tenant and Workspace scope, and in which direction | **ADR** | A security property, not an authoring convenience |
-| Whether a Policy may depend on aggregate state, and how it is captured | **ADR** | Threatens D4 directly; the class a spend threshold needs |
+| The Expression Profile's specification: the pinned CEL release, the inputs and their names, the functions and macros admitted, the cost measure and bound, and how an amount and a time are represented so that comparison is exact | Document | A specification in [`../30-protocol/`](../30-protocol/), under [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) |
+| Which aggregates the platform defines, and when a reservation is released other than on an unknown outcome — a refusal, a rejected gate, a compensated action | Document | The Expression Profile's specification, with [`../50-workflows/execution-semantics.md`](../50-workflows/execution-semantics.md) section 6 |
+| How a `require_approval` rule names its Approval Chain, and how one Approval Request records the chains of several matching rules, `approval-request.v1` carrying one chain with one mode | **ADR** | [`approval-workflows.md`](approval-workflows.md) section 5, with the decision on what satisfies a chain that its register marks **ADR** |
+| How the Expression Profile is versioned, and where VERSIONING records it | Document | [`../VERSIONING.md`](../VERSIONING.md), with the profile's specification; ADR-0035 fixes that a published version keeps its profile major |
 | Whether parameter-level or row-level restriction is a grant attribute or a Policy rule | **ADR** | Jointly with [`tool-authorization.md`](tool-authorization.md), which registers it on its side |
 | Whether an Agent version pins the Tool schema major version it may call | **ADR** | With the grant-subject question in [`tool-authorization.md`](tool-authorization.md); VERSIONING W5 covers Workflow versions only |
 | What a Run does after a `deny` outside admission — terminal refusal, declared branch, or failed Step Execution | **ADR** | The same shape as the rejected-gate question [`approval-workflows.md`](approval-workflows.md) section 11 marks **ADR**; spans the Run state machine, step types and a metered outcome |
 | Retention of Audit Records, Policy Decisions included | **ADR** | [`audit-model.md`](audit-model.md), adopting its classification. ADR-0012 makes this one question rather than two |
-| Attribution of an action with no acting Principal — operator work, approval expiry | **ADR** | [`audit-model.md`](audit-model.md), adopting its classification; registered in the domain model |
 | Whether untrusted content carries provenance inside the model context | **ADR** if it reaches a public contract, else Document | Jointly with [`../30-protocol/`](../30-protocol/); assigned here by [`threat-model.md`](threat-model.md) section 14 |
-| How a rule discriminating on a model-authored argument selects the restrictive branch on an unverifiable value | Document | Inseparable from the language decision; assigned here by [`threat-model.md`](threat-model.md) section 14. See S2 |
+| How a rule discriminating on a model-authored argument selects the restrictive branch on a value that is present and well formed but unverifiable — an absent or malformed value being settled by S2 under ADR-0035 | Document | With the provenance row above; assigned here by [`threat-model.md`](threat-model.md) section 14. See S2 |
 | Whether the Step-boundary and Tool PEPs collapse into one evaluation for a `tool` Step | Document | A later revision of this document, with [`../50-workflows/`](../50-workflows/) |
 | What a Policy Decision references for a Tool call inside an Agent Run | Document | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/), or an ADR |
 | What an evaluation failure records — a `deny`, or a Step Execution error | Document | Reliability model in [`../60-operations/`](../60-operations/). ADR-0013 already settles that the action MUST NOT proceed; only the record and the Run outcome are open |
-| Where evaluation executes — in-process at each PEP, or a separate component | Document | [`../10-architecture/`](../10-architecture/); an ADR if it constrains the datastore |
 | What satisfies an Approval Chain, and how it escalates and delegates | Document | [`approval-workflows.md`](approval-workflows.md) |
 | How a Policy Decision reaches a client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed** |
 | Whether Connector reachability is an evaluation input | Document | Rests on ADR-0007, **Proposed** |
 
-The first three are one tangle rather than three decisions taken in sequence: a language, a
-threshold syntax and a precedence rule are three faces of a single choice, and settling any one
-alone will constrain the other two invisibly.
+Five questions left this register together: the policy language, how thresholds are expressed,
+rule precedence, scope composition and aggregate state. A language, a threshold syntax and a
+precedence rule were three faces of a single choice, and settling any one alone would have
+constrained the others invisibly, so
+[ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) takes all five.
+Where evaluation executes waited on them and left with them: in process at each enforcing service
+([`../10-architecture/data-plane.md`](../10-architecture/data-plane.md) section 5).
 
 Two questions this document previously carried have been settled and are gone from the register.
 [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md) fixes Policy versioning against

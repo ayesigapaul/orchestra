@@ -1,9 +1,9 @@
 ---
 title: Reliability
 doc_id: DOC-072
-version: 0.12.1
+version: 0.13.0
 status: Draft
-last_updated: 2026-09-10
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -213,12 +213,17 @@ distinguishable.** They halt the action identically and differ in what can be re
 evaluation error can be written, whereas a failure to make the Policy Decision durable cannot
 describe itself in the store that refused it.
 
-Neither is a degraded period. Both are halts: the gated action does not proceed. An audit-store
-outage will usually open a degraded period *concurrently*, for the second record class buffering
-behind it, and that period is bracketed under section 8 — but the decision write itself never enters
-the degradable class. ADR-0013 makes the classification a property of the record class rather than a
-runtime choice, and rates reclassifying a Policy Decision as degradable an **existential** risk. It
-is exactly the door an availability argument would push on.
+Neither is a degraded period. Both are halts: the gated action does not proceed. The store whose
+failure halts it is the datastore the enforcing service commits to
+([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)),
+and that outage will usually open a degraded period *concurrently*, for the second record class
+buffering behind the same failure. That period is bracketed under section 8, but the decision write
+itself never enters the degradable class. An outage of the audit store behind the outbox halts
+nothing: decisions already committed wait in their outboxes, and the completeness horizon stops
+advancing ([`observability.md`](observability.md) section 4). ADR-0013 makes the classification a
+property of the record class rather than a runtime choice, and rates reclassifying a Policy Decision
+as degradable an **existential** risk. It is exactly the door an availability argument would push
+on.
 
 **F12 — A `condition` predicate that cannot evaluate is a contained fault, and must not fall
 through to a default branch.** [`../50-workflows/step-types.md`](../50-workflows/step-types.md)
@@ -227,9 +232,10 @@ boundary enforcement point already ran and allowed (E2, E3), so what failed is a
 Workflow's own language, with no Policy Decision at stake and no verdict to misreport. What the two
 share is the safety shape — an evaluation that produced no answer must not be read as the permissive
 one, whether that answer is `allow` or *take the else branch*, because a fault choosing the path is
-a fault choosing the side effect. Whether such a predicate is attemptable depends on whether the
-expression language admits anything impure, which
-[`../50-workflows/workflow-dsl.md`](../50-workflows/workflow-dsl.md) owns and has not decided.
+a fault choosing the side effect. The Expression Profile admits nothing impure
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)), so evaluating
+the same predicate over the same data again faults again: an attempt is harmless, and changes
+nothing.
 
 ## 8. Degradation, and the signal for a degraded period
 
@@ -239,18 +245,20 @@ Policy Decision inside the audit model as a class of Audit Record over versioned
 **Policy Decision MUST be durable before the gated action** — durable meaning it survives a crash,
 not that it reached the audit store — while **other Audit Records MAY degrade**, provided a degraded
 period is recoverable from the trail rather than silent. That ADR and `audit-model.md` A6 both name
-this document as owner of the signal. State the cost as ADR-0013 asks: **audit store availability
-bounds the availability of every governed action**, deliberately, and that belongs in front of a
-buyer rather than in a post-incident review. Degradation of the second class bounds not availability
-but what the platform may afterwards claim.
+this document as owner of the signal. State the cost as ADR-0013 asks, for the mechanism ADR-0034
+chose: **the availability of the datastore an enforcing service commits to bounds the availability
+of every governed action it gates**, deliberately, and that belongs in front of a buyer rather than
+in a post-incident review. The audit store behind the outbox bounds how current the trail reads, not
+whether an action proceeds. Degradation of the second class bounds not availability but what the
+platform may afterwards claim.
 
 **F13 — A degraded period is bracketed, and the bracket is written on the path that cannot
 degrade.** A record of the gap in the degradable class can be lost by the same failure that caused
 the gap, which is circular. The requirement is durability and not a mechanism: the bracket rides
 whichever path carries the fail-closed Policy Decision write, so it survives the crash the buffered
-records did not. ADR-0013 offers a durable local append as one *sufficient* example and requires no
-particular one; which path that is follows the write mechanism section 10 leaves undecided, and
-under a shared transaction there is no local append for a bracket to ride.
+records did not. ADR-0034 fixes that path: the enforcing service's own transaction and its outbox,
+so a bracket commits in the schema of the service that observed the degradation and reaches the
+audit store the way a Policy Decision does.
 
 **F14 — The bracket makes the gap attributable, not merely flags that something was wrong.** It
 carries when the degradation began and ended, which record classes were affected, and which
@@ -335,28 +343,30 @@ of the supported window. F17 constrains the first, F18 all three, and the third 
 with an actionable answer rather than a rate to measure. Choosing belongs with the connector design
 in [`../10-architecture/`](../10-architecture/) once ADR-0007 binds.
 
-## 10. Draining a process that holds durable decision writes
+## 10. Draining a process that can gate an action
 
-`data-plane.md` section 11 registers here: **how a node is drained, restarted or replaced without
-losing decision writes not yet replicated, where the chosen mechanism replicates at all.** The
-mechanism — a shared transaction, a durable outbox, or a node-local append — is undecided and
-belongs to that document with the datastore ADR. A shared transaction leaves the processes
-stateless, so drain is ordinary and this section is vacuous, at the cost of a network round-trip on
-every enforcement path. A node-local append or an outbox makes durable storage part of the process's
-identity, and unreplicated decisions are then **lost audit, not stale audit**: a Policy Decision
-cannot be regenerated (D5), and replaying the evaluation later produces a new decision rather than
-the one that gated the action.
+`data-plane.md` section 11 registered here how a node is drained, restarted or replaced without
+losing decision writes not yet replicated.
+[ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)
+answers most of it. A Policy Decision commits in the enforcing service's own transaction, so no
+process holds a decision of its own, and a process lost mid-evaluation loses nothing that was
+committed: what had not committed was never durable, and its gated action did not proceed. Delivery
+to the audit store belongs to the capture connector, platform infrastructure whose replication slot
+lag ADR-0029 bounds, and to the Audit container that consumes what it carries. A decision stays in
+the enforcing service's schema until the audit store has
+recorded it, so a stalled or re-created connector delays audit rather than losing it. That matters
+because a Policy Decision cannot be regenerated (D5): evaluating again later produces a new
+decision, not the one that gated the action.
 
-**F22 — Drain is ordered: stop admitting gated actions, let in-flight enforcement complete, flush
-replication, then terminate.** Any other order loses records the platform has already told a Run
-were durable. Late replication is permitted by ADR-0013 — durable does not mean remote — but losing
-the medium is not the same as replicating late. A process that cannot flush has not drained, and
-destroying it opens a degraded period of section 8's kind.
+**F22 — Drain is ordered: stop admitting gated actions, let in-flight transactions commit or roll
+back, then terminate.** A transaction cut short commits nothing, so no order loses a record the
+platform has told a Run is durable, and stopping admission first means no gated action starts in a
+process that is about to stop.
 
 **F23 — *Node* is the wrong noun.** The Step-boundary enforcement point is emitted into the compiled
 artifact and executes wherever the Step executes (ADR-0005, `data-plane.md` section 5), so drain is
 a property of **every process that can gate an action**, not of one service with a lifecycle hook.
-No drain timeout, flush deadline or deployment gate is decided.
+No drain timeout or deployment gate is decided.
 
 ## 11. The numbers, and what bounds them
 
@@ -370,7 +380,7 @@ the constraint, so whoever eventually sets a figure inherits it rather than a bl
 | Elapsed time across attempts | The origin's own recovery behaviour | The caller's timeout at the Gateway, and any deadline a racing Approval Request carries — both undecided, in `gateway-api.md` section 1, which fixes that no timeout is decided anywhere, and `approval-workflows.md` section 7 |
 | Backoff | The origin's recovery behaviour | The attempt budget. Under BYOK, backoff against a Quota Envelope is scheduling and not backoff (F7); the two must not be composed |
 | Health-check interval, degradation threshold | What the customer's own operator can act on — faster than a human response is telemetry, not an alert | How long a Run may sit against a connector that cannot serve it, which F19 makes short by choosing failure over waiting; F18 bounds the shape |
-| Service level objective, error budget | A commitment in a contract nobody has signed | ADR-0013 makes audit store availability the ceiling for every governed action; F4 keeps a Tenant's own governance configuration out of the denominator |
+| Service level objective, error budget | A commitment in a contract nobody has signed | ADR-0013 and ADR-0034 make the availability of the datastore an enforcing service commits to the ceiling for every governed action it gates; F4 keeps a Tenant's own governance configuration out of the denominator |
 | Run event-retention window, which bounds stream resumption | `event-protocol.md`, which names this document as co-decider | Storage cost once volume is observable. It is not the audit-retention period: the stream is delivery, not evidence |
 
 ## 12. What the wire sees
@@ -401,10 +411,10 @@ owning document's classification unchanged.
 | Where a governance refusal lands as a Run outcome, `Failed` today carrying both a refusal and a crash | `approval-workflows.md` section 8 with the Run state machine and an ADR-0009 outcome dimension; F4 and F10 both assume a separation neither can create | **ADR** — *repeated* |
 | Whether compensation can fail terminally, and what a Run carrying a known unresolved side effect is called | `execution-semantics.md` section 6.2; F21 reaches the same condition by the connector route and adds urgency, not an answer | **ADR** — *repeated* |
 | Retry counts, backoff, attempt budgets and any bound on attempts | This document, once an implementation exists to measure against; section 11 states the bounds and section 6 admits no attempt at all in the indeterminate position | No — assigned here by `execution-semantics.md`, escalated as unanswerable pre-implementation |
-| Which mechanism satisfies the durable Policy Decision write — shared transaction, durable outbox, or node-local append | `data-plane.md`, against PostgreSQL ([ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md)); section 10 is conditional on it | **ADR** — *repeated* |
 | Whether the bracket marking a degraded audit period is itself an Audit Record class | `audit-model.md` section 3, which is the enumeration of audited events; F13 and F14 fix what it must survive and carry | No |
-| How a degraded period is **detected and ended**, and whether any duration bound halts execution | This document, after section 10's write mechanism is chosen — detection and closure ride whichever path F13 names. A halting bound would reintroduce the coupling ADR-0013's split exists to remove: operational audit volume able to halt a Run after all | No |
-| Drain timeout, flush deadline, and whether a process that cannot flush blocks a release | This document with the deployment topology work, after the write mechanism is chosen | No |
+| How a degraded period is **detected and ended**, and whether any duration bound halts execution | This document, on the path F13 names, which ADR-0034 fixes — detection and closure ride it. A halting bound would reintroduce the coupling ADR-0013's split exists to remove: operational audit volume able to halt a Run after all | No |
+| Drain timeout, and whether a process whose in-flight transactions cannot finish blocks a release | This document with the deployment topology work | No |
+| How a Policy Decision is delivered again to the audit store after a capture gap — a replication slot invalidated past its bound, or a topic past its retention — how an enforcing service learns that the Audit container has recorded a decision, and what then removes the copy it kept | This document with [`observability.md`](observability.md) section 4, under [ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md) and [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) | No — ADR-0034 fixes that nothing is removed before the audit store has it |
 | What separates `Degraded` from `Healthy`, and on what interval | The connector design in [`../10-architecture/`](../10-architecture/) after ADR-0007 binds, constrained by F17 and F18 | No — *repeated* from `lifecycle-state-machines.md` |
 | Whether Connector health transitions are Audit Records or telemetry | `audit-model.md` section 10, held open because ADR-0009 meters Connectors by health while the audit test calls a flap telemetry | No — but it MUST be settled before the metered dimension ships; *repeated* |
 | Whether Connector reachability is an evaluation input, which decides whether a `Refused` connector surfaces as a precondition `deny` or a fault | `policy-model.md` section 9; rests on ADR-0007, **Proposed** | No — *repeated* |

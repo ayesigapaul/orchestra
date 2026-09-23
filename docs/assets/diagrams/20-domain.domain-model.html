@@ -56,6 +56,7 @@ erDiagram
   PRINCIPAL ||--o| END_USER : "is exactly one of"
   PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
   PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
+  PRINCIPAL ||--o| PLATFORM_OPERATOR : "is exactly one of"
   PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
   PERSON ||--o{ MEMBERSHIP : "belongs through"
   TENANT ||--o{ MEMBERSHIP : "holds"
@@ -83,6 +84,7 @@ erDiagram
   PRINCIPAL ||--o| END_USER : "is exactly one of"
   PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
   PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
+  PRINCIPAL ||--o| PLATFORM_OPERATOR : "is exactly one of"
   PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
   PERSON ||--o{ MEMBERSHIP : "belongs through"
   TENANT ||--o{ MEMBERSHIP : "holds"
@@ -116,7 +118,7 @@ erDiagram
   STEP }o--o| TOOL : "invokes"
   TENANT ||--o{ POLICY : "authors"
   POLICY ||--|{ POLICY_VERSION : "publishes"
-  POLICY_VERSION |o--o{ POLICY_DECISION : "referenced by"
+  POLICY_VERSION }o--o{ POLICY_DECISION : "referenced by"
   POLICY_VERSION }o--o{ RUN : "pinned at admission by"
   AUDIT_RECORD ||--o| POLICY_DECISION : "is exactly one class of"
   RUN ||--|{ POLICY_DECISION : "evaluated by"
@@ -128,7 +130,7 @@ erDiagram
   TENANT ||--o{ MODEL_BINDING : "configures"
   MODEL_BINDING ||--|| QUOTA_ENVELOPE : "constrained by"
   AGENT_VERSION }o--|{ MODEL_BINDING : "selects, in order"
-  AUDIT_RECORD }o--|| PRINCIPAL : "attributed to"
+  AUDIT_RECORD }o--o| PRINCIPAL : "attributed to, where one acted"
 </pre></div>
   <details><summary>Mermaid source</summary><pre class="src">erDiagram
   TENANT ||--|| TOOL_CATALOG : "has one"
@@ -140,7 +142,7 @@ erDiagram
   STEP }o--o| TOOL : "invokes"
   TENANT ||--o{ POLICY : "authors"
   POLICY ||--|{ POLICY_VERSION : "publishes"
-  POLICY_VERSION |o--o{ POLICY_DECISION : "referenced by"
+  POLICY_VERSION }o--o{ POLICY_DECISION : "referenced by"
   POLICY_VERSION }o--o{ RUN : "pinned at admission by"
   AUDIT_RECORD ||--o| POLICY_DECISION : "is exactly one class of"
   RUN ||--|{ POLICY_DECISION : "evaluated by"
@@ -152,7 +154,7 @@ erDiagram
   TENANT ||--o{ MODEL_BINDING : "configures"
   MODEL_BINDING ||--|| QUOTA_ENVELOPE : "constrained by"
   AGENT_VERSION }o--|{ MODEL_BINDING : "selects, in order"
-  AUDIT_RECORD }o--|| PRINCIPAL : "attributed to"</pre></details>
+  AUDIT_RECORD }o--o| PRINCIPAL : "attributed to, where one acted"</pre></details>
 </section>
 </main>
 <footer><p class="offline" id="offline" hidden>Mermaid could not be loaded, probably because this machine is offline. Each diagram's source is shown instead.</p></footer>

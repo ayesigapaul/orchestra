@@ -8,9 +8,10 @@ info:
   version: 0.1.0
   summary: Tenants, Persons, Memberships and Principals, and credential resolution for the Gateway.
   description: |
-    An internal service: the Gateway and the Control Plane API call it, and no end client does
-    (ADR-0024). Every response is a JSON:API 1.1 document, and every failure an error document with a
-    registered code and a retry safety — see docs/30-protocol/http-conventions.md (ADR-0025).
+    An internal service: the Gateway and the Control Plane API call it, and so will Orchestra's
+    provisioning client, to create a Tenant (ADR-0031); no end client does (ADR-0024). Every response
+    is a JSON:API 1.1 document, and every failure an error document with a registered code and a
+    retry safety — see docs/30-protocol/http-conventions.md (ADR-0025).
 
     **Run it locally** with `pnpm start` in `services/tenant-user-management`; it listens on
     `http://localhost:8080`. In the local stack it has no published port, and only other services

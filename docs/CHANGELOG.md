@@ -1,9 +1,9 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.44.1
+version: 0.45.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -18,6 +18,103 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.45.0] — 2026-09-23
+
+Six decisions are recorded: how a fact with no acting Principal is attributed and how an operator
+reaches a Tenant's records, what creates a Tenant, what an administrative grant is, the Gateway's
+URL layout, where a Policy Decision commits, and the language Policies and Workflows share.
+
+### Added
+
+- `adr/adr-0030-platform-operator-and-observed-conditions.md` — operator access to a Tenant's
+  records is an act by a tenant-scoped Platform Operator Principal, under a grant with an end time,
+  and a transition caused by an observed condition records its cause and no Principal.
+- `adr/adr-0031-tenant-user-management-creates-tenants.md` — a Tenant is created by an internal
+  Tenant User Management operation that only Orchestra's provisioning client may call, for a
+  Platform Operator, and the creation names the Tenant's first administrator.
+- `adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md` — an administrative grant is
+  one role from a closed set Orchestra defines, held by Tenant User Management, and an
+  identity-provider group holds one only through a mapping the Tenant administers.
+- `adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md` — the Gateway contract
+  follows JSON:API's recommended URL layout, and every command is a resource that is created.
+- `adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md` — a Policy
+  Decision commits in the enforcing service's own transaction and reaches a new Audit service
+  through that service's outbox, and the Run Supervisor is the service that admits Runs.
+- `adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md` — Policies and Workflow
+  expressions are CEL behind an Orchestra-versioned profile, matching Policies combine by verdict
+  rather than by order, and a Policy reads only an aggregate the platform defines.
+
+### Changed
+
+- `GLOSSARY.md` (0.11.0) — entries for the Platform Operator, an administrative grant and the
+  Expression Profile, with the Principal and Policy Decision entries following them.
+- `20-domain/domain-model.md` (0.11.0) — invariant I2 admits a record with no Principal, and
+  section 3 and both diagrams gain the Platform Operator.
+- `20-domain/lifecycle-state-machines.md` (0.17.0) — archival records its cause and no Principal,
+  and the contradiction with the audit model is gone.
+- `40-governance/audit-model.md` (0.8.0) — A3 and A4 carry a cause and an administrative basis,
+  section 3 enumerates operator and provisioning acts, and a decision names every matching Policy
+  version.
+- `40-governance/policy-model.md` (0.8.0) — N2 has a Principal to evaluate, P4 gives way to
+  order-independent precedence, and Tenant and Workspace Policies are evaluated together.
+- `40-governance/approval-workflows.md` (0.8.0) — D2 attributes an expiry, and C1 covers several
+  matching gates.
+- `40-governance/threat-model.md` (0.9.0) — boundary B6 closes on the Platform Operator, and T1
+  takes its restrictive branch.
+- `40-governance/tool-authorization.md` (0.9.0) — TA14 attributes operator work, and section 9
+  names the versions a decision references.
+- `10-architecture/identity-and-access.md` (0.16.0) — sections 1 to 3 carry the Platform Operator,
+  an administrative grant's shape, and Tenant User Management's Keycloak role.
+- `10-architecture/containers.md` (0.26.0) — an Audit container, the Run Supervisor admitting
+  Runs, and policy evaluation in process.
+- `10-architecture/control-plane.md` (0.16.0) — where a Tenant is created, who holds grants and
+  mappings, and the audit surface reading through Audit.
+- `10-architecture/data-plane.md` (0.17.0) — a Run Supervisor row, the durable decision write, and
+  the sequence diagram that follows it.
+- `10-architecture/deployment-topologies.md` (0.13.0) — evaluation is no network hop, and the
+  durable write inside a customer's estate.
+- `10-architecture/multi-tenancy.md` (0.15.0) — the datastore operator role reads no tenant
+  content, and the decision write adds no store.
+- `10-architecture/system-context.md` (0.9.0) — operator access crosses the platform's edges, and
+  evaluation executes inside each enforcing service.
+- `10-architecture/tech-stack.md` (0.36.0) — the CEL profile's constraints, and the evaluators
+  still to choose, each a stable release.
+- `30-protocol/gateway-api.md` (0.12.0) — G9, G11, G13 and G15 follow these records, and a new G30
+  keeps a replayed mint from returning a live credential.
+- `30-protocol/http-conventions.md` (0.8.0) — HC18 covers a callee verifying a credential itself
+  where no Tenant exists to name yet.
+- `30-protocol/ui-protocol.md` (0.15.0) — an approval decision is a command, and a refusal nobody
+  caused records its cause.
+- `30-protocol/schemas/README.md` (0.16.0) — neither the endpoint shape nor the policy language
+  holds the seven schemas back now.
+- `50-workflows/workflow-dsl.md` (0.18.0) — expressions are the CEL profile, and bounded macros
+  are not the iteration L11 forbids.
+- `50-workflows/step-types.md` (0.11.0) — section 10 attributes a `wait` that elapses, and section
+  8 says what a `condition` declares.
+- `50-workflows/execution-semantics.md` (0.11.0) — section 7 attributes what no Principal caused.
+- `50-workflows/README.md` (0.18.0), `examples/README.md` (0.18.0), `examples/invoice-payment.md`
+  (0.18.0), `examples/purchase-approval.md` (0.18.0) and `examples/shipment-exception.md` (0.18.0)
+  — the worked examples name the expression language, and a `wait` nobody ends records its cause.
+- `60-operations/observability.md` (0.15.0) — an operator's act is telemetry with a Tenant, and
+  the completeness horizon follows the decision write.
+- `60-operations/reliability.md` (0.13.0) — F11, F13 and F23 follow the mechanism, and drain is
+  ordinary for every process.
+- `00-overview/vision.md` (0.17.0), `product-thesis.md` (0.15.0) and `personas.md` (0.14.0) — the
+  commitments, the unmade decisions and the roles question follow these records.
+- `70-delivery/mvp-definition.md` (0.18.0), `compliance-roadmap.md` (0.15.0) and
+  `testing-strategy.md` (0.18.0) — reconstructing a Run, who acted under what authority, and
+  evaluators that have to agree.
+- `adr/README.md` (0.31.0) — indexes ADR-0030 to ADR-0035, and the graph carries them.
+- `30-protocol/schemas/audit-record.v1.schema.json` — a record carries a Principal or a cause, and
+  gains the Platform Operator and an administrative basis. MINOR: nothing tightens.
+- `30-protocol/schemas/policy-rule.v1.schema.json`, `approval-request.v1.schema.json` and
+  `workflow-definition.v1.schema.json` — the CEL profile, the versions that gated a request, and
+  what a Step's comment leaves open. MINOR on the same terms.
+- `CLAUDE.md` records ADR-0030 to ADR-0035, and `infra/compose/seed-local-tenant.sh` says what
+  replaces its owner-role write.
 
 ---
 

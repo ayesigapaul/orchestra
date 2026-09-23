@@ -1,9 +1,9 @@
 ---
 title: Threat Model
 doc_id: DOC-055
-version: 0.8.0
+version: 0.9.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -64,7 +64,7 @@ flowchart LR
 | B3 | An outbound request to an endpoint a Platform User configured, carrying a BYOK credential | The destination is tenant-supplied input (ADR-0006) |
 | B4 | A Tool invocation and its arguments, composed by a model | Arguments are model-authored; the callee is outside Orchestra |
 | B5 | Tool results and retrieved content entering the model's context | **Unauthenticated by construction.** Nothing decides what an attacker may write here |
-| B6 | Operator access for support, migration and cross-tenant aggregation | Legitimate and cross-tenant by design, and **unmade in both respects**. Whether operator work reaches a Policy Enforcement Point at all or only the datastore is undecided, and so is how it is attributed. The two are one decision: attribution is what an enforcement point would need, so answering either answers the other. [`audit-model.md`](audit-model.md) owns it and needs an ADR. Meanwhile [`policy-model.md`](policy-model.md) N2 blocks any such path through a PEP, because an unattributable permission has nothing to attribute to |
+| B6 | Operator access for support, migration and cross-tenant aggregation | Legitimate and cross-tenant by design, and split by kind ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Support and incident response read a Tenant's content, so each of their acts is a Platform Operator Principal's, under an administrative grant with an end time issued for a recorded support case or incident, crossing the Policy Enforcement Points on its path and recorded in that Tenant's trail. Migration and aggregation read no tenant content, reach the datastore, and appear in no Tenant's trail. What remains a boundary is what an operator holding datastore privilege could do around the governed path, which section 13 excludes when it is done deliberately |
 
 B5 is the boundary the rest of this document turns on: every other one has a credential, a policy or
 an engine behind it, and B5 has bytes.
@@ -132,8 +132,11 @@ UI Surface that misstates what is about to happen.
   Model-produced content is judged as the object of the action and never believed as an assertion
   about permission (S1, S2, C3).
 - Policy legitimately discriminates on model-authored arguments. Where a rule does, an absent,
-  malformed or unverifiable value MUST NOT select the more permissive branch; how that is expressed
-  is unmade, and [`policy-model.md`](policy-model.md) decides it.
+  malformed or unverifiable value MUST NOT select the more permissive branch. For an absent or
+  malformed value the Expression Profile makes it so: an expression that raises an error leaves the
+  evaluation incomplete, and [`policy-model.md`](policy-model.md) A3 forbids `allow`
+  ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). Whether an
+  unverifiable value is marked as such is the provenance question section 14 registers.
 - The approver decides on the Agent's inputs rather than its summary of them, with the Agent's own
   argument labelled as model-generated (C8, and rules E1 to E3 of
   [`approval-workflows.md`](approval-workflows.md)). Separating agent-authored text from content
@@ -412,7 +415,7 @@ this document does not address, excluded deliberately rather than overlooked.
 | --- | --- | --- |
 | Denial of service and resource exhaustion, including noisy-neighbour effects | ADR-0011 provides no per-tenant resource isolation and says so; the controls are operational, and no scale figure exists to design against | [`../60-operations/`](../60-operations/) — reliability and quotas |
 | Supply chain of Orchestra's own dependencies, build and release pipeline | ADR-0003 accepts dependence on rails Orchestra does not control; the only place it surfaces here is T7's signed-release requirement | A dedicated model, needed before a customer security review; not written |
-| Insider threat at Orchestra — an employee or a compromised operator account, acting **deliberately** | Excluded deliberately, and uncomfortably: B6 is in the boundary table, the domain model has no Principal subtype for operator action, and invariant I2 admits no unattributed action. The distinction that keeps T5 honest: the controls in T5 and section 9 hold against accidental exposure through operator-reachable stores, and against an outsider who obtains operator-level read access. They are not written against an operator with intent | Attribution is registered in section 14; the adversary is not modelled |
+| Insider threat at Orchestra — an employee or a compromised operator account, acting **deliberately** | Excluded deliberately, and uncomfortably: B6 is in the boundary table, and although operator access is an act by a Platform Operator Principal recorded in the Tenant's trail ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)), an operator acting with intent and holding datastore privilege can go around that path. The distinction that keeps T5 honest: the controls in T5 and section 9 hold against accidental exposure through operator-reachable stores, and against an outsider who obtains operator-level read access. They are not written against an operator with intent | Attribution is decided by ADR-0030; the adversary is not modelled |
 | Physical and infrastructure security of the hosting provider | Assumed, per section 1 | The provider's attestations, and SOC 2 readiness under ADR-0001 |
 | The security of the customer's systems behind a Tool, and of the model provider | Orchestra governs the call and does not vouch for the callee | The customer's own controls |
 
@@ -425,13 +428,13 @@ classification is the one repeated here.
 | Question | Decided by | ADR required? |
 | --- | --- | --- |
 | Whether untrusted content carries provenance inside the model context, and whether that reaches the public event contract | [`policy-model.md`](policy-model.md), [`../30-protocol/`](../30-protocol/) | ADR if it changes a public contract |
-| How a rule discriminating on a model-authored argument selects the restrictive branch on an unverifiable value | [`policy-model.md`](policy-model.md) | Later document |
+| How a rule discriminating on a model-authored argument selects the restrictive branch on a value that is present and well formed but unverifiable — an absent or malformed value being settled by ADR-0035, where an expression that errors never allows | [`policy-model.md`](policy-model.md), with the provenance row above | Later document |
 | What happens when registered Tool metadata diverges from what the origin now serves — a precedence rule between registered and served metadata | [`tool-authorization.md`](tool-authorization.md), with the Tool registration specification in [`../10-architecture/`](../10-architecture/) | Later document |
 | Whether a Tool is invoked with the Agent's authority or with a delegated End User identity | [`tool-authorization.md`](tool-authorization.md) | **ADR required** — spans identity, connector and the origin contract |
 | Whether an immediately effective revocation path exists for a capability grant, and whether it overrides a Run's pinned version | [`tool-authorization.md`](tool-authorization.md), with the incident-response requirements this document does not carry | **ADR required** — that document's classification; it is what an incident response asks first |
 | The shape and scope of the egress allow-list; the default-deny posture is settled normatively in section 10 and is not reopened here | Connector and model-broker designs in [`../10-architecture/`](../10-architecture/) | **ADR required** for the shape — it spans model broker, Tool invocation and connector |
 | Which stores exist outside the row-level-secured datastore, and how each is tenant-scoped and CI-checked | `multi-tenancy.md` in [`../10-architecture/`](../10-architecture/) | Later document |
-| How platform-operator action is attributed under invariant I2, and how operator cross-tenant access is authorised and audited | [`audit-model.md`](audit-model.md), with this document | **ADR required** — [`audit-model.md`](audit-model.md) section 13's classification; it changes the identity model and the audit contract |
+| How Orchestra authorizes issuing a Platform Operator's administrative grant, and who may issue one — the grant always carrying an end time and a recorded support case or incident, with no consent from the Tenant ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 12, with this document | Later document — but before the first security review |
 | Whether per-tenant keys extend beyond credentials to data at rest | Left open by ADR-0011 | **ADR required** — key hierarchy and data model, expensive to reverse |
 | Credential and Session Token lifetimes and rotation intervals | `identity-and-access.md` in [`../10-architecture/`](../10-architecture/) | Later document; a customer contract will force it first |
 | Audit and Evidence Set retention periods, which bound how long any record relied on here can be produced | [`audit-model.md`](audit-model.md) | **ADR required** — that document's classification; it spans storage, erasure, the definition lifecycle and metering |

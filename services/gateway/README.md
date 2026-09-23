@@ -6,8 +6,9 @@ The Data Plane's only ingress — the public HTTP and event-stream boundary
 **Phase 0.** One probe route, `GET /_probe/identity`, which proves the whole path: APISIX in front, a
 bearer credential this service verifies itself against Keycloak's signing keys, and that
 credential's resolution to one Principal in one Tenant by Tenant User Management. It is not part of
-the Gateway contract, whose path layout is ADR-required and unmade, and it goes when the first real
-resource arrives.
+the Gateway contract, whose path layout
+[ADR-0033](../../docs/adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) fixes,
+and it goes when the first real resource arrives.
 
 **Resolution fails closed**
 ([`credential-resolution.md`](../../docs/30-protocol/credential-resolution.md)).

@@ -1,9 +1,9 @@
 ---
 title: Audit Model
 doc_id: DOC-054
-version: 0.7.1
+version: 0.8.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -64,25 +64,30 @@ not conventional — the role that writes audit MUST NOT hold update or delete p
 is ADR-0011's reasoning applied a second time. Whether immutability is additionally cryptographic —
 hash chain, write-once storage, external notarisation — is **not decided**.
 
-**A3 — Exactly one Principal.** Every record MUST resolve to exactly one Principal (GLOSSARY,
-invariant I2) and MUST carry the authenticated identity behind it, so attribution survives a rename
-or the Principal's deletion. The Principal named is the one who **acted**:
+**A3 — Exactly one Principal.** Every record of an act MUST resolve to exactly one Principal
+(GLOSSARY, invariant I2) and MUST carry the authenticated identity behind it, so attribution
+survives a rename or the Principal's deletion. The Principal named is the one who **acted**:
 [`approval-workflows.md`](approval-workflows.md) fixes the same rule for delegation, where the
 record names the delegate who decided and the delegation grant is a separate audited fact with its
 own acting Principal. Whether a record ever carries an acted-for Principal alongside the acting one
 depends on a delegation and impersonation mechanism no document defines; section 13 registers it,
-and this rule holds on any answer. Actions with no acting Principal are section 9, and are
-unresolved.
+and this rule holds on any answer. A record of a transition caused by an observed condition carries
+its cause and no Principal, as section 9 states
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 **A4 — Sufficiency.** A record MUST carry enough to reconstruct the event without reference to any
-other system: **who** — the Principal of A3; **what** — the action and the entities it touched, by
-identifier; **when** — a timestamp and the ordering key of A7; **on what basis** — the inputs it
-rested on, including the Evidence Set where one exists; **under which Policy** — for a Policy
-Decision, the Policy version it evaluated, held by reference and never as embedded rule text
-(ADR-0012); for any other record, the Policy Decision that permitted or gated it. Where no Policy
-Decision applies the record MUST say so rather than omit the field, since deny-by-default makes *no
-rule matched* a decision, not a missing record. A Policy Decision that names no Policy is likewise a
-decision — [`policy-model.md`](policy-model.md) owns when one arises.
+other system: **who** — the Principal of A3, or for a transition no Principal caused, its cause;
+**what** — the action and the entities it touched, by identifier; **when** — a timestamp and the
+ordering key of A7; **on what basis** — the inputs it rested on, including the Evidence Set where
+one exists, and for an administrative act the administrative grant that permitted it, with the group
+membership observed at the check where a group-to-role mapping supplied the role
+([ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md)); **under which
+Policy** — for a Policy Decision, every Policy version that matched with the verdict each
+contributed, held by reference and never as embedded rule text (ADR-0012, ADR-0035); for any other
+record, the Policy Decision that permitted or gated it.
+Where no Policy Decision applies the record MUST say so rather than omit the field, since
+deny-by-default makes *no rule matched* a decision, not a missing record. A Policy Decision that
+names no Policy is likewise a decision — [`policy-model.md`](policy-model.md) owns when one arises.
 
 **A5 — Records reference, they do not depend.** A record MUST stay readable and meaningful after the
 Agent, Workflow version, Tool, Policy, Model Binding or Principal it names is deleted. It holds
@@ -93,12 +98,13 @@ so a Policy version MUST be retained for at least as long as any record referenc
 **A6 — Written on the governed path.** The component taking the decision MUST write the record. A
 record MUST NOT be reconstructed by parsing application logs, traces or metrics, and those artefacts
 MUST NOT be presented as the audit trail. A governed action MUST NOT be reported as having occurred
-under governance if its record was not durably written. The mechanism — a shared transaction with
-the state change, or a durable outbox — is constrained by the datastore, which
-[ADR-0021](../adr/adr-0021-postgresql-is-the-datastore.md) makes PostgreSQL. What happens when
-the audit store is unreachable is settled by
-[ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md), which splits the write by record
-class rather than treating audit as one undifferentiated thing.
+under governance if its record was not durably written. For a Policy Decision the mechanism is
+[ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)'s:
+the enforcing service writes the decision in its own transaction, with the state change it gates,
+and the decision reaches the audit store through that service's outbox, kept in the service's
+schema until the audit store has recorded it. What happens when the write cannot be made durable is
+settled by [ADR-0013](../adr/adr-0013-fail-closed-policy-decision-writes.md), which splits the
+write by record class rather than treating audit as one undifferentiated thing.
 
 - A **Policy Decision MUST be durable before the gated action is attempted**, where durable means
   it survives a crash — a local append that is later replicated satisfies it, a remote round-trip is
@@ -109,15 +115,17 @@ class rather than treating audit as one undifferentiated thing.
   a gap rather than a saving.
 - A degraded period MUST be recoverable from the trail, so that a gap is attributable rather than
   silent. It brackets the degradable class only: a Policy Decision that cannot be written halts the
-  gated action under the first bullet rather than opening one, though the same audit store outage
+  gated action under the first bullet rather than opening one, though the same datastore outage
   will usually open a period concurrently for the records buffering behind it. `reliability.md` in
   [`../60-operations/`](../60-operations/) owns the failure taxonomy and the signals that make one
   visible.
 - The class is a property of the record, not a runtime choice. An implementation MUST NOT reclassify
   a Policy Decision as degradable under load.
 
-ADR-0013 accepts the cost in the open, and this document repeats rather than buries it: audit store
-availability bounds the availability of every governed action.
+ADR-0013 accepts the cost in the open, and this document repeats rather than buries it: the
+availability of the datastore an enforcing service commits to bounds the availability of every
+governed action it gates. The audit store behind the outbox bounds only how current the trail reads
+(ADR-0034).
 
 **A7 — Deterministic order.** Reconstruction requires order, and wall-clock timestamps MUST NOT be
 the sole basis for it: clocks skew across the components that write records. Records within a Run
@@ -146,7 +154,7 @@ flowchart TD
     ADM["Administrative acts<br/>publish, retire, grant, revoke, enrol"]
     ACC["Credential and audit access; Platform User authentication"]
   end
-  SRC --> AR["Audit Record<br/>append-only, immutable, tenant-scoped<br/>exactly one Principal"]
+  SRC --> AR["Audit Record<br/>append-only, immutable, tenant-scoped<br/>exactly one Principal, or the cause of a transition nobody acted on"]
   PEP["Policy Decision at a PEP<br/>allow, deny, require_approval"]
   PEP -. "is a class of Audit Record — ADR-0012<br/>durable before the gated action — ADR-0013" .-> AR
   PEP -->|"references by version, never embeds the rule"| PV["Policy version<br/>immutable; retained while any record names it"]
@@ -166,7 +174,7 @@ makes each row a derivation rather than a preference.
 
 | Governed act | The record MUST additionally carry | Grounding |
 | --- | --- | --- |
-| Every Policy Decision at every PEP, all three verdicts | The PEP, the Policy version evaluated — by reference, never the rule text — the inputs, and the verdict. A `deny` reached before any Policy applied names none, and [`policy-model.md`](policy-model.md) owns that rule | [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md); GLOSSARY; [`policy-model.md`](policy-model.md) |
+| Every Policy Decision at every PEP, all three verdicts | The PEP, every Policy version that matched with the verdict each contributed — by reference, never the rule text — the inputs, aggregate values included, and the verdict. A `deny` reached before any Policy applied names none, and [`policy-model.md`](policy-model.md) owns that rule | [ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md); [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md); GLOSSARY; [`policy-model.md`](policy-model.md) |
 | Run admission, and every Run state transition | The admission Policy Decision, the pinned Agent or Workflow version, and the cause of each transition; for cancellation, the cancelling Principal and any Step Execution in flight | [ADR-0008](../adr/adr-0008-declarative-workflow-definitions.md), invariant I3, [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) |
 | Step Execution start and terminal transition | The Run, the Step, the Side-Effect Class, the outcome, and the idempotency key the Step Execution is scoped to | Invariant I4, ADR-0009 — Step Executions is a metered dimension |
 | Tool invocation | The Tool, its Side-Effect Class, and the execution it belongs to — the Step Execution in a Workflow Run; an Agent Run has none, and that grain is open (sections 7 and 13) | GLOSSARY, ADR-0009 |
@@ -180,9 +188,10 @@ makes each row a derivation rather than a preference.
 | A capability grant from an Agent version to a Tool, and its revocation | The Principal — a second act, audited separately from registration | Invariant I5, [`tool-authorization.md`](tool-authorization.md) |
 | Model Binding created or changed; a custodied credential accessed | The binding and the Principal — never the credential, in any form | [ADR-0002](../adr/adr-0002-enterprise-segment-and-byok.md) |
 | Connector enrolment, first session, every version negotiation outcome including refusals, revocation | The Connector, which is itself a Principal | ADR-0007 — **Proposed** |
-| Principal, Workspace and Tenant administration; Session Token issuance and revocation | The Principal, and the authority granted or removed | A3, GLOSSARY |
+| Principal, Workspace and Tenant administration, including a Tenant's creation, and an administrative grant or group-to-role mapping created, changed or removed; Session Token issuance and revocation | The Principal, and the authority granted or removed. For a mapping, the group, the role and the scope before and after. For a Platform Operator's administrative grant, its end time and the support case or incident it names. A Tenant's creation is the first record in the new Tenant's trail, attributed to the Platform Operator who created it and naming the first administrator it invites; that person's first verified sign-in, which gives them the Tenant's administrator role, is recorded with its cause and no Principal | A3, GLOSSARY, [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md), [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) |
 | A Platform User authenticating to the Control Plane | The Principal, the authenticated identity behind them, and the outcome | ADR-0009 — Platform Users is the seat-billable metered dimension; section 7 |
 | A read of the audit surface or of an Evidence Set | The reading Principal and the scope of the query | ADR-0003 and section 8 — derived here, not required by an ADR |
+| A Platform Operator's access to a Tenant's records, whether it reads or changes them | The Platform Operator, the authenticated identity behind it, and the records read or changed — one record for each Tenant affected | [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md), A1 |
 
 Sampling MUST NOT be applied to any row above. Sampling is a telemetry technique, and a sampled
 control cannot be evidenced.
@@ -213,7 +222,7 @@ cost to plan for, not a reason to sample.
 **"Under which Policy" resolves through a version, not a snapshot.** ADR-0012 makes Policies
 immutably versioned on the same terms as Agent and Workflow definitions
 ([`../VERSIONING.md`](../VERSIONING.md) sections 2 and 8), and a Policy Decision references the
-version it evaluated rather than embedding the rule. A Run pins the Policy versions in force at
+versions that matched rather than embedding the rule. A Run pins the Policy versions in force at
 admission for its whole life, so editing a Policy cannot change the verdict a Run in flight
 receives. Two obligations land on this document. A Policy version MUST be retained for at least as
 long as any record referencing it, which section 11 folds into the retention question; and
@@ -235,8 +244,8 @@ had. A record that cannot reproduce it attests to nothing beyond somebody having
   aggregate record loses who dissented.
 - `Expired` MUST be distinguishable from `Rejected`. "A human declined" and "nobody looked" are
   different facts about a control, and a report conflating them misstates it. Whether a deadline
-  exists at all belongs to [`approval-workflows.md`](approval-workflows.md); expiry is also the
-  sharpest instance of the attribution gap in section 9.
+  exists at all belongs to [`approval-workflows.md`](approval-workflows.md); expiry records its
+  cause and no Principal, as section 9 requires.
 - An Evidence Set is content an Agent may have been induced to assemble. It is recorded because it
   is what the human saw, never because it is trustworthy — see [`threat-model.md`](threat-model.md).
 
@@ -303,8 +312,8 @@ metering and audit share one undefined grain until `execution-semantics.md` in
   resolution, the pinned definition version, every Tool invocation with its Side-Effect Class, and
   the Principal for each — the list of questions ADR-0003 says the buyer arrives with. Because a
   Policy Decision is a class of Audit Record (ADR-0012), that is one query over one store rather
-  than a join across two, and a Policy named in a decision resolves through the version it
-  evaluated.
+  than a join across two, and a Policy named in a decision resolves through the version the
+  decision names.
 - The surface MUST NOT return the compiled artifact. It is retained in the publication record so a
   process can be reconstructed, which ADR-0005 sanctions; returning it would put the orchestration
   runtime's vocabulary into a customer-facing contract, which A8 and ADR-0005 both forbid. What a
@@ -321,46 +330,43 @@ metering and audit share one undefined grain until `execution-semantics.md` in
 
 ## 9. Attribution when no Principal acted
 
-Invariant I2 admits no unattributed action, and
-[`../20-domain/domain-model.md`](../20-domain/domain-model.md) calls this the largest hole in its
-identity section. **This document owns it and does not close it.**
+Invariant I2 admits no unattributed action.
+[ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles the two kinds of
+fact that had no acting Principal, and whether platform-operator work crosses a Policy Enforcement
+Point, as one decision. This section states the rules.
 
-It owns both halves, which were briefly separated and are not separable. Whether platform-operator
-work crosses a Policy Enforcement Point at all, or reaches only the datastore under ADR-0011, is the
-same decision as how it is attributed: attribution is exactly what an enforcement point would
-require, so an answer to either determines the other. [`policy-model.md`](policy-model.md) N2 blocks
-such a path meanwhile, and [`threat-model.md`](threat-model.md) B6 records the boundary as unmade in
-both respects.
+**A transition caused by an observed condition records its cause and no Principal.** The class
+covers approval expiry, if a deadline mechanism is adopted; withdrawal; a `wait` step elapsing;
+`Retired → Archived` firing when the last pinned Run reaches a terminal state; and a refusal no
+Principal caused. Such a record MUST carry its cause — the condition observed, and the records it
+was observed on, by identifier — and MUST NOT carry a Principal. It MUST NOT be attributed to a
+Principal who did not act: attributing an expiry to the last approver, or to the author of the
+Policy that set the deadline, produces a record that is false rather than incomplete, and a false
+attribution is worse than an acknowledged gap. Section 3's archival row is the plainest case. A
+Policy Decision is never in this class, because it records an evaluation for the Principal a Run
+acts for ([`policy-model.md`](policy-model.md) D2). Whether a Connector session dropping is recorded
+at all is section 10's question.
 
-The class is larger than the two cases usually named. It covers approval expiry, if a deadline
-mechanism is adopted; platform-operator work — scheduled maintenance, support access, migration
-tooling; and every transition caused by elapsed time or an observed condition rather than by an act,
-including a `wait` step elapsing, a Connector session dropping, and `Retired → Archived` firing when
-the last pinned Run reaches a terminal state.
+**Operator access to a Tenant's records is an act by a Platform Operator.** Work a person does for
+Orchestra that reads a Tenant's content or changes it — support reading a Run, the audit surface or
+an Evidence Set, incident response cancelling a Run, a correction to a Tenant's records — MUST be
+performed as a Platform Operator Principal of that Tenant, and only under an administrative grant
+with an end time, issued on Orchestra's side for a recorded support case or incident and never by
+the Tenant; the Tenant's consent is not required. It travels the paths every Principal travels,
+crosses the Policy Enforcement Points on them, and MUST produce an Audit Record in that Tenant's
+trail, one for each Tenant affected (A1). A Platform Operator stands on no Membership: the trail
+names the operator as the identity provider holds them, with the authenticated identity of A3. An
+operator path that reads or changes a Tenant's content without resolving a Platform Operator
+Principal is a defect, not an exception. [`threat-model.md`](threat-model.md) owns the operator
+trust boundary, B6.
 
-One constraint holds however it resolves, and it is normative: such a record MUST NOT be attributed
-to a Principal who did not act. Attributing an expiry to the last approver, or migration tooling to
-a tenant administrator, produces a record that is false rather than incomplete — and a false
-attribution is worse than an acknowledged gap. Section 3's archival row is the plainest case:
-`Retired → Archived` fires on an observed condition, so the record carries the cause and no
-Principal.
-
-One consequence is already normative elsewhere and is not this document's to soften.
-[`policy-model.md`](policy-model.md) fails an evaluation closed where no Principal resolves (its
-rule N2), so a platform-operator path that would cross a Policy Enforcement Point is blocked until
-this is settled. Operator access to the datastore is a different thing, and a trust boundary either
-way; [`threat-model.md`](threat-model.md) owns it.
-
-| Option | Gains | Costs |
-| --- | --- | --- |
-| A fifth Principal subtype for platform and system action | One attribution mechanism; every record still resolves to a Principal; I2 stands unchanged | Breaks the domain model's "four disjoint and exhaustive" claim; under A1 it must be tenant-scoped, so the operator appears inside each customer's own trail — candid for support access, noisy for maintenance — and shares a namespace with the customer's own identities |
-| A separate operator attribution path, outside the four subtypes | Keeps the customer's trail free of operator noise; the subtype claim stands | A second attribution mechanism, which is exactly what making the Connector a Principal avoided; "who touched my data" is then answered from two places, which is the answer a security review likes least |
-| For time-caused transitions only: attribute to the configuring act | No extension to the identity model — expiry is the deterministic consequence of a Policy some Platform User authored, so the record names that Principal and marks elapsed time as the cause | Covers expiry and `wait`, covers no operator work at all, and is therefore at best half an answer |
-
-**This needs an ADR.** It changes the identity section of the domain model, it is visible in a
-public contract through the audit surface and the event stream, and it is expensive to reverse once
-records exist under one scheme. [`threat-model.md`](threat-model.md) is the other consumer: operator
-access to a Tenant's data is a trust boundary whether or not it is modelled as a Principal.
+**Platform maintenance that reads no tenant content appears in no Tenant's trail.** Schema
+migration, index and storage work, and metering aggregation, which needs aggregates rather than
+rows, read no Tenant's content and produce no Audit Record in a Tenant's trail, and neither does a
+backup of the whole database. The test is the content, not the tool: work that reads what a Tenant's
+records say, or changes it, is operator access, and so is restoring a Tenant's records or reading a
+backup's contents for a Tenant. What Orchestra keeps of its own maintenance MUST NOT be presented as
+a Tenant's audit trail.
 
 ## 10. Audit or telemetry
 
@@ -370,8 +376,10 @@ governance fact in telemetry is sampled, aggregated and expired on an operationa
 control it evidences becomes unevidenceable.
 
 **The test.** A fact is an Audit Record if it answers *who did what, when, on what basis, and under
-which Policy* — which requires a Principal and, where one applies, a Policy basis. A fact with
-neither is telemetry, and belongs to `observability.md` in [`../60-operations/`](../60-operations/).
+which Policy* — which requires a Principal and, where one applies, a Policy basis — or if section 3
+enumerates it as a transition caused by an observed condition, which records its cause in place of a
+Principal (section 9). A fact that is neither is telemetry, and belongs to `observability.md` in
+[`../60-operations/`](../60-operations/).
 
 Connector health is where the test does not settle cleanly, and it is **undecided**. Enrolment,
 every version negotiation outcome including refusals, and revocation have an acting Principal and
@@ -450,12 +458,13 @@ is an ADR.
 Everything this document could not settle, and whether closing it requires an ADR or a later
 document suffices. Two entries have left the register since the previous version: ADR-0012 settles
 the record model and how a Policy is identified in a decision, and ADR-0013 settles what an
-unreachable audit store does to a governed action.
+unreachable audit store does to a governed action. A third has left since:
+[ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) settles how a fact with no
+acting Principal is recorded, and whether platform-operator work crosses a Policy Enforcement Point.
 
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
 | The audit-retention period, and whether the rule is platform-wide, per Tenant or per record class | A customer contract forcing a regulatory floor; storage cost modelling once volume is observable. Policy Decision retention is not separate from it (section 11), and it now also fixes how long a Policy version lives, since ADR-0012 bounds that below by the records naming it | **Yes** — spans storage, erasure, the definition and Policy version lifecycles, metering and the contract |
-| How an action with no acting Principal is attributed, and whether platform-operator work crosses a Policy Enforcement Point at all — one decision, not two | Section 9 lays out three options; the choice changes the identity model and the audit contract | **Yes** |
 | How erasure requests are satisfied against immutable Audit Records | ADR-0011's per-tenant erasure follow-on, with legal input | **Yes** |
 | Whether immutability is additionally cryptographic — hash chain, write-once storage, notarisation | A security review, and the datastore selection ADR-0011 constrains but does not make | **Yes** — it narrows the datastore choice |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand | A design-partner conversation; forwarding attaches an availability obligation to Orchestra | **Yes** |

@@ -1,9 +1,9 @@
 ---
 title: HTTP Conventions
 doc_id: DOC-096
-version: 0.7.0
+version: 0.8.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0025, ADR-0026, ADR-0027, ADR-0029]
 ---
@@ -221,8 +221,11 @@ range is not a credential. Outside the local stack, every hop MUST be encrypted.
 calling service and nothing more. A callee that acts for a Principal in a Tenant MUST take both from
 a signed token it verifies, and MUST NOT take either from a header or body member on the caller's
 word. That token is a Principal Token, which Tenant User Management signs for one callee
-([ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md)). An operation that
-needs one does not ship before the token is specified, as section 9 registers.
+([ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md)). Creating a Tenant is
+the one exception: no Principal Token can name a Tenant that does not exist yet, so Tenant User
+Management verifies the acting Platform Operator's credential itself
+([ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md)). An operation that needs a
+Principal Token does not ship before the token is specified, as section 9 registers.
 
 **HC19 — Deadlines and retries follow `meta.retry`.** Every call has a deadline. A caller MAY repeat
 a failed call only when the error's `meta.retry` is `safe`, after `Retry-After` when one is present.
@@ -256,3 +259,4 @@ consumers as a CloudEvent keyed by its Tenant, captured from the outbox by Debez
 | The Principal Token's specification: its explicit type, claims, issuance and exchange operations, header, grant for resumed work, and key set (HC18) | A document in this directory, before the first internal operation that acts for a Principal | No — [ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) decides the mechanism |
 | The framing of a stream between services, such as Server-Sent Events (HC21) | The first stream between services, with this document | No |
 | The specification of facts between services: topic names, the CloudEvents mapping, the outbox table's columns and the capture connector's configuration | A document in this directory, with the first event type | No — [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) decides the transport |
+| Whether internal APIs follow the Gateway's addressing — one collection per type, relationship links, and every command a resource that is created — which the one internal operation, credential resolution, already has | The first internal operation that is not a resolution, with this document and [`gateway-api.md`](gateway-api.md) G26 to G29 | No — an internal operation has no customer to break, and [ADR-0033](../adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md) binds only the Gateway |

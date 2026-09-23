@@ -1,9 +1,9 @@
 ---
 title: Product Thesis
 doc_id: DOC-012
-version: 0.14.0
+version: 0.15.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
 ---
@@ -249,13 +249,12 @@ Policy version pinned for the life of a Run, an approval carrying the Evidence S
 record durable before the action. Those are choices. A superseding record would have to attack the
 choices, not the vocabulary.
 
-**And one of the four is not yet whole.** The no-unattributed-path commitment holds for acts. Facts
-caused by elapsed time or an observed condition — an approval expiring, a `wait` Step elapsing, a
-Connector session dropping, platform-operator work — have no acting Principal, and
-[`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 9 owns that class and
-explicitly does not close it. The one rule already fixed is that such a record MUST NOT be
-attributed to a Principal who did not act, because a false attribution is worse than an acknowledged
-gap. The hole is named here rather than left for a reader to find.
+**The commitment that was not whole now is.** The no-unattributed-path commitment holds for acts.
+Facts caused by elapsed time or an observed condition — an approval expiring, a `wait` Step elapsing
+— are not acts: their records carry the cause and no Principal, never a Principal who did not act.
+Platform-operator work that reads a Tenant's records is an act by a Platform Operator Principal of
+that Tenant, recorded in its trail
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 Normative wording is not this document's to write. Under [`../README.md`](../README.md) section 3
 only `30-protocol/` and `40-governance/` bind, and the commitments above are stated there:
@@ -351,9 +350,11 @@ specific to Orchestra is the third bullet: an approval that must carry the input
 model's account of them is a commitment about evidence, and it is the one an incumbent's approval
 flow is least likely to have made.
 
-Not decided: the policy language, how thresholds are expressed, and how Approval Chains route and
-escalate. Section 7 names what decides each, and no threshold value appears here because none has
-been chosen.
+The policy language and how thresholds are expressed are decided: CEL behind an Orchestra-versioned
+profile, with rate and window thresholds over platform-defined aggregates
+([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). How Approval
+Chains route and escalate is not, section 7 names what decides it, and no threshold value appears
+here because none has been chosen.
 
 ## 6. The competitive position, without overclaiming
 
@@ -415,11 +416,9 @@ Decisions that are unmade, with what decides each:
 
 | Unmade | What decides it |
 | --- | --- |
-| The policy language, and how thresholds are expressed | An ADR. [`policy-model.md`](../40-governance/policy-model.md) section 8 argues why it cannot be a later document: the language becomes a permanent public contract the moment a customer authors against it |
 | What satisfies an Approval Chain, and whether escalation, delegation and reassignment exist | [`approval-workflows.md`](../40-governance/approval-workflows.md) section 11 holds these open and marks each as requiring an ADR |
 | Audit retention periods | [`audit-model.md`](../40-governance/audit-model.md) section 11. No period is decided anywhere in this repository and no number appears there |
 | Audit export | [`audit-model.md`](../40-governance/audit-model.md) section 12 states the requirement and records that nothing has designed it |
-| Attribution for facts with no acting Principal | [`audit-model.md`](../40-governance/audit-model.md) section 9 owns it and does not close it |
 | The run supervisor's size, and whether it dominates the build | [ADR-0014](../adr/adr-0014-run-supervisor-is-orchestras.md)'s first follow-on: enumerate its responsibilities precisely enough to size it, before an MVP is committed to |
 | Whether the MVP can be committed to as a plan | [`../70-delivery/mvp-definition.md`](../70-delivery/mvp-definition.md) scopes the slice against ADR-0015 — governed actions with defensible evidence, not a connectivity demonstration — and states that it is not yet a plan, because the row above is unanswered |
 

@@ -1,9 +1,9 @@
 ---
 title: Approval Workflows
 doc_id: DOC-052
-version: 0.7.0
+version: 0.8.0
 status: Draft
-last_updated: 2026-09-09
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0008, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -197,7 +197,7 @@ deny-by-default:
 
 | | Requirement |
 | --- | --- |
-| **C1** | The chain MUST be derived from Policy at raise time and recorded as resolved at that moment. A chain that cannot be reconstructed later cannot be audited. |
+| **C1** | The chain MUST be derived from Policy at raise time and recorded as resolved at that moment. A chain that cannot be reconstructed later cannot be audited. Where several matching rules return `require_approval`, the chain requires the chain of every one of them ([`policy-model.md`](policy-model.md) V2, [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)). |
 | **C2** | A chain MUST resolve to at least one Principal. A chain resolving to none is an unresolvable gate: the request MUST NOT resolve as satisfied and the gated action MUST NOT execute. An empty chain that auto-satisfies is a silent bypass of the platform's central control. |
 | **C3** | Satisfaction MUST be affirmative. Silence, absence, unavailability and the passage of time are not decisions and MUST NOT count toward satisfying a chain. |
 | **C4** | Each decision MUST be attributed to exactly one Principal, with the authenticated identity behind them. |
@@ -260,7 +260,7 @@ have to satisfy, and what follows from having none.
 | | Requirement |
 | --- | --- |
 | **D1** | If a deadline exists, `Expired` MUST be distinct from `Rejected`. *A human declined* and *nobody looked* are different facts about a control, and an audit that cannot separate them cannot report on that control at all. |
-| **D2** | Expiry MUST NOT be recorded as a decision by any Principal, and MUST NOT be attributed to a Principal who did not act. Expiry is a fact with no actor and invariant I2 requires one. *How* such facts are attributed is [`audit-model.md`](audit-model.md) section 9's, and that document holds the choice open — a purpose-made system Principal subtype is one of its live options, and nothing here forecloses it. Withdrawal is a third instance alongside expiry and platform-operator action and takes the same rule; where a Principal cancelled the gated Run, that Principal is the cause of the withdrawal and MUST NOT be recorded as having decided the request. |
+| **D2** | Expiry MUST NOT be recorded as a decision by any Principal, and MUST NOT be attributed to a Principal who did not act. Expiry is not an action but a transition caused by an observed condition, so its record carries its cause and no Principal ([`audit-model.md`](audit-model.md) section 9, [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Withdrawal takes the same rule; where a Principal cancelled the gated Run, the cancellation is the cause of the withdrawal, recorded as that Principal's own act, and that Principal MUST NOT be recorded as having decided the request. |
 | **D3** | A terminal Approval Request is permanently terminal, so a re-raise after expiry is a **new** Approval Request referencing the expired one, never a reopening. Derivable rather than preferred: reopening a terminal state would make the request's own history a lie, and Audit Records are append-only. |
 | **D4** | A re-raised request captures its own Evidence Set at its own raise time under E4. Whether that is a copy of the original capture or a fresh one MUST be recorded — a Principal told *this is what the Agent saw* is entitled to know when it saw it. |
 
@@ -424,7 +424,6 @@ in the section named.
 | Whether batching, standing approvals or automatic approval below a bound are ever permitted | Section 10; [`threat-model.md`](threat-model.md) first, then a policy-language decision | **Yes** |
 | Whether a break-glass path exists at all | Section 10; assigned here by [`threat-model.md`](threat-model.md) sections 12 and 14 — a deliberate hole in the primary control | **Yes** |
 | Evidence Set retention and erasure against audit-retention obligations | [`audit-model.md`](audit-model.md) and the ADR-0011 erasure follow-on; ADR-0012 fixes the record model and leaves the period unmade | **Yes** — [`audit-model.md`](audit-model.md) section 13 owns the classification |
-| How a fact with no acting Principal is attributed — expiry, withdrawal, platform-operator action | [`audit-model.md`](audit-model.md) section 9 owns it and holds it open; whichever option it takes binds expiry and withdrawal here, and D2 stands either way | **Yes** — [`audit-model.md`](audit-model.md) section 13 owns the classification |
 | Whether an ordered chain's partial progress is a substate of `Pending` or an attribute of it | Assigned here by [`../20-domain/lifecycle-state-machines.md`](../20-domain/lifecycle-state-machines.md) section 3.1; C6 holds either way, so the choice is representational | No |
 | Whether *request more information* is a state, given the lifecycle admits only Approved, Rejected, Expired and Withdrawn | [`../00-overview/personas.md`](../00-overview/personas.md) names the action and the state machine has no transition for it; a later document reconciles the two | No |
 | Whether the Evidence Set is materialised by value or by reference, and how a large one is made reviewable | Section 4; an implementation choice constrained by E4 and E6, then the approval surface schema ADR-0010 requires for the first slice | No |

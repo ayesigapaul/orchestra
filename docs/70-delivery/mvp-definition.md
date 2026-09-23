@@ -1,9 +1,9 @@
 ---
 title: MVP Definition
 doc_id: DOC-081
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0009, ADR-0010, ADR-0011, ADR-0012, ADR-0013, ADR-0014, ADR-0015]
 ---
@@ -117,7 +117,7 @@ The slice is done when all of these hold, and not when a date passes.
 - A `require_approval` verdict suspended the Run, an Approval Request carried the Evidence Set, a
   named Principal decided it, and the Run resumed.
 - The entire Run can be reconstructed from the audit trail alone, with every action resolving to
-  exactly one Principal and naming the Policy version that governed it.
+  exactly one Principal and naming the Policy versions that governed it.
 - A Policy Decision that could not be made durable stopped the action rather than proceeding
   (ADR-0013), demonstrated deliberately rather than observed by accident.
 - Two Tenants ran concurrently and neither appears in the other's trail, with isolation enforced by

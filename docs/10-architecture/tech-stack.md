@@ -1,9 +1,9 @@
 ---
 title: Technology Stack
 doc_id: DOC-016
-version: 0.35.0
+version: 0.36.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0006, ADR-0011, ADR-0014, ADR-0016]
 ---
@@ -39,6 +39,8 @@ These are not open. They constrain everything below.
 | Services call each other over HTTP under that contract, each call authenticated with the calling service's own credential; a fact another service reacts to leaves through a transactional outbox; gRPC is the named fallback, never the default | [ADR-0026](../adr/adr-0026-services-call-over-http-and-publish-through-an-outbox.md) |
 | Telemetry leaves over OTLP for a self-hosted Grafana stack; the edge decides sampling, and every trace is kept until volume demands tail sampling; work with no Tenant carries the Nil UUID | [ADR-0028](../adr/adr-0028-telemetry-in-a-self-hosted-grafana-stack.md) |
 | Kafka carries facts between services as CloudEvents keyed by Tenant, captured from each outbox by Debezium through logical decoding | [ADR-0029](../adr/adr-0029-kafka-carries-facts-captured-by-debezium.md) |
+| A Policy Decision commits in the enforcing service's own transaction, with the state change it gates, and reaches the audit store through that service's outbox | [ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md) |
+| A Policy's conditions and a Workflow's expressions are CEL behind the Orchestra Expression Profile, evaluated in process by an exactly pinned evaluator in each enforcing service, and only by one that passes CEL's conformance tests | [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) |
 
 ### 1.1 Versions — latest stable, pinned exactly
 
@@ -293,3 +295,4 @@ because it fails silently and looks like latency.
 | How APISIX configuration is declared and versioned, so routes are reviewable | [ADR-0018](../adr/adr-0018-apisix-at-the-edge.md)'s follow-on | No |
 | The cloud and the deployment target, which data residency may decide first | [`deployment-topologies.md`](deployment-topologies.md) | **Yes** — repeated |
 | Whether the administrative API is the Gateway contract or its own | [`../30-protocol/gateway-api.md`](../30-protocol/gateway-api.md) section 6 | No — repeated |
+| Which CEL evaluator the Python services and the TypeScript services use, pinned exactly in section 1.1 | The first enforcing service and the first publication check, each run against CEL's conformance tests and the Expression Profile's own cases before it evaluates anything | No — [ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md) fixes the language and the conformance bar |

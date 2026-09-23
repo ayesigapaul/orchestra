@@ -1,9 +1,9 @@
 ---
 title: Entity Lifecycle State Machines
 doc_id: DOC-032
-version: 0.16.2
+version: 0.17.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0003, ADR-0004, ADR-0005, ADR-0007, ADR-0008, ADR-0009, ADR-0011]
 ---
@@ -172,10 +172,10 @@ no" and "nobody looked" are different facts about a control, and an audit that c
 cannot report on that control. Whether a deadline exists at all is undecided, so the state is drawn
 provisionally rather than asserted.
 
-Expiry also has no acting Principal, and GLOSSARY.md admits none: every action in the audit log
-resolves to exactly one Principal. [`domain-model.md`](domain-model.md) records the same gap for
-platform-operator action and marks it unmade. Expiry is a second instance of it, not a separate
-problem, and `40-governance/audit-model.md` decides both together.
+Expiry also has no acting Principal. It is not an action but a transition caused by an observed
+condition, so its record carries the cause and no Principal, and MUST NOT name one who did not act
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md),
+`40-governance/audit-model.md` section 9). Withdrawal is recorded the same way.
 
 **The Evidence Set is captured at raise time and is immutable thereafter**, settled by
 `40-governance/approval-workflows.md` rule E4. The point of attaching
@@ -260,9 +260,11 @@ state.
 
 Publication MUST record the Principal, the frozen definition and the compiled artifact — ADR-0005
 requires every compiled graph to retain a traceable link back to its source definition, version and
-step identifiers, and retains compiled snapshots for audit. Set-as-current, retirement and archival
-MUST each record the acting Principal. Every Run's pin MUST be recorded, because that is what makes
-`Retired → Archived` verifiable rather than asserted.
+step identifiers, and retains compiled snapshots for audit. Set-as-current and retirement MUST each
+record the acting Principal. Archival is caused by an observed condition, so it MUST record its
+cause — the last pinned Run reaching a terminal state — and no Principal, because none acted
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). Every Run's pin MUST be
+recorded, because that is what makes `Retired → Archived` verifiable rather than asserted.
 
 ## 5. Connector
 
@@ -352,7 +354,6 @@ billing-adjacent surface.
 | Do approval transitions survive disconnect and replay? | Approval Request | ADR-0004 validation step 2, then `30-protocol/event-protocol.md` |
 | What audit-retention period ends `Archived`? | Workflow version | `40-governance/audit-model.md` |
 | May a `Draft` version be deleted, given audit-retention obligations? | Workflow version | `40-governance/audit-model.md`, ADR-0011 follow-on |
-| How is an action with no acting Principal attributed — expiry, platform-operator work? | Approval Request, Audit Record | `40-governance/audit-model.md` |
 | What separates `Degraded` from `Healthy`, and on what interval? | Connector | `10-architecture/connector.md`, `60-operations/reliability.md` |
 | What does a Run do when its Connector is not `Healthy`? | Run, Connector | `60-operations/reliability.md` |
 | Are Connector health transitions audited or telemetry? | Connector | `40-governance/audit-model.md` |

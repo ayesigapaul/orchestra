@@ -1,9 +1,9 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.10.0
+version: 0.11.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0001, ADR-0002, ADR-0005, ADR-0006, ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0012, ADR-0013]
 ---
@@ -51,7 +51,11 @@ therefore an implicit edge from every entity below, drawn only where it carries 
 
 **I2 — One action, one Principal.** Every Principal resolves to exactly one identity, and every
 action in the audit log resolves to exactly one Principal. There is no shared, anonymous or
-unattributed action. It is a modelling constraint, not a logging convention.
+unattributed action. It is a modelling constraint, not a logging convention. A transition caused by
+an observed condition rather than an act, such as an Approval Request expiring or the last pinned
+Run reaching a terminal state, is not an action: its record carries the cause and no Principal, and
+MUST NOT name a Principal who did not act
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)).
 
 **I3 — A Run pins its definition version for life.** A Run executes the Agent version or Workflow
 version it started with, to completion, even after that version is retired. In-flight executions are
@@ -102,6 +106,7 @@ who approved, audit records who requested, and only then can seats be counted.
 | End User | Tenant, as a Principal | Disjoint subtype of Principal | Measurement — **never seat-billed** |
 | Service Account | Tenant, as a Principal | Disjoint subtype of Principal | Machine-to-machine attribution |
 | Connector | Tenant, as a Principal | Disjoint subtype of Principal | Reachability — see section 5 |
+| Platform Operator | Tenant, as a Principal | Disjoint subtype of Principal | Attribution of a person acting for Orchestra on one Tenant's records ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) |
 | Person | None — global, and visible to a Tenant only through a Membership | One per human | A human's attributes, held once across every Tenant |
 | Membership | Tenant | Person 1 : 0..* Membership; a Membership has at most one Platform User and at most one End User | A Person's place in one Tenant |
 | Session Token | Principal | Principal 1 : 0..* Session Token | Short-lived client authority |
@@ -111,9 +116,10 @@ carries a mandatory Tenant reference and an optional Workspace reference. Row-le
 enforced on the Tenant, so a Workspace scopes administration and visibility, not isolation. A
 control that treats a Workspace as a security boundary is wrong.
 
-**The four Principal subtypes are disjoint and exhaustive.** A Principal is exactly one of them.
+**The five Principal subtypes are disjoint and exhaustive.** A Principal is exactly one of them.
 Making the Connector a Principal is deliberate: traffic arriving through the connector fabric is
-attributable in the same audit trail as a human approval, with no second attribution mechanism.
+attributable in the same audit trail as a human approval, with no second attribution mechanism. The
+Platform Operator is a Principal for the same reason.
 
 **Platform User is the seat-billable identity; End User is measured and is not.** The two differ by
 orders of magnitude — tens to hundreds of administrators against a potentially very large embedded
@@ -129,11 +135,14 @@ Tenants; an End User vouched for by a customer's backend is a Person known to th
 Which credential class a Service Account authenticates with belongs to
 [`identity-and-access.md`](../10-architecture/identity-and-access.md).
 
-**Platform operator action has no Principal subtype.** Work Orchestra performs on its own behalf —
-scheduled maintenance, support access, migration tooling — is none of the four subtypes, yet I2
-admits no unattributed action. Whether that becomes a fifth subtype or a separate operator
-attribution path is **unmade**, would be decided by the audit and threat models in
-[`../40-governance/`](../40-governance/), and is the largest hole in this section.
+**Operator access to a Tenant's records is an act by a Platform Operator.** A person acting for
+Orchestra who reads a Tenant's content, or changes it, does so as a Platform Operator Principal of
+that Tenant, under an administrative grant with an end time, and every such act is recorded in that
+Tenant's trail. A Platform Operator stands on no Membership, so it never appears among the Tenant's
+people. Platform maintenance that reads no tenant content, such as a schema migration, is no
+Principal's act and appears in no Tenant's trail
+([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)). How a Platform Operator
+authenticates belongs to [`identity-and-access.md`](../10-architecture/identity-and-access.md).
 
 ## 4. Execution
 
@@ -164,6 +173,7 @@ erDiagram
   PRINCIPAL ||--o| END_USER : "is exactly one of"
   PRINCIPAL ||--o| SERVICE_ACCOUNT : "is exactly one of"
   PRINCIPAL ||--o| CONNECTOR : "is exactly one of"
+  PRINCIPAL ||--o| PLATFORM_OPERATOR : "is exactly one of"
   PRINCIPAL ||--o{ SESSION_TOKEN : "authenticates with"
   PERSON ||--o{ MEMBERSHIP : "belongs through"
   TENANT ||--o{ MEMBERSHIP : "holds"
@@ -227,9 +237,9 @@ else changes, which is the point of keeping the axes separate.
 
 A **Policy Enforcement Point is a place in the execution path, not a record.** It is where policy is
 evaluated: minimally at Run admission, before any Tool invocation, and at every Workflow Step
-boundary. What persists is the **Policy Decision** — a reference to the Policy version that matched,
-the inputs, the verdict and the timestamp — recorded for allows as well as denials, as the glossary
-entry requires.
+boundary. What persists is the **Policy Decision** — a reference to every Policy version that
+matched, the inputs, the verdict and the timestamp — recorded for allows as well as denials, as the
+glossary entry requires.
 
 **Registration and the grant are inputs to the evaluation, not gates in front of it.** By I5 they
 are two relationships rather than one, and both are available at the enforcement point: a Tool
@@ -243,17 +253,18 @@ relationship bypasses the enforcement point.
 version, never afterwards edited
 ([ADR-0012](../adr/adr-0012-policy-decisions-are-audit-records.md),
 [VERSIONING.md](../VERSIONING.md) sections 2 and 8), so editing a Policy means publishing a new
-version, and by I3 a Run keeps the versions it pinned at admission. Whether a Policy version is
-scoped to a Tenant or to a Workspace is **not decided**: section 3 records the scope a Policy
-carries, and ADR-0012 fixes the record model rather than Policy scope.
+version, and by I3 a Run keeps the versions it pinned at admission. A Policy carries a Tenant
+reference and may carry a Workspace reference (section 3), and an evaluation considers the Tenant's
+Policies that name no Workspace together with those that name its own Workspace, under one
+precedence rule ([ADR-0035](../adr/adr-0035-cel-profile-for-policies-and-workflow-expressions.md)).
 
 - Every Run has at least one Policy Decision, from admission.
 - A Policy Decision references the Run, and where the enforcement point is a Step boundary, the Step
   Execution it gates.
-- A Policy Decision names at most one Policy version, and holds that reference rather than the rule
-  text (ADR-0012). Deny-by-default means the absence of a matching rule is itself a recorded
-  outcome, so *no rule matched* is a decision, not a missing record; the same cardinality carries a
-  denial reached before any Policy was evaluated at all.
+- A Policy Decision names every Policy version that matched, with the verdict each contributed, and
+  holds those references rather than the rule text (ADR-0012, ADR-0035). Deny-by-default means the
+  absence of a matching rule is itself a recorded outcome, so *no rule matched* is a decision, not a
+  missing record, and so is a denial reached before any Policy was evaluated at all.
 - A `require_approval` verdict raises exactly one Approval Request; `allow` and `deny` raise none.
 - An Approval Request carries exactly one Evidence Set and is routed by exactly one Approval Chain.
 - An Approval Chain requires decisions from one or more Principals, ordered or parallel, derived
@@ -299,7 +310,7 @@ erDiagram
   STEP }o--o| TOOL : "invokes"
   TENANT ||--o{ POLICY : "authors"
   POLICY ||--|{ POLICY_VERSION : "publishes"
-  POLICY_VERSION |o--o{ POLICY_DECISION : "referenced by"
+  POLICY_VERSION }o--o{ POLICY_DECISION : "referenced by"
   POLICY_VERSION }o--o{ RUN : "pinned at admission by"
   AUDIT_RECORD ||--o| POLICY_DECISION : "is exactly one class of"
   RUN ||--|{ POLICY_DECISION : "evaluated by"
@@ -311,7 +322,7 @@ erDiagram
   TENANT ||--o{ MODEL_BINDING : "configures"
   MODEL_BINDING ||--|| QUOTA_ENVELOPE : "constrained by"
   AGENT_VERSION }o--|{ MODEL_BINDING : "selects, in order"
-  AUDIT_RECORD }o--|| PRINCIPAL : "attributed to"
+  AUDIT_RECORD }o--o| PRINCIPAL : "attributed to, where one acted"
 ```
 
 ## 7. Models
@@ -401,11 +412,9 @@ that question should be settled early rather than left to implementation.
 | --- | --- | --- |
 | Attributes, keys, indexes, partitioning | The schema work that follows a datastore decision | No |
 | What a Tool invocation in an Agent Run is called, and what its Policy Decision, Audit Record and meter record key on | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) section 11, with `audit-model.md` | No — but neither compensation nor metering can be applied retroactively |
-| How platform operator action is attributed under I2 | The audit and threat models in [`../40-governance/`](../40-governance/) | **Yes** — it changes the identity model and the audit contract |
 | Which credential class a Service Account authenticates with | [`identity-and-access.md`](../10-architecture/identity-and-access.md) | No |
 | Whether a Conversation may span Agents | A product decision, not yet taken | No |
 | Whether Quota Envelopes are declared or discovered | The quota design ADR-0006 calls for | No |
-| Whether a Policy version is scoped to a Tenant or to a Workspace | Left open by ADR-0012, which fixes the record model and not Policy scope | **Yes** — a scope question with the character of Policy composition |
 | The Policy version lifecycle and its states | `lifecycle-state-machines.md`, which ADR-0012 directs to follow the Workflow version lifecycle rather than invent a second shape | No |
 | Audit, evidence and Policy-version retention periods | Compliance work; a customer contract will force it first | **Yes** — it spans storage, erasure, the definition lifecycle and metering |
 | Glossary entries this document leans on — capability grant, Message, meter record, Agent version and Workflow version — and whether the Approval Chain entry carries the human-Principal restriction | [`../GLOSSARY.md`](../GLOSSARY.md) | No |

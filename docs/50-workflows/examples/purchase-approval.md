@@ -1,9 +1,9 @@
 ---
 title: "Example: Purchase Approval"
 doc_id: DOC-066
-version: 0.17.0
+version: 0.18.0
 status: Draft
-last_updated: 2026-09-11
+last_updated: 2026-09-23
 owners: [platform-architecture]
 ---
 
@@ -94,5 +94,5 @@ retried blindly (X17), and a failed void does not trigger compensation of the vo
 | What a rejected gate does to the Run, and whether the language admits a rejection branch | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 8, jointly with [`../step-types.md`](../step-types.md) section 7 | **Yes** — repeated |
 | Whether the requester may approve their own purchase | [`approval-workflows.md`](../../40-governance/approval-workflows.md) section 6 | **Yes** — repeated |
 | If `notify` fails after the purchase order was issued, whether that failure compensates `issue-po` — voiding a valid order because an email bounced | [`../execution-semantics.md`](../execution-semantics.md) section 6, which owns what triggers compensation | Not yet classified — **new here** |
-| The syntax of the `route` predicate, and what a predicate that cannot evaluate does to the Run | [`../workflow-dsl.md`](../workflow-dsl.md) section 8 and [`../step-types.md`](../step-types.md) section 13 | As classified there |
+| How the `route` predicate is written in the document, now that it is an Expression Profile expression, and what a predicate that cannot evaluate does to the Run | [`../workflow-dsl.md`](../workflow-dsl.md) section 11 and [`../step-types.md`](../step-types.md) section 13 | As classified there |
 | Whether the `assess` Step pins `procurement-analyst@2` or resolves the Active version at run time | [`../workflow-dsl.md`](../workflow-dsl.md) section 11 | **Yes** — repeated |

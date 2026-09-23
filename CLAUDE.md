@@ -52,6 +52,12 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0027 | Tenant User Management signs the Principal Token that carries a Principal and Tenant between services | Accepted |
 | 0028 | Telemetry goes to a self-hosted Grafana stack; every trace is kept until volume demands sampling; work with no Tenant carries the Nil UUID | Accepted |
 | 0029 | Kafka carries facts between services as CloudEvents keyed by Tenant, captured from each outbox by Debezium | Accepted |
+| 0030 | Operator access to a Tenant's records is a time-boxed act by a tenant-scoped Platform Operator Principal, with no Membership and no consent; a transition caused by an observed condition records its cause and no Principal; maintenance that reads no tenant content stays out of tenant trails | Accepted |
+| 0031 | A Tenant is created by an internal Tenant User Management operation that only Orchestra's provisioning client may call, for a Platform Operator; the act is the Tenant's first Audit Record and invites its first administrator | Accepted |
+| 0032 | An administrative grant is a role from a closed set Orchestra defines, held by Tenant User Management; an identity-provider group holds one only through a mapping each Tenant administers | Accepted |
+| 0033 | The Gateway's paths follow JSON:API's recommended layout under `/v1`; a command is a resource that is created | Accepted |
+| 0034 | A Policy Decision commits in the enforcing service's own transaction and reaches the audit store through its outbox | Accepted |
+| 0035 | Policies and Workflow expressions are CEL behind an Orchestra profile; matching Policies combine by verdict, never by order; aggregates are platform-defined | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.
@@ -116,7 +122,9 @@ spike or a design-partner conversation. Do not build on a Proposed decision as t
   `orchestra-json-api` plugin in `infra/compose/apisix/`. Each service's API is an OpenAPI document
   in `docs/30-protocol/openapi/`, bundled by `scripts/build-openapi.mjs`, which also copies it into
   the service as `openapi.yaml` for contract tests that validate real responses against it. Document
-  an operation and every code it returns before shipping it.
+  an operation and every code it returns before shipping it. The Gateway's paths follow JSON:API's
+  recommended layout under `/v1`, and every command is a resource that is created
+  ([ADR-0033](docs/adr/adr-0033-gateway-urls-follow-json-api-and-commands-are-created.md)).
 - **Standards** — international naming and data standards, never a local or ad hoc convention. A
   person's name is the display name the identity provider holds, in its own order and script. Given
   and family names are never required or composed (OpenID Connect, SCIM RFC 7643). Text is Unicode
