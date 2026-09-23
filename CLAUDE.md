@@ -69,6 +69,7 @@ contradicts it; if you disagree, write a superseding ADR rather than arguing in 
 | 0044 | Run data carries origin labels, they propagate through references and transforms, and Policy reads them | Accepted |
 | 0045 | The compiler derives a Step's Side-Effect Class; a delegating Step carries the set its delegation can reach | Accepted |
 | 0046 | A Tool declares its compensating Tool at registration, and a Step's own declaration overrides it | Accepted |
+| 0047 | A Service Account authenticates with OAuth 2.0 client credentials, interim, resolving through a record Tenant User Management holds | Accepted |
 
 **Proposed** ADRs are not binding. Each names the validation step that would make it so — usually a
 spike or a design-partner conversation. Do not build on a Proposed decision as though it were settled.

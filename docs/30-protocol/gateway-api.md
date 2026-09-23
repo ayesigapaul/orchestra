@@ -1,7 +1,7 @@
 ---
 title: Gateway API
 doc_id: DOC-043
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -95,13 +95,15 @@ is an audited act and the seat-billable dimension (ADR-0009).
 
 **G4 — An End User reaches this contract only with a Session Token.** Whatever credential a Service
 Account presents is not a Session Token
-([`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 3,
-which fixes only that and leaves the class open between a long-lived secret, an asymmetric key and
-workload identity federated from the customer's cloud), and **no credential of either kind may
-appear in a browser or mobile bundle, in client source, or in any artifact shipped to a device**
-([`../GLOSSARY.md`](../GLOSSARY.md), `threat-model.md` T5). This document names no term for the
-Service Account's credential, because the glossary defines none: "tenant API key" appears there only
-in the negative, as what a Session Token is never.
+([`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 3);
+it is an access token the identity provider issued through the OAuth 2.0 client credentials grant,
+which [ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md) records
+as an **interim** class, and **no credential of either kind may appear in a browser or mobile
+bundle, in client source, or in any artifact shipped to a device**
+([`../GLOSSARY.md`](../GLOSSARY.md), `threat-model.md` T5). "Tenant API key" still appears in the
+glossary only in the negative, as what a Session Token is never, and no credential on this contract
+is one: a Service Account's is issued and signed by the identity provider, never minted or custodied
+by Orchestra.
 
 **G5 — Minting is a Gateway operation performed by a Service Account**, which presents its own
 credential and asks Orchestra for a short-lived, narrowly scoped token for a named End User.
@@ -537,7 +539,7 @@ to G29 state, and **whether a Session Token mint response may be stored under an
 | --- | --- | --- |
 | The `Idempotency-Key` retention window, and the outcome of a key reused with a different payload | A later revision of this document; [`../VERSIONING.md`](../VERSIONING.md) section 4 fixes the obligation and names no window | No |
 | What a Session Token's scope may contain, which leaves the End User cancellation row with an undefined term | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — *repeated* |
-| Session Token, Service Account and enrolment credential lifetimes, and what credential class a Service Account holds | A customer contract or design partner; [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) sections 3 and 9 fix only what they are not | No — *repeated*, condition included: that document's section 12 classifies it *No, unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies* — and this is that contract, so a lifetime landing here lands as a versioned obligation |
+| Session Token, Service Account and enrolment credential lifetimes, the class being settled | A customer contract or design partner; [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) sections 3 and 9 fix only what they are not, and [ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md) fixes the Service Account's class as interim without fixing a lifetime | No — *repeated*, condition included: that document's section 12 classifies it *No, unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies* — and this is that contract, so a lifetime landing here lands as a versioned obligation |
 | The audit-retention period, and whether the rule is platform-wide, per Tenant or per record class | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 11, on a customer contract | **ADR** — *repeated* |
 | Audit export: format, transport, completeness proof, and self-serve versus operator-assisted | [`../40-governance/audit-model.md`](../40-governance/audit-model.md) section 12 | No — *repeated* |
 | Whether an out-of-band replay endpoint exists alongside in-stream resumption — resumption itself is fixed by [`../VERSIONING.md`](../VERSIONING.md) section 5 and is not open, section 2 | [`event-protocol.md`](event-protocol.md) section 11 assigns it here, with its section 5; [ADR-0004](../adr/adr-0004-adopt-ag-ui-event-protocol.md) leaves it open and is **Proposed** | No — *repeated* |

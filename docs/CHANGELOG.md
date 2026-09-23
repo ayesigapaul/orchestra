@@ -1,7 +1,7 @@
 ---
 title: Documentation Changelog
 doc_id: DOC-003
-version: 0.48.0
+version: 0.49.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -18,6 +18,42 @@ Versioning: [SemVer 2.0.0](https://semver.org/spec/v2.0.0.html), per [VERSIONING
 ### Planned
 
 - `60-operations/runbooks/` — operational procedures, once there is something to operate
+
+---
+
+## [0.49.0] — 2026-09-23
+
+A Service Account's credential class, chosen as an interim answer so that credential resolution and
+the Service Accounts meter stop waiting on a design partner.
+
+### Added
+
+- `adr/adr-0047-service-accounts-authenticate-with-client-credentials.md` — a Service Account
+  authenticates with the OAuth 2.0 client credentials grant at Orchestra's identity provider, one
+  confidential client each, presenting a bearer token to the Gateway. The Tenant and Principal come
+  from a record Tenant User Management holds, because a client-credentials token names no
+  Organization and tenancy is never Keycloak's. Interim, and revisited at the first design-partner
+  conversation about machine access.
+
+### Changed
+
+- `30-protocol/credential-resolution.md` (0.4.0) — a new rule CR9 resolves a client credential
+  through that record, under four conditions that must all hold, and the verifier fixes the
+  algorithm from the published key set rather than reading it from the token. Its register keeps
+  only which claim names the client.
+- `10-architecture/identity-and-access.md` (0.19.0) — the Principal table and section 3 carry the
+  class, and its register keeps the lifetimes and secret custody, with a new row for the operation
+  that creates a Service Account.
+- `10-architecture/multi-tenancy.md` (0.17.0) — the record that maps a client to a Tenant joins the
+  small reviewed set of tables outside row-level security, because resolution runs before tenant
+  context exists.
+- `10-architecture/containers.md` (0.28.0), `system-context.md` (0.11.0), `20-domain/domain-model.md`
+  (0.14.0) and `30-protocol/gateway-api.md` (0.14.0) — the rows asking how a Service Account
+  authenticates are discharged, and G4 names the class.
+- `GLOSSARY.md` (0.15.0) — the Service Account entry says how one authenticates, as the other
+  subtypes' entries do.
+- `adr/README.md` (0.35.0) — indexes ADR-0047.
+- `CLAUDE.md` records it.
 
 ---
 

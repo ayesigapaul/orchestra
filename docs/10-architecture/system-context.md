@@ -1,7 +1,7 @@
 ---
 title: System Context
 doc_id: DOC-021
-version: 0.10.0
+version: 0.11.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -221,4 +221,3 @@ prose. Where another document owns a question, its classification is repeated ra
 | Whether model traffic may be proxied through the Connector so BYOK credentials never leave the customer perimeter, adding an edge this diagram does not carry | `connector.md`, planned in [`README.md`](README.md), with the Model Broker design; void if ADR-0007 is rejected | **ADR required** — it relocates credential custody, which ADR-0002 places with Orchestra |
 | How an approver is reached, which is an Orchestra-initiated outbound edge to a notification channel that this diagram cannot yet draw | [`../40-governance/approval-workflows.md`](../40-governance/approval-workflows.md); a product decision, per its register | Later document |
 | Whether Orchestra forwards audit continuously into a customer SIEM, or exports on demand; forwarding would add a standing outbound edge and an availability obligation | [`../40-governance/audit-model.md`](../40-governance/audit-model.md); a design-partner conversation, per its register | **ADR required** — that register's classification |
-| Whether the tenant identity provider on R2 also authenticates Service Accounts, or a separate credential type does | [`identity-and-access.md`](identity-and-access.md) | Later document |
