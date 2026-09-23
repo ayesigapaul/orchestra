@@ -1,7 +1,7 @@
 ---
 title: Multi-Tenancy
 doc_id: DOC-025
-version: 0.16.0
+version: 0.17.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -142,7 +142,11 @@ exists to catch; a list of what is exempt cannot, because a new table is scoped 
 The realistic exemptions are few and structural: schema-migration bookkeeping, non-tenant enumerated
 reference data that ships with the schema, and the tenant directory of section 7 — which is
 keyed by Tenant and must be readable *before* tenant context exists, so it holds routing facts and
-nothing else.
+nothing else. The Service Account record that resolves a machine caller's credential
+([ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md)) is the same
+shape and the same exemption: keyed by the identity provider's client, read before tenant context
+exists, and holding the Tenant and the Principal it routes to and nothing more. The Principal it
+names is an ordinary tenant-scoped row under forced row-level security.
 
 Two further properties. The check must fail when it enumerates zero tables, because a check that
 scans nothing and passes is the same class of defect as a commit-range check reporting failure

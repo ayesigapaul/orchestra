@@ -1,7 +1,7 @@
 ---
 title: Architecture Decision Records
 doc_id: DOC-004
-version: 0.34.0
+version: 0.35.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -73,6 +73,7 @@ Template: [`adr-template.md`](adr-template.md) · Lifecycle: [`../VERSIONING.md`
 | [0044](adr-0044-origin-labels-on-run-data.md) | Every value in a Run's data carries origin labels, they propagate through references and transforms, and Policy reads them | Accepted | 2026-09-13 |
 | [0045](adr-0045-the-compiler-derives-a-steps-side-effect-class.md) | The compiler derives a Step's Side-Effect Class, and a delegating Step carries the set of classes its delegation can reach | Accepted | 2026-09-13 |
 | [0046](adr-0046-compensation-is-declared-on-the-tool-registration.md) | A Tool declares its compensating Tool when it is registered, and a Step's own declaration overrides it | Accepted | 2026-09-13 |
+| [0047](adr-0047-service-accounts-authenticate-with-client-credentials.md) | A Service Account authenticates with OAuth 2.0 client credentials, interim, and resolves through a record Tenant User Management holds | Accepted | 2026-09-13 |
 
 ## Decision dependency graph
 
@@ -162,10 +163,14 @@ flowchart TD
   A40 --> A46["ADR-0046<br/>Compensation on the Tool registration"]
   A42 --> A46
 
+  A27 --> A47["ADR-0047<br/>Service Accounts use client credentials"]
+  A24 --> A47
+  A39 --> A47
+
   classDef accepted fill:#1f6f43,stroke:#0d3b24,color:#fff;
   classDef proposed fill:#8a6d1f,stroke:#4d3c10,color:#fff;
   classDef superseded fill:#4a4a4a,stroke:#2a2a2a,color:#fff;
-  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43,A44,A45,A46 accepted;
+  class A1,A2,A6,A11,A12,A13,A14,A15,A16,A17,A18,A19,A20,A21,A23,A24,A25,A26,A27,A28,A29,A30,A31,A32,A33,A34,A35,A36,A37,A38,A39,A40,A41,A42,A43,A44,A45,A46,A47 accepted;
   class A4,A7,A10 proposed;
   class A3,A5,A8,A9,A22 superseded;
 ```

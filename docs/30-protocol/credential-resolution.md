@@ -1,9 +1,9 @@
 ---
 title: Credential Resolution
 doc_id: DOC-098
-version: 0.3.0
+version: 0.4.0
 status: Draft
-last_updated: 2026-09-13
+last_updated: 2026-09-23
 owners: [platform-architecture]
 depends_on: [ADR-0017, ADR-0018, ADR-0024, ADR-0025, ADR-0026, ADR-0027]
 ---
@@ -85,8 +85,8 @@ active Tenant. A client obtains the claim by requesting the `organization` scope
 **CR5 — The Principal stands on the subject's Membership in that Tenant.** The credential's `sub` is
 the subject the identity provider verified ([ADR-0024](../adr/adr-0024-global-person-with-tenant-memberships.md)).
 Today the operation resolves a Platform User, which ADR-0024 requires to stand on a verified Person.
-An End User's Session Token and a Service Account's credential are not specified yet, and resolve to
-nothing until they are (section 5).
+A Service Account's credential resolves by CR9 instead, against a record and not a Membership. An
+End User's Session Token is not specified yet, and resolves to nothing until it is (section 5).
 
 **CR6 — A rejection is an answer, not an error.** Every reason a credential does not resolve
 answers 200 with `outcome` set to `rejected` and nothing more. The reasons include a failed
@@ -124,6 +124,36 @@ repeat a resolution that failed with `meta.retry` set to `safe`, within its own 
 cannot reach the identity provider's signing keys, it has not judged the credential. It MUST answer
 503 `upstream.unavailable`, which is safe to retry, rather than `rejected`.
 
+**CR9 — A Service Account resolves from a record, not from an Organization.** A Service Account's
+credential is an access token the identity provider issued through the OAuth 2.0 client credentials
+grant ([RFC 6749](https://www.rfc-editor.org/rfc/rfc6749#section-4.4) section 4.4), presented as a
+bearer token ([RFC 6750](https://www.rfc-editor.org/rfc/rfc6750)) and verified exactly as CR3 and
+CR8 require. The verifier MUST accept only the signature algorithms Orchestra accepts, matched
+against the identity provider's published key set, and MUST NOT take the algorithm from the token's
+own `alg` header ([RFC 8725](https://www.rfc-editor.org/rfc/rfc8725) section 3.1). Such a credential
+carries no `organization` claim, because an Organization holds users and not clients, so **CR4 does
+not apply**. A client's service-account user MUST NOT be made a member of an Organization to produce
+one, which would put tenancy in the identity provider
+([ADR-0017](../adr/adr-0017-keycloak-for-identity.md),
+[ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md)).
+
+The Tenant and the Principal come from one **Service Account record** in Tenant User Management,
+naming the identity provider's client, the Tenant that owns it and that Tenant's Service Account
+Principal. The record identifies a Tenant rather than belonging to one, so it sits with the tenant
+directory (CR4) and holds routing facts only. A resolution MUST satisfy all of:
+
+- the credential's `sub` matches exactly one Service Account record, and no verified Person — a
+  subject in both classes is a rejection, never a choice between them;
+- the credential's client identifier agrees with the one that record names;
+- the Tenant the record names is active, as CR4 requires of every Tenant;
+- the Principal the record names is a Service Account in that Tenant.
+
+A resolution that satisfies all four answers `principal_kind` set to `service-account`, with that
+Tenant and that Principal. Anything else is a rejection under CR6. The credential class is
+**interim** ([ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md)):
+what this rule takes from it is a client and a subject, so a later class changes what the record is
+keyed on rather than where the Tenant is decided.
+
 ## 3. Responses
 
 | Status | Code | When |
@@ -150,6 +180,6 @@ proves that a user in no Organization is refused.
 | Question | What would decide it | ADR required? |
 | --- | --- | --- |
 | How an End User's Session Token resolves | The Session Token's specification, with [`gateway-api.md`](gateway-api.md) G4 and G5 | No |
-| How a Service Account's credential resolves | The credential class [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) section 3 leaves undecided | **Yes** — its classification, repeated |
+| Which claim of a client credentials token names the client CR9 matches, `client_id` or `azp` | This document with Tenant User Management's OpenAPI source, against the pinned Keycloak release, when CR9 is built; [ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md) decides everything else about how a Service Account's credential resolves | No |
 | Whether the Gateway may cache a resolution, and for how long, given that a cached resolution outlives a Membership removed or a Tenant suspended in the meantime | This document, once a latency budget for the Gateway exists | No |
 | How a person in several Organizations chooses the Tenant a session acts in | The sign-in flow, with [`../10-architecture/identity-and-access.md`](../10-architecture/identity-and-access.md) | No |

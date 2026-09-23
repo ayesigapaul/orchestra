@@ -208,6 +208,7 @@
               "adr/adr-0044-origin-labels-on-run-data",
               "adr/adr-0045-the-compiler-derives-a-steps-side-effect-class",
               "adr/adr-0046-compensation-is-declared-on-the-tool-registration",
+              "adr/adr-0047-service-accounts-authenticate-with-client-credentials",
               "adr/adr-template"
             ]
           },
@@ -732,6 +733,10 @@
     {
       "source": "/adr/adr-0046-compensation-is-declared-on-the-tool-registration.md",
       "destination": "/adr/adr-0046-compensation-is-declared-on-the-tool-registration"
+    },
+    {
+      "source": "/adr/adr-0047-service-accounts-authenticate-with-client-credentials.md",
+      "destination": "/adr/adr-0047-service-accounts-authenticate-with-client-credentials"
     },
     {
       "source": "/adr/adr-template.md",

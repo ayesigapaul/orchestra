@@ -1,7 +1,7 @@
 ---
 title: Domain Model
 doc_id: DOC-031
-version: 0.13.0
+version: 0.14.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -133,8 +133,10 @@ recorded once: **a Person is global, and each Tenant holds a Membership for it**
 User each belong to exactly one Membership, a Person never acts, and a Tenant sees a Person only
 through its own Membership. Only a subject the identity provider verified joins Memberships across
 Tenants; an End User vouched for by a customer's backend is a Person known to that Tenant alone.
-Which credential class a Service Account authenticates with belongs to
-[`identity-and-access.md`](../10-architecture/identity-and-access.md).
+A Service Account authenticates with the OAuth 2.0 client credentials grant at Orchestra's identity
+provider, as an interim class
+([ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md)), and resolves
+through a record Tenant User Management holds rather than through an Organization.
 
 **Operator access to a Tenant's records is an act by a Platform Operator.** A person acting for
 Orchestra who reads a Tenant's content, or changes it, does so as a Platform Operator Principal of
@@ -434,7 +436,6 @@ that question should be settled early rather than left to implementation.
 | --- | --- | --- |
 | Attributes, keys, indexes, partitioning | The schema work that follows a datastore decision | No |
 | What a Tool invocation in an Agent Run is called, what its Policy Decision, Audit Record and meter record key on, and what an `unresolved` compensation outcome names for it ([ADR-0040](../adr/adr-0040-run-outcomes-for-refusal-and-compensation.md)) | `execution-semantics.md` in [`../50-workflows/`](../50-workflows/) section 11, with `audit-model.md` | No — but neither compensation nor metering can be applied retroactively |
-| Which credential class a Service Account authenticates with | [`identity-and-access.md`](../10-architecture/identity-and-access.md) | No |
 | Whether a Conversation may span Agents | A product decision, not yet taken | No |
 | Whether Quota Envelopes are declared or discovered | The quota design ADR-0006 calls for | No |
 | The Policy version lifecycle and its states | `lifecycle-state-machines.md`, which ADR-0012 directs to follow the Workflow version lifecycle rather than invent a second shape | No |

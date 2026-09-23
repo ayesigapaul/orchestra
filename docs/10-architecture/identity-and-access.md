@@ -1,7 +1,7 @@
 ---
 title: Identity and Access
 doc_id: DOC-026
-version: 0.18.0
+version: 0.19.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -11,9 +11,9 @@ depends_on: [ADR-0001, ADR-0002, ADR-0003, ADR-0006, ADR-0007, ADR-0009, ADR-001
 # Identity and Access
 
 Who Orchestra believes an actor to be, how it decides what that actor may reach, and where those
-two questions stop being one. Twelve open-questions rows across ten documents name this document as
-decider, and more route a question here in prose; section 12 says which are settled and which are
-escalated, and accounts for all twelve.
+two questions stop being one. Twelve open-questions rows across ten documents have named this
+document as decider, and more route a question here in prose; section 12 says which are settled and
+which are escalated, and accounts for all twelve.
 
 **This document is informative.** Only [`../30-protocol/`](../30-protocol/) and
 [`../40-governance/`](../40-governance/) are normative, per [`../README.md`](../README.md)
@@ -62,7 +62,7 @@ identity types: administrator, developer, approver and auditor are one subtype
 | --- | --- | --- | --- |
 | Platform User | A person administering Orchestra, approving, reading audit | The tenant's identity provider | Yes — ADR-0009 |
 | End User | A person using the customer's own application | A scoped Session Token minted by Orchestra | No — measured only |
-| Service Account | A machine caller into the Gateway, typically the customer's backend | Undecided; see section 3 | Not counted under ADR-0009 as written, which counts Principals authenticating to the Control Plane; whether that omission was intended is registered in `personas.md` section 5 |
+| Service Account | A machine caller into the Gateway, typically the customer's backend | The OAuth 2.0 client credentials grant at Orchestra's identity provider, one client per Service Account — **interim**, to be revisited with the first design partner ([ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md)) | No — a seat is a Platform User, and a Service Account is counted on a dimension of its own, measured and never billed ([ADR-0039](../adr/adr-0039-seats-count-platform-users.md)) |
 | Connector | Customer-deployed software proxying Tool traffic inward | Enrolment identity, provisional under **Proposed** [ADR-0007](../adr/adr-0007-outbound-connector-for-enterprise-reachability.md) | No |
 | Platform Operator | A person acting for Orchestra on one Tenant's records — support, incident response ([ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md)) | Undecided; see section 3 | Not a Platform User; how ADR-0009's wording, which counts Principals authenticating to the Control Plane, treats one is registered in `quotas-and-metering.md` section 14 |
 
@@ -129,13 +129,23 @@ trusts an assertion the customer's backend makes, which
 in its trusted-by-assumption set. The strength of End User identity is exactly the strength of that
 backend, and no control Orchestra builds improves it.
 
-**Service Account — undecided, and narrowed here.** The domain model routes the credential class to
-this document. One thing follows without a new decision: it is not a Session Token, which is a
-per-interaction authority minted per End User, where a Service Account is a durable Principal that
-exists between interactions — serving both from one class would put a long-lived secret on the path
-the glossary forbids a tenant API key from taking. Which class it is instead — long-lived secret,
-asymmetric key, workload identity federated from the customer's cloud — is an unmade product
-decision, and the one Orchestra-side credential whose rotation is Orchestra's own problem.
+**Service Account — an OAuth client credential, interim.** The domain model routes the credential
+class to this document, and
+[ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md) records it: a
+Service Account authenticates with the OAuth 2.0 client credentials grant at Orchestra's identity
+provider, one confidential client per Service Account, and presents the resulting access token to
+the Gateway as a bearer token. The tenant's own identity provider does not authenticate one, because
+federation covers human sign-in and a machine caller has no sign-in to federate. It is still not a
+Session Token, which is a per-interaction authority minted per End User, where a Service Account
+is a durable Principal that exists between interactions — serving both from one class would put a
+long-lived secret on the path the glossary forbids a tenant API key from taking. The Tenant and the
+Principal come from a record Tenant User Management holds and not from an Organization, because an
+Organization holds users and not clients
+([`../30-protocol/credential-resolution.md`](../30-protocol/credential-resolution.md) CR9). The class
+is **interim**, to be revisited with the first design partner against the asymmetric key and the
+workload identity federated from the customer's cloud that were the other candidates. Rotation,
+expiry and the custody of the client secret stay undecided (section 12), and this is still the one
+Orchestra-side credential whose rotation is Orchestra's own problem.
 
 **Connector — provisional.** Enrolment identity, mutual authentication and revocation rest entirely
 on **Proposed** ADR-0007; the planned `connector.md` in [`./README.md`](README.md) owns the
@@ -438,9 +448,12 @@ application code (section 4); whether credential custody is write-only (section 
 cross-tenant person record exists (section 2); that a Service Account credential is not a Session
 Token (section 3); and which component authenticates each subtype, mints and validates a Session
 Token, and reads the tenant directory (section 3). That discharges eight of the twelve register rows
-naming this document in full. The other four are discharged in part: the Service Account halves of
-`containers.md`, `system-context.md` and the domain model land in the credential-class row below,
-and `threat-model.md`'s lifetimes row is below unchanged. Which signed token carries a Principal and
+naming this document in full. Three more close with
+[ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md), which fixes the
+Service Account's credential class as interim: the Service Account halves of `containers.md`,
+`system-context.md` and the domain model, and with them the credential-class row that used to carry
+them. The twelfth, `threat-model.md`'s lifetimes row, is below, widened to carry the custody of the
+client secret that class introduces. Which signed token carries a Principal and
 Tenant between services is settled by
 [ADR-0027](../adr/adr-0027-tenant-user-management-signs-principal-tokens.md) (section 3), so its row
 is gone too. So is whether an End User may sit in an Approval Chain:
@@ -459,8 +472,7 @@ of an administrative grant (section 5), and `gateway-api.md` G15 carries the can
 | What a Session Token's scope may contain, which bounds the End User row in section 7 | The delegation decision [`../40-governance/tool-authorization.md`](../40-governance/tool-authorization.md) section 6 owns | **ADR** — its classification, repeated |
 | Which federation protocol the identity-provider integration speaks, how group membership reaches Orchestra for a group-to-role mapping, and how stale it may be | [`control-plane.md`](control-plane.md) with a design partner; that document accepts the assignment in its section 12 and carries the row in section 13. [ADR-0032](../adr/adr-0032-administrative-grants-are-orchestra-defined-roles.md) decides that a group holds a role only through a mapping | No |
 | How a Platform User is deprovisioned, and what becomes of administrative grants held by a Principal who can no longer authenticate | [`control-plane.md`](control-plane.md), which accepts it in section 12 and carries the row in section 13; the domain model fixes that a Principal outlives its credentials, not what removes its authority | No |
-| What credential class a Service Account authenticates with, and whether the tenant identity provider authenticates it or a separate credential type does | A product decision with a design partner; section 3 fixes only what it is not, and which component receives it | No |
-| Session Token, Service Account and enrolment credential lifetimes and rotation intervals | A customer contract or design partner; no input exists pre-customer, and section 9 gives the forces | No — unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies |
+| Session Token, Service Account and enrolment credential lifetimes and rotation intervals, and the custody of a Service Account's client secret — how it is generated, who holds it, how it reaches the customer's backend, and how it is replaced without an outage ([ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md)) | A customer contract or design partner; no input exists pre-customer, and section 9 gives the forces | No — unless a lifetime enters a public contract, when [`../VERSIONING.md`](../VERSIONING.md) applies |
+| Which operation creates a Service Account, its identity-provider client and the record CR9 resolves against, who may call it, and what realm role creating a client needs, given that Tenant User Management's client holds only `view-users` and `manage-organizations` | This document with [`control-plane.md`](control-plane.md), on the shape [ADR-0031](../adr/adr-0031-tenant-user-management-creates-tenants.md) gives Tenant creation; [ADR-0047](../adr/adr-0047-service-accounts-authenticate-with-client-credentials.md) fixes the class and the mapping, never the operation | No — but before the first Service Account exists |
 | Whether a Platform Operator's access to a Tenant requires the Tenant's consent, is time-bounded, or is announced to the Tenant, and who gives a Platform Operator an administrative grant there | A design-partner conversation and the contract; [ADR-0030](../adr/adr-0030-platform-operator-and-observed-conditions.md) decides the attribution, not the consent | No — but it must exist before the first security review |
-| Whether a Service Account consumes a seat, given ADR-0009 counts Principals authenticating to the Control Plane and carries no Service Account dimension | `quotas-and-metering.md` in [`../60-operations/`](../60-operations/), where [`../00-overview/personas.md`](../00-overview/personas.md) section 5 registers it | No — its classification, repeated |
 | When identity sync runs — on a schedule, on the identity provider's events, or at sign-in — and so how long a Person's name and email may lag behind the identity provider | [`control-plane.md`](control-plane.md), which owns deprovisioning, with a design partner's expectations of how soon a change must show | No |

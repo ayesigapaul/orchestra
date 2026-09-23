@@ -1,7 +1,7 @@
 ---
 title: Glossary
 doc_id: DOC-002
-version: 0.14.0
+version: 0.15.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -37,7 +37,12 @@ identity.**
 to Orchestra by the customer's backend via a scoped session token. **Not seat-billable** — see
 [ADR-0009](adr/adr-0009-meter-first-defer-tiering.md).
 
-**Service Account** — a non-human Principal used for machine-to-machine calls into the Gateway.
+**Service Account** — a non-human Principal used for machine-to-machine calls into the Gateway. It
+authenticates with the OAuth 2.0 client credentials grant at Orchestra's identity provider, one
+client per Service Account, and resolves to its Tenant and Principal through a record Tenant User
+Management holds — an interim class, to be revisited with the first design partner
+([ADR-0047](adr/adr-0047-service-accounts-authenticate-with-client-credentials.md)). **Never
+seat-billable** ([ADR-0039](adr/adr-0039-seats-count-platform-users.md)).
 
 **Platform Operator** — a person acting for Orchestra on one Tenant's records, such as support
 reading a Run or incident response cancelling one. A tenant-scoped Principal, one in each Tenant the

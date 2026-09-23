@@ -1,7 +1,7 @@
 ---
 title: Containers
 doc_id: DOC-022
-version: 0.27.0
+version: 0.28.0
 status: Draft
 last_updated: 2026-09-23
 owners: [platform-architecture]
@@ -318,7 +318,6 @@ before implementation. **Document** means a later document suffices.
 | How an enforcing service learns that the Audit container has recorded a decision it is keeping, and what then removes that copy | Document | This document with [`../40-governance/audit-model.md`](../40-governance/audit-model.md) and [`../60-operations/reliability.md`](../60-operations/reliability.md) sections 10 and 13. [ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md) fixes only that nothing is removed before the audit store has it |
 | Which containers are separately deployable, and which share a process or a release | Document | `deployment-topologies.md`, planned in [`./README.md`](README.md). Nothing here is a service count |
 | The complete inventory of stores outside the row-level-secured datastore | Document | Accumulates as each document introduces a store; section 8 contributes the two this view introduces, and [`multi-tenancy.md`](multi-tenancy.md) owns the scoping rule the inventory is checked against. ADR-0013's durable decision write adds none ([ADR-0034](../adr/adr-0034-policy-decisions-commit-with-the-gated-change-and-leave-by-outbox.md)) |
-| Whether the Gateway or the Control Plane API mints and validates Session Tokens, and what identity a Service Account presents | Document | [`identity-and-access.md`](identity-and-access.md) |
 | What the Gateway emits on the Run event stream, and how replay reaches a disconnected client | Document | [`../30-protocol/`](../30-protocol/); rests on ADR-0004, **Proposed**, whose validation step 2 is outstanding |
 | Whether the Model Broker's Quota Envelopes are declared, discovered from the surface, or both | Document | The quota design ADR-0006 calls for, with [`../60-operations/`](../60-operations/) |
 
